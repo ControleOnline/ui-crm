@@ -1,5 +1,5 @@
 <template>
-  <TasksSummary :context="context" />
+  <TasksDetails :context="context" />
 </template>
 
 <script>
