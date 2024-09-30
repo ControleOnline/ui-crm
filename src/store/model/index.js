@@ -94,13 +94,14 @@ export default {
         style() {
           //return { display: "none" };
         },
+        preview: true,
         formClass: "row col-12 full-width",
         name: "file",
         editable: true,
         label: "file",
         align: "left",
         saveFormat: function (value) {
-          if (typeof value == "object") return value["@id"];
+          if (typeof value == "object" && value["@id"]) return value["@id"];
           else return value.toString();
         },
       },
