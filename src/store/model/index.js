@@ -91,6 +91,7 @@ export default {
         sortable: true,
         inputType: "file",
         fileType: ["html", "text"],
+        editInline: true,
         style() {
           //return { display: "none" };
         },
