@@ -20,7 +20,7 @@ export default {
         name: "id",
         align: "left",
         label: "id",
-        externalFilter: true,
+        externalFilter: false,
         to: function (value) {
           return {
             name: "modelDetails",
@@ -45,7 +45,7 @@ export default {
         label: "category",
         list: "categories/getItems",
         searchParam: "name",
-        externalFilter: true,
+        externalFilter: false,
         format: function (value) {
           return value?.name;
         },
