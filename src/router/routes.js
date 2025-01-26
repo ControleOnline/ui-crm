@@ -21,7 +21,7 @@ export const routes = [
       import("@controleonline/ui-layout/src/layouts/AdminLayout.vue"),
     children: [
       {
-        name: "model",
+        name: "proposalModel",
         path: "",
         component: () =>
           import("@controleonline/ui-crm/src/pages/Model"),
