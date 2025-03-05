@@ -59,14 +59,7 @@ items:[],
         saveFormat: function (value, column, row) {
           return "/categories/" + parseInt(value.value || value);
         },
-        formatList: function (value) {
-          return value
-            ? {
-                label: value?.name,
-                value: value?.id,
-              }
-            : null;
-        },
+
       },
       {
         sortable: true,
@@ -78,13 +71,7 @@ items:[],
         format: function (value) {
           return value ? value?.name + " - " + value?.alias : " - ";
         },
-        formatList: function (value) {
-          if (value)
-            return {
-              value: value["@id"].split("/").pop(),
-              label: value?.name + " - " + value?.alias,
-            };
-        },
+
         saveFormat: function (value) {
           return value ? "/people/" + (value.value || value) : null;
         },
