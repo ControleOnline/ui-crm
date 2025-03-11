@@ -3,7 +3,7 @@
 </template>
 
 <script>
-import Tasks from "@controleonline/ui-tasks/src/components/Tasks";
+import Tasks from "@controleonline/ui-tasks/src/vue/components/Tasks";
 
 export default {
   components: {

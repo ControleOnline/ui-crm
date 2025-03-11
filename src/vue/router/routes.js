@@ -1,7 +1,7 @@
 export const routes = [
   {
     path: '/crm/',
-    component: () =>  import ('@controleonline/ui-layout/src/layouts/AdminLayout.vue'),
+    component: () =>  import ('@controleonline/ui-layout/src/vue/layouts/AdminLayout.vue'),
     children: [
       {
         name: 'CustomerServices',
@@ -18,20 +18,20 @@ export const routes = [
   {
     path: "/proposal/models/",
     component: () =>
-      import("@controleonline/ui-layout/src/layouts/AdminLayout.vue"),
+      import("@controleonline/ui-layout/src/vue/layouts/AdminLayout.vue"),
     children: [
       {
         name: "proposalModel",
         path: "",
         component: () =>
-          import("@controleonline/ui-crm/src/pages/Model"),
+          import("@controleonline/ui-crm/src/vue/pages/Model"),
       },
       {
         name: "modelDetails",
         path: "id/:id",
         component: () =>
           import(
-            "@controleonline/ui-crm/src/pages/Model/Details.vue"
+            "@controleonline/ui-crm/src/vue/pages/Model/Details.vue"
           ),
       },
     ],

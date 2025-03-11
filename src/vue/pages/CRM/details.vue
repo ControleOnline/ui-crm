@@ -3,7 +3,7 @@
 </template>
 
 <script>
-import TasksDetails from "@controleonline/ui-tasks/src/components/Tasks/details.vue";
+import TasksDetails from "@controleonline/ui-tasks/src/vue/components/Tasks/details.vue";
 
 import { mapGetters } from "vuex";
 
