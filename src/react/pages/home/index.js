@@ -38,7 +38,7 @@ export default function HomePage({navigation}) {
       title: 'Comissões',
       icon: 'money',
       backgroundColor: 'green',
-      onPress: () => handleTo('Comission'),
+      onPress: () => handleTo('ComissionsPage'),
     },
   ];
 
