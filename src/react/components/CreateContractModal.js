@@ -17,17 +17,14 @@ const CreateContractModal = ({visible, onClose, onSuccess}) => {
   const {actions: contractActions} = getStore('contract');
   const {getters: peopleGetters, actions: peopleActions} = getStore('people');
   const {getters: statusGetters, actions: statusActions} = getStore('status');
-  // const {getters: modelsetters, actions: modelsActions} = getStore('model');
 
   const {items: people, currentCompany} = peopleGetters;
   const {items: status} = statusGetters;
-  // const {items: models} = modelsetters;
 
   const [isLoading, setIsLoading] = useState(false);
   const [contractModels, setContractModels] = useState([]);
   const [loadingModels, setLoadingModels] = useState(false);
 
-  // Form fields
   const [selectedModel, setSelectedModel] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
   const [selectedBeneficiary, setSelectedBeneficiary] = useState('');

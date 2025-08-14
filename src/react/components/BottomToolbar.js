@@ -1,6 +1,5 @@
-import React, {useState, useCallback} from 'react';
+import React from 'react';
 import {View, TouchableOpacity, Text, StyleSheet} from 'react-native';
-import {useNavigation, useFocusEffect} from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Feather';
 import {useNavigationState} from '@react-navigation/native';
 import {getStore} from '@store';
@@ -15,11 +14,8 @@ const BottomToolbar = ({navigation}) => {
   const {getters: authGetters, actions: authActions} = getStore('auth');
   const {getters: peopleGetters} = getStore('people');
   const {getters} = getStore('theme');
-  const {isLogged} = authGetters;
   const {colors} = getters;
   const {currentCompany} = peopleGetters;
-  const [posType, setPosType] = useState(null);
-  const localDevice = JSON.parse(localStorage.getItem('device') || '{}');
 
   const styles = StyleSheet.create({
     toolbar: {
@@ -42,7 +38,7 @@ const BottomToolbar = ({navigation}) => {
       marginTop: 6,
     },
     activeText: {
-      color: colors['primary'],
+      color: colors.primary,
       fontWeight: 'bold',
     },
   });
