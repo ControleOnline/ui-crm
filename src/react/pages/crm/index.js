@@ -84,6 +84,7 @@ export default function CrmIndex() {
   const productCategories = categories.filter(
     cat => cat.context === 'products',
   );
+
   const criticalityCategories = categories.filter(
     cat => cat.context === 'relationship-criticality',
   );

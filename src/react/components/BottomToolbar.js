@@ -1,8 +1,8 @@
+import { useNavigationState } from '@react-navigation/native';
+import { getStore } from '@store';
 import React from 'react';
-import {View, TouchableOpacity, Text, StyleSheet} from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
-import {useNavigationState} from '@react-navigation/native';
-import {getStore} from '@store';
 
 const BottomToolbar = ({navigation}) => {
   const state = useNavigationState(state => state);
@@ -70,7 +70,7 @@ const BottomToolbar = ({navigation}) => {
       <TouchableOpacity
         style={styles.button}
         onPress={() => {
-          navigation.navigate('IncomeStatment');
+          navigation.navigate('CrmIndex');
         }}
         disabled={
           !currentCompany || Object.entries(currentCompany).length === 0
@@ -78,12 +78,12 @@ const BottomToolbar = ({navigation}) => {
         <Icon
           name="dollar-sign"
           size={15}
-          color={activeTab === 'IncomeStatment' ? '#007AFF' : '#666'}
+          color={activeTab === 'CrmIndex' ? '#007AFF' : '#666'}
         />
         <Text
           style={[
             styles.buttonText,
-            activeTab === 'IncomeStatment' && styles.activeText,
+            activeTab === 'CrmIndex' && styles.activeText,
           ]}>
           Oportunidades
         </Text>
@@ -92,7 +92,7 @@ const BottomToolbar = ({navigation}) => {
       <TouchableOpacity
         style={styles.button}
         onPress={() => {
-          navigation.navigate('PurchasingSuggestion');
+          navigation.navigate('ClientsIndex');
         }}
         disabled={
           !currentCompany || Object.entries(currentCompany).length === 0
@@ -100,12 +100,12 @@ const BottomToolbar = ({navigation}) => {
         <Icon
           name="shopping-bag"
           size={15}
-          color={activeTab === 'PurchasingSuggestion' ? '#007AFF' : '#666'}
+          color={activeTab === 'ClientsIndex' ? '#007AFF' : '#666'}
         />
         <Text
           style={[
             styles.buttonText,
-            activeTab === 'PurchasingSuggestion' && styles.activeText,
+            activeTab === 'ClientsIndex' && styles.activeText,
           ]}>
           Clientes
         </Text>

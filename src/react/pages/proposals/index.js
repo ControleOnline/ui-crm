@@ -12,7 +12,7 @@ import {
 import {useNavigation, useFocusEffect} from '@react-navigation/native';
 import {getStore} from '@store';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import CreateContractModal from '../../components/CreateContractModal';
+import CreateProposalsModal from './CreateProposalsModal';
 
 const ProposalsPage = () => {
   const {getters: contractGetters, actions: contractActions} =
@@ -216,12 +216,14 @@ const ProposalsPage = () => {
         <ScrollView
           style={contractStyles.scrollView}
           showsVerticalScrollIndicator={false}>
-          {contracts.map(renderContract)}
+          {contracts
+            .filter(contract => contract.contractModel.context === 'proposal')
+            .map(renderContract)}
           <View style={contractStyles.bottomPadding} />
         </ScrollView>
       )}
 
-      <CreateContractModal
+      <CreateProposalsModal
         visible={createModalVisible}
         onClose={() => setCreateModalVisible(false)}
         onSuccess={handleCreateSuccess}

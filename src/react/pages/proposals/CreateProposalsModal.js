@@ -1,32 +1,32 @@
-import { DateTimePicker } from '@react-native-community/datetimepicker';
-import { Picker } from '@react-native-picker/picker';
-import { getStore } from '@store';
-import React, { useEffect, useState } from 'react';
+import React, {useState, useEffect} from 'react';
 import {
-  ActivityIndicator,
-  Modal,
-  ScrollView,
-  StyleSheet,
   Text,
-  TextInput,
-  TouchableOpacity,
   View,
+  TouchableOpacity,
+  ScrollView,
+  ActivityIndicator,
+  TextInput,
+  Modal,
+  StyleSheet,
 } from 'react-native';
+import {getStore} from '@store';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import {Picker} from '@react-native-picker/picker';
 
-const CreateContractModal = ({ visible, onClose, onSuccess }) => {
-  const { actions: contractActions } = getStore('contract');
-  const { getters: peopleGetters, actions: peopleActions } = getStore('people');
-  const { getters: statusGetters, actions: statusActions } = getStore('status');
+const CreateProposalsModal = ({visible, onClose, onSuccess}) => {
+  const {actions: contractActions} = getStore('contract');
+  const {getters: peopleGetters, actions: peopleActions} = getStore('people');
+  const {getters: statusGetters, actions: statusActions} = getStore('status');
+  const {actions: modelsActions} = getStore('models');
 
-  const { items: people, currentCompany } = peopleGetters;
-  const { items: status } = statusGetters;
+  const {items: people, currentCompany} = peopleGetters;
+  const {items: status} = statusGetters;
 
   const [isLoading, setIsLoading] = useState(false);
   const [contractModels, setContractModels] = useState([]);
   const [loadingModels, setLoadingModels] = useState(false);
-  const [open, setOpen] = useState(false);
-  const [date, setDate] = useState(new Date());
+
+  // Form fields
   const [selectedModel, setSelectedModel] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
   const [selectedBeneficiary, setSelectedBeneficiary] = useState('');
@@ -34,6 +34,7 @@ const CreateContractModal = ({ visible, onClose, onSuccess }) => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
+  // Modal states
   const [modelPickerVisible, setModelPickerVisible] = useState(false);
   const [beneficiaryPickerVisible, setBeneficiaryPickerVisible] =
     useState(false);
@@ -46,49 +47,29 @@ const CreateContractModal = ({ visible, onClose, onSuccess }) => {
 
   const loadInitialData = async () => {
     try {
+      // Load people
       await peopleActions.getItems({
         company: '/people/' + currentCompany.id,
         link_type: 'client',
       });
 
-      await statusActions.getItems({ context: 'relationship' });
+      // Load status
+      await statusActions.getItems({context: 'relationship'});
 
+      // Load contract models
       await loadContractModels();
     } catch (error) {
       console.error('Erro ao carregar dados iniciais:', error);
     }
   };
+
   const loadContractModels = async () => {
     setLoadingModels(true);
     try {
-      const response = await contractActions.getItems({
-        'contractModel.context': 'contract',
-        limit: 100,
-      });
+      const response = await modelsActions.getItems({context: 'proposal'});
 
-      const uniqueModels = [];
-      const modelIds = new Set();
-
-      if (response && Array.isArray(response)) {
-        response.forEach(contract => {
-          if (
-            contract.contractModel &&
-            !modelIds.has(contract.contractModel['@id'])
-          ) {
-            modelIds.add(contract.contractModel['@id']);
-            uniqueModels.push(contract.contractModel);
-          }
-        });
-      }
-
-      setContractModels(uniqueModels);
+      setContractModels(response);
     } catch (error) {
-      console.error('Erro ao carregar modelos:', error);
-      setContractModels([
-        { '@id': '/contract-models/1', model: 'Contrato de Serviços' },
-        { '@id': '/contract-models/2', model: 'Contrato de Locação' },
-        { '@id': '/contract-models/3', model: 'Contrato de Compra e Venda' },
-      ]);
     } finally {
       setLoadingModels(false);
     }
@@ -106,18 +87,16 @@ const CreateContractModal = ({ visible, onClose, onSuccess }) => {
         contractModel: selectedModel,
         status: selectedStatus,
         beneficiary: selectedBeneficiary,
-        docKey: docKey.trim() || undefined,
-        startDate: startDate || new Date().toISOString(),
-        endDate: endDate || undefined,
-        creationDate: new Date().toISOString(),
-        alterDate: new Date().toISOString(),
-        peoples: [],
+        docKey: '3399ceaac8abbfd262afa479ccd273cc',
+        startDate: startDate,
+        endDate: null,
+        provider_id: currentCompany.id,
+        provider: currentCompany.id,
       };
 
       await contractActions.save(contractData);
 
-      alert('Contrato criado com sucesso!');
-      resetForm();
+      // resetForm();
       onSuccess && onSuccess();
       onClose();
     } catch (error) {
@@ -141,8 +120,6 @@ const CreateContractModal = ({ visible, onClose, onSuccess }) => {
     resetForm();
     onClose();
   };
-
-
 
   const renderModelSelectModal = () => (
     <Modal
@@ -187,7 +164,7 @@ const CreateContractModal = ({ visible, onClose, onSuccess }) => {
                       style={[
                         styles.modelName,
                         selectedModel === model['@id'] &&
-                        styles.selectOptionTextActive,
+                          styles.selectOptionTextActive,
                       ]}>
                       {model.model}
                     </Text>
@@ -234,7 +211,7 @@ const CreateContractModal = ({ visible, onClose, onSuccess }) => {
                   style={[
                     styles.selectOption,
                     selectedBeneficiary === person['@id'] &&
-                    styles.selectOptionActive,
+                      styles.selectOptionActive,
                   ]}
                   onPress={() => {
                     setSelectedBeneficiary(person['@id']);
@@ -248,7 +225,7 @@ const CreateContractModal = ({ visible, onClose, onSuccess }) => {
                       style={[
                         styles.personName,
                         selectedBeneficiary === person['@id'] &&
-                        styles.selectOptionTextActive,
+                          styles.selectOptionTextActive,
                       ]}>
                       {person.name}
                     </Text>
@@ -270,12 +247,6 @@ const CreateContractModal = ({ visible, onClose, onSuccess }) => {
     </Modal>
   );
 
-  const onChange = (event, selectedDate) => {
-    const currentDate = selectedDate;
-    setDate(currentDate);
-  };
-
- 
   return (
     <Modal
       animationType="slide"
@@ -285,7 +256,7 @@ const CreateContractModal = ({ visible, onClose, onSuccess }) => {
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Criar Novo Contrato</Text>
+            <Text style={styles.modalTitle}>Criar Nova Proposta</Text>
             <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
               <Icon name="close" size={24} color="#666666" />
             </TouchableOpacity>
@@ -307,16 +278,16 @@ const CreateContractModal = ({ visible, onClose, onSuccess }) => {
                     name="description"
                     size={20}
                     color="#2529a1"
-                    style={{ marginRight: 8 }}
+                    style={{marginRight: 8}}
                   />
                   <Text
                     style={[
                       styles.selectInputText,
-                      { color: selectedModel ? '#1A1A1A' : '#999999' },
+                      {color: selectedModel ? '#1A1A1A' : '#999999'},
                     ]}>
                     {selectedModel
                       ? contractModels.find(m => m['@id'] === selectedModel)
-                        ?.model
+                          ?.model
                       : 'Selecionar modelo'}
                   </Text>
                 </View>
@@ -337,16 +308,16 @@ const CreateContractModal = ({ visible, onClose, onSuccess }) => {
                     name="person"
                     size={20}
                     color="#2529a1"
-                    style={{ marginRight: 8 }}
+                    style={{marginRight: 8}}
                   />
                   <Text
                     style={[
                       styles.selectInputText,
-                      { color: selectedBeneficiary ? '#1A1A1A' : '#999999' },
+                      {color: selectedBeneficiary ? '#1A1A1A' : '#999999'},
                     ]}>
                     {selectedBeneficiary
                       ? people?.find(p => p['@id'] === selectedBeneficiary)
-                        ?.name
+                          ?.name
                       : 'Selecionar beneficiário'}
                   </Text>
                 </View>
@@ -354,6 +325,7 @@ const CreateContractModal = ({ visible, onClose, onSuccess }) => {
               </TouchableOpacity>
             </View>
 
+            {/* Status */}
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>
                 Status <Text style={styles.required}>*</Text>
@@ -375,33 +347,20 @@ const CreateContractModal = ({ visible, onClose, onSuccess }) => {
               </View>
             </View>
 
+            {/* Data de Início */}
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Data de Inícios</Text>
+              <Text style={styles.inputLabel}>Data de Início</Text>
               <TextInput
                 style={styles.textInput}
-                onFocus={() => setOpen(true)}
                 value={startDate}
                 onChangeText={setStartDate}
                 placeholder="YYYY-MM-DD"
                 placeholderTextColor="#999999"
               />
-
-              {open && (
-                <DateTimePicker
-                  testID="dateTimePicker"
-                  value={date}
-                  mode={'date'}
-                  is24Hour={true}
-                  onChange={onChange}
-                />
-              )}
             </View>
-
-
-
-
           </ScrollView>
 
+          {/* Botões de ação */}
           <View style={styles.modalFooter}>
             <TouchableOpacity style={styles.cancelButton} onPress={handleClose}>
               <Text style={styles.cancelButtonText}>Cancelar</Text>
@@ -410,7 +369,7 @@ const CreateContractModal = ({ visible, onClose, onSuccess }) => {
               style={[
                 styles.createButton,
                 (!selectedModel || !selectedBeneficiary || !selectedStatus) &&
-                styles.createButtonDisabled,
+                  styles.createButtonDisabled,
               ]}
               onPress={handleSubmit}
               disabled={
@@ -427,7 +386,7 @@ const CreateContractModal = ({ visible, onClose, onSuccess }) => {
                     name="add"
                     size={20}
                     color="#FFFFFF"
-                    style={{ marginRight: 8 }}
+                    style={{marginRight: 8}}
                   />
                   <Text style={styles.createButtonText}>Criar Contrato</Text>
                 </>
@@ -457,7 +416,7 @@ const styles = StyleSheet.create({
     maxHeight: '80%',
     elevation: 10,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: {width: 0, height: 4},
     shadowOpacity: 0.25,
     shadowRadius: 8,
   },
@@ -582,7 +541,7 @@ const styles = StyleSheet.create({
     maxHeight: '70%',
     elevation: 10,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: {width: 0, height: 4},
     shadowOpacity: 0.25,
     shadowRadius: 8,
   },
@@ -665,4 +624,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default CreateContractModal;
+export default CreateProposalsModal;
