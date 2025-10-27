@@ -1,4 +1,4 @@
-import React, {useCallback, useState} from 'react';
+import React, {useCallback, useState, useEffect} from 'react';
 import {
   Text,
   View,
@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   StyleSheet,
   TextInput,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import {useNavigation, useFocusEffect} from '@react-navigation/native';
 import {getStore} from '@store';
@@ -15,31 +16,56 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import CreateProposalsModal from './CreateProposalsModal';
 
 const ProposalsPage = () => {
+  const {getters: peopleGetters} = getStore('people');
+  const {currentCompany} = peopleGetters;
   const {getters: contractGetters, actions: contractActions} =
     getStore('contract');
-  const {items: contracts, isLoading, error} = contractGetters;
+  const {items: contracts, totalItems, isLoading, error} = contractGetters;
   const navigation = useNavigation();
-  const [search, setSearch] = useState('');
   const [createModalVisible, setCreateModalVisible] = useState(false);
-  const {getters} = getStore('people');
-
-  const {currentCompany} = getters;
+  const [search, setSearch] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [showItemsPerPageDropdown, setShowItemsPerPageDropdown] =
+    useState(false);
 
   useFocusEffect(
     useCallback(() => {
-      contractActions.getItems({
-        company: '/people/' + currentCompany.id,
-        contractModel: search.trim() !== '' ? search : undefined,
-      });
-    }, [currentCompany.id, search]),
+      const params = {
+        beneficiary: currentCompany.id,
+        'contractModel.context': 'proposal',
+        page: currentPage,
+        itemsPerPage: itemsPerPage,
+      };
+
+      // Adiciona o parâmetro de busca se houver
+      if (search.trim()) {
+        params['peoples.people.name'] = search.trim();
+      }
+
+      contractActions.getItems(params);
+    }, [currentCompany.id, currentPage, itemsPerPage, search]),
   );
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, itemsPerPage]);
+
   const handleCreateSuccess = () => {
-    // Recarregar a lista de contratos após criar um novo
-    contractActions.getItems({
-      company: '/people/' + currentCompany.id,
-      contractModel: search.trim() !== '' ? search : undefined,
-    });
+    const params = {
+      beneficiary: currentCompany.id,
+      'contractModel.context': 'proposal',
+      page: currentPage,
+      itemsPerPage: itemsPerPage,
+      contractModel: 'proposal',
+    };
+
+    // Adiciona o parâmetro de busca se houver
+    if (search.trim()) {
+      params['peoples.people.name'] = search.trim();
+    }
+
+    contractActions.getItems(params);
   };
 
   const getStatusColor = status => {
@@ -54,6 +80,7 @@ const ProposalsPage = () => {
         return '#757575';
     }
   };
+
   const renderContract = contract => (
     <View key={contract.id} style={contractStyles.contractCard}>
       <View style={contractStyles.contractHeader}>
@@ -74,13 +101,32 @@ const ProposalsPage = () => {
       </View>
 
       <View style={contractStyles.contractBody}>
-        <View style={contractStyles.infoRow}>
-          <Icon name="person" size={16} color="#666" />
-          <Text style={contractStyles.infoLabel}>Beneficiário:</Text>
-          <Text style={contractStyles.infoValue}>
-            {contract.beneficiary.name}
-          </Text>
-        </View>
+        {/* People Section */}
+        {contract.peoples && contract.peoples.length > 0 && (
+          <View style={contractStyles.peopleSection}>
+            <View style={contractStyles.sectionHeader}>
+              <Icon name="people" size={16} color="#666" />
+              <Text style={contractStyles.sectionTitle}>Pessoas</Text>
+            </View>
+            {contract.peoples.map((contractPeople, index) => (
+              <View key={contractPeople.id} style={contractStyles.personItem}>
+                <View style={contractStyles.personInfo}>
+                  <Text style={contractStyles.personName}>
+                    {contractPeople.people.name}
+                  </Text>
+                  <Text style={contractStyles.personType}>
+                    {contractPeople.peopleType}
+                  </Text>
+                </View>
+                <View style={contractStyles.personTypeIndicator}>
+                  <Text style={contractStyles.personTypeText}>
+                    {contractPeople.people.peopleType === 'F' ? 'PF' : 'PJ'}
+                  </Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
 
         <View style={contractStyles.dateContainer}>
           <View style={contractStyles.dateItem}>
@@ -113,6 +159,7 @@ const ProposalsPage = () => {
 
   return (
     <SafeAreaView style={contractStyles.container}>
+      {/* Header com botão de criar */}
       <View
         style={{
           backgroundColor: '#fff',
@@ -213,14 +260,182 @@ const ProposalsPage = () => {
           </Text>
         </View>
       ) : (
-        <ScrollView
-          style={contractStyles.scrollView}
-          showsVerticalScrollIndicator={false}>
-          {contracts
-            .filter(contract => contract.contractModel.context === 'proposal')
-            .map(renderContract)}
-          <View style={contractStyles.bottomPadding} />
-        </ScrollView>
+        <>
+          {/* Items per page selector */}
+          {!isLoading && contracts && contracts.length > 0 && !error && (
+            <View
+              style={{
+                backgroundColor: '#fff',
+                paddingHorizontal: 20,
+                paddingVertical: 12,
+                borderBottomWidth: 1,
+                borderBottomColor: '#e9ecef',
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginHorizontal: 20,
+                marginBottom: 16,
+              }}>
+              <Text style={{color: '#6c757d', fontSize: 14}}>
+                Mostrando {contracts.length} de {totalItems} propostas
+              </Text>
+              <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                <Text style={{color: '#6c757d', fontSize: 14, marginRight: 8}}>
+                  Por página:
+                </Text>
+                <View style={{position: 'relative'}}>
+                  <TouchableOpacity
+                    onPress={() =>
+                      setShowItemsPerPageDropdown(!showItemsPerPageDropdown)
+                    }
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      paddingHorizontal: 12,
+                      paddingVertical: 8,
+                      borderWidth: 1,
+                      borderColor: '#e9ecef',
+                      borderRadius: 6,
+                      backgroundColor: '#f8f9fa',
+                      minWidth: 60,
+                    }}>
+                    <Text
+                      style={{color: '#495057', fontSize: 14, marginRight: 4}}>
+                      {itemsPerPage}
+                    </Text>
+                    <Icon
+                      name={
+                        showItemsPerPageDropdown
+                          ? 'keyboard-arrow-up'
+                          : 'keyboard-arrow-down'
+                      }
+                      size={16}
+                      color="#6c757d"
+                    />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          )}
+
+          <ScrollView
+            style={contractStyles.scrollView}
+            showsVerticalScrollIndicator={false}>
+            {contracts.map(renderContract)}
+
+            {/* Pagination Controls */}
+            {totalItems > itemsPerPage && (
+              <View
+                style={{
+                  backgroundColor: '#fff',
+                  marginHorizontal: 16,
+                  marginTop: 16,
+                  borderRadius: 16,
+                  padding: 20,
+                  shadowColor: '#000',
+                  shadowOffset: {width: 0, height: 3},
+                  shadowOpacity: 0.08,
+                  shadowRadius: 12,
+                  elevation: 4,
+                }}>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}>
+                  <TouchableOpacity
+                    onPress={() =>
+                      setCurrentPage(prev => Math.max(1, prev - 1))
+                    }
+                    disabled={currentPage === 1}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      paddingHorizontal: 16,
+                      paddingVertical: 10,
+                      borderRadius: 8,
+                      backgroundColor:
+                        currentPage === 1 ? '#f8f9fa' : '#2529a1',
+                      opacity: currentPage === 1 ? 0.5 : 1,
+                    }}>
+                    <Icon
+                      name="chevron-left"
+                      size={20}
+                      color={currentPage === 1 ? '#6c757d' : '#fff'}
+                    />
+                    <Text
+                      style={{
+                        color: currentPage === 1 ? '#6c757d' : '#fff',
+                        marginLeft: 4,
+                        fontWeight: '600',
+                      }}>
+                      Anterior
+                    </Text>
+                  </TouchableOpacity>
+
+                  <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                    <Text style={{color: '#6c757d', fontSize: 14}}>
+                      Página {currentPage} de{' '}
+                      {Math.ceil(totalItems / itemsPerPage)}
+                    </Text>
+                  </View>
+
+                  <TouchableOpacity
+                    onPress={() =>
+                      setCurrentPage(prev =>
+                        Math.min(
+                          Math.ceil(totalItems / itemsPerPage),
+                          prev + 1,
+                        ),
+                      )
+                    }
+                    disabled={
+                      currentPage >= Math.ceil(totalItems / itemsPerPage)
+                    }
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      paddingHorizontal: 16,
+                      paddingVertical: 10,
+                      borderRadius: 8,
+                      backgroundColor:
+                        currentPage >= Math.ceil(totalItems / itemsPerPage)
+                          ? '#f8f9fa'
+                          : '#2529a1',
+                      opacity:
+                        currentPage >= Math.ceil(totalItems / itemsPerPage)
+                          ? 0.5
+                          : 1,
+                    }}>
+                    <Text
+                      style={{
+                        color:
+                          currentPage >= Math.ceil(totalItems / itemsPerPage)
+                            ? '#6c757d'
+                            : '#fff',
+                        marginRight: 4,
+                        fontWeight: '600',
+                      }}>
+                      Próxima
+                    </Text>
+                    <Icon
+                      name="chevron-right"
+                      size={20}
+                      color={
+                        currentPage >= Math.ceil(totalItems / itemsPerPage)
+                          ? '#6c757d'
+                          : '#fff'
+                      }
+                    />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+
+            <View style={contractStyles.bottomPadding} />
+          </ScrollView>
+        </>
       )}
 
       <CreateProposalsModal
@@ -228,6 +443,66 @@ const ProposalsPage = () => {
         onClose={() => setCreateModalVisible(false)}
         onSuccess={handleCreateSuccess}
       />
+
+      {/* Dropdown Overlay */}
+      {showItemsPerPageDropdown && (
+        <TouchableWithoutFeedback
+          onPress={() => setShowItemsPerPageDropdown(false)}>
+          <View
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              zIndex: 998,
+            }}>
+            <View
+              style={{
+                position: 'absolute',
+                top: 140,
+                right: 20,
+                backgroundColor: '#fff',
+                borderWidth: 1,
+                borderColor: '#e9ecef',
+                borderRadius: 6,
+                shadowColor: '#000',
+                shadowOffset: {width: 0, height: 2},
+                shadowOpacity: 0.1,
+                shadowRadius: 4,
+                elevation: 999,
+                zIndex: 999,
+              }}>
+              {[5, 10, 20, 50].map(size => (
+                <TouchableOpacity
+                  key={size}
+                  onPress={() => {
+                    setItemsPerPage(size);
+                    setCurrentPage(1);
+                    setShowItemsPerPageDropdown(false);
+                  }}
+                  style={{
+                    paddingHorizontal: 16,
+                    paddingVertical: 10,
+                    backgroundColor:
+                      itemsPerPage === size ? '#f8f9fa' : 'transparent',
+                    borderBottomWidth: size !== 50 ? 1 : 0,
+                    borderBottomColor: '#f1f3f4',
+                  }}>
+                  <Text
+                    style={{
+                      color: itemsPerPage === size ? '#2529a1' : '#495057',
+                      fontSize: 14,
+                      fontWeight: itemsPerPage === size ? '600' : '400',
+                    }}>
+                    {size}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        </TouchableWithoutFeedback>
+      )}
     </SafeAreaView>
   );
 };
@@ -299,6 +574,54 @@ const contractStyles = StyleSheet.create({
   },
   contractBody: {
     padding: 16,
+  },
+  peopleSection: {
+    marginBottom: 16,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#495057',
+    marginLeft: 6,
+  },
+  personItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: '#F8F9FA',
+    borderRadius: 8,
+    marginBottom: 6,
+  },
+  personInfo: {
+    flex: 1,
+  },
+  personName: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#212529',
+  },
+  personType: {
+    fontSize: 12,
+    color: '#6C757D',
+    marginTop: 2,
+  },
+  personTypeIndicator: {
+    backgroundColor: '#E9ECEF',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  personTypeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#495057',
   },
   infoRow: {
     flexDirection: 'row',

@@ -8,6 +8,7 @@ import {
   Alert,
   Modal,
   TextInput,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import {Text} from 'react-native-animatable';
 import Icon from 'react-native-vector-icons/FontAwesome';
@@ -31,11 +32,21 @@ export default function CrmIndex() {
     useState(false);
   const [reasonPickerVisible, setReasonPickerVisible] = useState(false);
   const [searchText, setSearchText] = useState('');
-  const [filteredOpportunities, setFilteredOpportunities] = useState([]);
-
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [showItemsPerPageDropdown, setShowItemsPerPageDropdown] =
+    useState(false);
+  const [dueDateDayPickerVisible, setDueDateDayPickerVisible] = useState(false);
+  const [dueDateMonthPickerVisible, setDueDateMonthPickerVisible] =
+    useState(false);
   const {getters: opportunitiesGetters, actions: opportunitiesActions} =
     getStore('tasks');
-  const {items: opportunities, isLoading, error} = opportunitiesGetters;
+  const {
+    items: opportunities,
+    totalItems,
+    isLoading,
+    error,
+  } = opportunitiesGetters;
   const {getters, actions: peopleActions} = getStore('people');
   const {getters: statusGetters, actions: statusActions} = getStore('status');
   const {items: status} = statusGetters;
@@ -48,10 +59,20 @@ export default function CrmIndex() {
 
   useFocusEffect(
     useCallback(() => {
-      opportunitiesActions.getItems({
+      const params = {
         type: 'relationship',
         provider_id: currentCompany.id,
-      });
+        provider: currentCompany.id,
+        page: currentPage,
+        itemsPerPage: itemsPerPage,
+      };
+
+      // Adiciona o parâmetro de busca se houver
+      if (searchText.trim()) {
+        params['client.name'] = searchText.trim();
+      }
+
+      opportunitiesActions.getItems(params);
       statusActions.getItems({context: 'relationship'});
       categoriesActions.getItems({
         context: ['relationship-criticality', 'products'],
@@ -60,42 +81,49 @@ export default function CrmIndex() {
         company: '/people/' + currentCompany.id,
         link_type: 'client',
       });
-    }, [currentCompany.id]),
+    }, [currentCompany.id, currentPage, itemsPerPage, searchText]),
   );
 
   useEffect(() => {
-    if (!searchText.trim()) {
-      setFilteredOpportunities(opportunities);
-    } else {
-      const filtered = opportunities.filter(opportunity => {
-        const searchLower = searchText.toLowerCase();
-        return (
-          opportunity.id?.toString().includes(searchLower) ||
-          opportunity.client?.name?.toLowerCase().includes(searchLower) ||
-          opportunity.category?.name?.toLowerCase().includes(searchLower) ||
-          opportunity.criticality?.name?.toLowerCase().includes(searchLower) ||
-          opportunity.taskStatus?.status?.toLowerCase().includes(searchLower)
-        );
-      });
-      setFilteredOpportunities(filtered);
-    }
-  }, [opportunities, searchText]);
+    setCurrentPage(1);
+  }, [searchText, itemsPerPage]);
+
+  const getCurrentDateComponents = () => {
+    const today = new Date();
+    return {
+      day: String(today.getDate()).padStart(2, '0'),
+      month: String(today.getMonth() + 1).padStart(2, '0'),
+      year: String(today.getFullYear()),
+    };
+  };
 
   const productCategories = categories.filter(
-    cat => cat.context === 'products',
+    cat => cat.context === 'relationship',
   );
 
   const criticalityCategories = categories.filter(
     cat => cat.context === 'relationship-criticality',
   );
-  const reasonCategories = categories.filter(cat => cat.context === 'reason');
+  const reasonCategories = categories.filter(
+    cat => cat.context === 'relationship-reason',
+  );
 
   const onRefresh = async () => {
     setRefreshing(true);
-    opportunitiesActions.getItems({
+    const params = {
       type: 'relationship',
       provider_id: currentCompany.id,
-    });
+      provider: currentCompany.id,
+      page: currentPage,
+      itemsPerPage: itemsPerPage,
+    };
+
+    // Adiciona o parâmetro de busca se houver
+    if (searchText.trim()) {
+      params['client.name'] = searchText.trim();
+    }
+
+    opportunitiesActions.getItems(params);
     setRefreshing(false);
   };
 
@@ -125,8 +153,6 @@ export default function CrmIndex() {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
     });
   };
 
@@ -138,11 +164,75 @@ export default function CrmIndex() {
     return `${year}-${month}-${day}`;
   };
 
+  const parseDateComponents = dateString => {
+    if (!dateString) {
+      return {day: '', month: '', year: ''};
+    }
+    const date = new Date(dateString);
+    return {
+      day: String(date.getDate()).padStart(2, '0'),
+      month: String(date.getMonth() + 1).padStart(2, '0'),
+      year: String(date.getFullYear()),
+    };
+  };
+
+  const formatDateFromComponents = (day, month, year) => {
+    if (!day || !month || !year) {
+      return '';
+    }
+    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+  };
+
+  const getDaysArray = () => {
+    return Array.from({length: 31}, (_, i) => ({
+      id: String(i + 1).padStart(2, '0'),
+      name: String(i + 1).padStart(2, '0'),
+    }));
+  };
+
+  const getMonthsArray = () => {
+    const months = [
+      'Janeiro',
+      'Fevereiro',
+      'Março',
+      'Abril',
+      'Maio',
+      'Junho',
+      'Julho',
+      'Agosto',
+      'Setembro',
+      'Outubro',
+      'Novembro',
+      'Dezembro',
+    ];
+    return months.map((month, index) => ({
+      id: String(index + 1).padStart(2, '0'),
+      name: month,
+    }));
+  };
+
   const handleOpportunityPress = opportunity => {
     navigation.navigate('CrmConversation', {opportunity});
   };
 
+  const parsePhoneNumbers = announce => {
+    if (!announce) {
+      return [];
+    }
+    try {
+      const parsed = JSON.parse(announce);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      // If it's not JSON, treat as single phone number
+      return announce.trim() ? [announce.trim()] : [];
+    }
+  };
+
   const handleEditOpportunity = opportunity => {
+    const dueDateComponents = parseDateComponents(opportunity.dueDate);
+    const alterDateComponents = parseDateComponents(opportunity.alterDate);
+    const phones = parsePhoneNumbers(opportunity.announce);
+    const todayComponents = getCurrentDateComponents();
     setEditingOpportunity({
       ...opportunity,
       dueDate: opportunity.dueDate
@@ -151,12 +241,38 @@ export default function CrmIndex() {
       alterDate: opportunity.alterDate
         ? formatDateForInput(opportunity.alterDate)
         : '',
+      dueDateDay: dueDateComponents.day || todayComponents.day,
+      dueDateMonth: dueDateComponents.month || todayComponents.month,
+      dueDateYear: dueDateComponents.year || todayComponents.year,
+      alterDateDay: alterDateComponents.day,
+      alterDateMonth: alterDateComponents.month,
+      alterDateYear: alterDateComponents.year,
+      announce: opportunity.announce || '',
+      phones: phones,
     });
     setEditModalVisible(true);
   };
 
   const handleSaveEdit = async () => {
     try {
+      const dueDate = formatDateFromComponents(
+        editingOpportunity.dueDateDay,
+        editingOpportunity.dueDateMonth,
+        editingOpportunity.dueDateYear,
+      );
+      const alterDate = formatDateFromComponents(
+        editingOpportunity.alterDateDay,
+        editingOpportunity.alterDateMonth,
+        editingOpportunity.alterDateYear,
+      );
+
+      // Format phones as JSON array for API
+      const validPhones = (editingOpportunity.phones || []).filter(phone =>
+        phone.trim(),
+      );
+      const phoneData =
+        validPhones.length > 0 ? JSON.stringify(validPhones) : '';
+
       const dataToSave = {
         id: editingOpportunity.id,
         client:
@@ -172,7 +288,9 @@ export default function CrmIndex() {
           editingOpportunity.criticality?.id,
         reason:
           editingOpportunity.reason?.['@id'] || editingOpportunity.reason?.id,
-        dueDate: editingOpportunity.dueDate,
+        dueDate: dueDate,
+        alterDate: alterDate,
+        announce: phoneData,
         provider_id: currentCompany.id,
       };
       await opportunitiesActions.save(dataToSave);
@@ -189,6 +307,19 @@ export default function CrmIndex() {
 
   const handleSaveNewOpportunity = async () => {
     try {
+      const dueDate = formatDateFromComponents(
+        newOpportunity?.dueDateDay,
+        newOpportunity?.dueDateMonth,
+        newOpportunity?.dueDateYear,
+      );
+
+      // Format phones as JSON array for API
+      const validPhones = (newOpportunity?.phones || []).filter(phone =>
+        phone.trim(),
+      );
+      const phoneData =
+        validPhones.length > 0 ? JSON.stringify(validPhones) : '';
+
       const dataToSave = {
         client: newOpportunity.client?.['@id'] || newOpportunity.client?.id,
         registeredBy:
@@ -201,8 +332,8 @@ export default function CrmIndex() {
           newOpportunity.criticality?.['@id'] || newOpportunity.criticality?.id,
         reason: newOpportunity.reason?.['@id'] || newOpportunity.reason?.id,
         type: 'relationship',
-        dueDate: newOpportunity.dueDate,
-        alterDate: newOpportunity.alterDate,
+        dueDate: dueDate,
+        announce: phoneData,
         provider: '/people/' + currentCompany.id,
       };
 
@@ -213,10 +344,20 @@ export default function CrmIndex() {
 
       Alert.alert('Sucesso', 'Oportunidade criada com sucesso!');
 
-      opportunitiesActions.getItems({
+      const params = {
         type: 'relationship',
         provider_id: currentCompany.id,
-      });
+        provider: currentCompany.id,
+        page: currentPage,
+        itemsPerPage: itemsPerPage,
+      };
+
+      // Adiciona o parâmetro de busca se houver
+      if (searchText.trim()) {
+        params['client.name'] = searchText.trim();
+      }
+
+      opportunitiesActions.getItems(params);
     } catch (error) {
       console.error('Erro ao criar:', error);
       Alert.alert('Erro', 'Não foi possível criar a oportunidade');
@@ -230,6 +371,48 @@ export default function CrmIndex() {
       `Alterando status da oportunidade ${opportunity.id} para: ${newStatus}`,
     );
     // opportunitiesActions.updateStatus(opportunity.id, newStatus);
+  };
+
+  const addPhoneInput = (isEdit = true) => {
+    if (isEdit) {
+      setEditingOpportunity(prev => ({
+        ...prev,
+        phones: [...(prev.phones || []), ''],
+      }));
+    } else {
+      setNewOpportunity(prev => ({
+        ...prev,
+        phones: [...(prev.phones || []), ''],
+      }));
+    }
+  };
+
+  const removePhoneInput = (index, isEdit = true) => {
+    if (isEdit) {
+      setEditingOpportunity(prev => ({
+        ...prev,
+        phones: prev.phones.filter((_, i) => i !== index),
+      }));
+    } else {
+      setNewOpportunity(prev => ({
+        ...prev,
+        phones: prev.phones.filter((_, i) => i !== index),
+      }));
+    }
+  };
+
+  const updatePhoneInput = (index, value, isEdit = true) => {
+    if (isEdit) {
+      setEditingOpportunity(prev => ({
+        ...prev,
+        phones: prev.phones.map((phone, i) => (i === index ? value : phone)),
+      }));
+    } else {
+      setNewOpportunity(prev => ({
+        ...prev,
+        phones: prev.phones.map((phone, i) => (i === index ? value : phone)),
+      }));
+    }
   };
 
   const renderOpportunityCard = (opportunity, index) => (
@@ -283,7 +466,7 @@ export default function CrmIndex() {
             <View style={styles.infoContainer}>
               <Icon name="calendar" size={14} color="#3498db" />
               <Text style={styles.infoText}>
-                {formatDate(opportunity.createdAt)}
+                {formatDate(opportunity.dueDate)}
               </Text>
             </View>
             <View style={styles.infoContainer}>
@@ -295,36 +478,18 @@ export default function CrmIndex() {
           </View>
         </View>
 
-        <View style={styles.cardFooter}>
-          <View style={styles.responsibleContainer}>
-            <Icon name="user" size={14} color="#7f8c8d" />
-            <Text style={styles.responsibleText}>
-              Por:{' '}
-              {opportunity.registeredBy?.name ||
-                (opportunity.registeredBy?.id
-                  ? `ID: ${opportunity.registeredBy.id}`
-                  : 'N/A')}
-            </Text>
-          </View>
-          <View style={styles.statusContainer}>
-            <View
-              style={[
-                styles.statusDot,
-                {backgroundColor: opportunity.taskStatus?.color || '#95a5a6'},
-              ]}
-            />
-          </View>
-        </View>
-
         {opportunity.announce && (
           <View style={styles.announceContainer}>
             <Icon name="bullhorn" size={12} color="#9b59b6" />
             <Text style={styles.announceText}>
-              Anúncio:{' '}
+              Telefones:{' '}
               {(() => {
                 try {
                   const parsed = JSON.parse(opportunity.announce);
-                  return Array.isArray(parsed) ? parsed[0] || 'N/A' : 'N/A';
+                  if (Array.isArray(parsed) && parsed.length > 0) {
+                    return parsed.join(', ');
+                  }
+                  return 'N/A';
                 } catch {
                   return 'N/A';
                 }
@@ -422,6 +587,51 @@ export default function CrmIndex() {
         </View>
       </View>
     </Modal>
+  );
+
+  const renderPhoneInputs = (phones = [], isEdit = true) => (
+    <View style={styles.phoneInputsContainer}>
+      {phones.length === 0 && (
+        <TouchableOpacity
+          style={styles.addPhoneButton}
+          onPress={() => addPhoneInput(isEdit)}>
+          <Icon name="plus" size={16} color="#27ae60" />
+          <Text style={styles.addPhoneText}>Adicionar telefone</Text>
+        </TouchableOpacity>
+      )}
+
+      {phones.map((phone, index) => (
+        <View key={index} style={styles.phoneInputRow}>
+          <TextInput
+            style={[styles.textInput, styles.phoneInput]}
+            value={phone}
+            onChangeText={text => {
+              // Remove formatting for storage but allow user to see formatted version
+              const cleaned = text.replace(/\D/g, '');
+              updatePhoneInput(index, cleaned, isEdit);
+            }}
+            placeholder="(11) 99999-9999"
+            placeholderTextColor="#6c757d"
+            keyboardType="phone-pad"
+            maxLength={15}
+          />
+          <TouchableOpacity
+            style={styles.removePhoneButton}
+            onPress={() => removePhoneInput(index, isEdit)}>
+            <Icon name="trash" size={16} color="#e74c3c" />
+          </TouchableOpacity>
+        </View>
+      ))}
+
+      {phones.length > 0 && (
+        <TouchableOpacity
+          style={styles.addPhoneButton}
+          onPress={() => addPhoneInput(isEdit)}>
+          <Icon name="plus" size={16} color="#27ae60" />
+          <Text style={styles.addPhoneText}>Adicionar outro telefone</Text>
+        </TouchableOpacity>
+      )}
+    </View>
   );
 
   const renderBeneficiarySelectModal = () => (
@@ -652,35 +862,50 @@ export default function CrmIndex() {
             </View>
 
             <View style={styles.editSection}>
-              <Text style={styles.editLabel}>Data de Vencimento</Text>
-              <TextInput
-                style={styles.editInput}
-                value={editingOpportunity?.dueDate || ''}
-                onChangeText={text => {
-                  setEditingOpportunity(prev => ({
-                    ...prev,
-                    dueDate: text,
-                  }));
-                }}
-                placeholder="2025-10-10"
-                placeholderTextColor="#6c757d"
-              />
+              <Text style={styles.editLabel}>Telefones</Text>
+              {renderPhoneInputs(editingOpportunity?.phones || [], true)}
             </View>
 
             <View style={styles.editSection}>
-              <Text style={styles.editLabel}>Data de Alteração</Text>
-              <TextInput
-                style={styles.editInput}
-                value={editingOpportunity?.alterDate || ''}
-                onChangeText={text => {
-                  setEditingOpportunity(prev => ({
-                    ...prev,
-                    alterDate: text,
-                  }));
-                }}
-                placeholder="2025-10-10"
-                placeholderTextColor="#6c757d"
-              />
+              <Text style={styles.editLabel}>Data de Vencimento</Text>
+              <View style={styles.datePickerContainer}>
+                <TouchableOpacity
+                  style={[styles.dateSelectButton, {flex: 1}]}
+                  onPress={() => setDueDateDayPickerVisible(true)}>
+                  <Text style={styles.dateSelectText}>
+                    {editingOpportunity?.dueDateDay || 'Dia'}
+                  </Text>
+                  <Icon name="chevron-down" size={16} color="#7f8c8d" />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.dateSelectButton, {flex: 2}]}
+                  onPress={() => setDueDateMonthPickerVisible(true)}>
+                  <Text style={styles.dateSelectText}>
+                    {editingOpportunity?.dueDateMonth
+                      ? getMonthsArray().find(
+                          m => m.id === editingOpportunity.dueDateMonth,
+                        )?.name
+                      : 'Mês'}
+                  </Text>
+                  <Icon name="chevron-down" size={16} color="#7f8c8d" />
+                </TouchableOpacity>
+
+                <TextInput
+                  style={[styles.dateSelectButton, styles.yearInput, {flex: 1}]}
+                  value={editingOpportunity?.dueDateYear || ''}
+                  onChangeText={text => {
+                    setEditingOpportunity(prev => ({
+                      ...prev,
+                      dueDateYear: text,
+                    }));
+                  }}
+                  placeholder="Ano"
+                  placeholderTextColor="#6c757d"
+                  keyboardType="numeric"
+                  maxLength={4}
+                />
+              </View>
             </View>
           </ScrollView>
 
@@ -832,35 +1057,50 @@ export default function CrmIndex() {
             </View>
 
             <View style={styles.editSection}>
-              <Text style={styles.editLabel}>Data de Vencimento</Text>
-              <TextInput
-                style={styles.editInput}
-                value={newOpportunity?.dueDate || ''}
-                onChangeText={text => {
-                  setNewOpportunity(prev => ({
-                    ...prev,
-                    dueDate: text,
-                  }));
-                }}
-                placeholder="2025-10-10"
-                placeholderTextColor="#6c757d"
-              />
+              <Text style={styles.editLabel}>Telefones</Text>
+              {renderPhoneInputs(newOpportunity?.phones || [], false)}
             </View>
 
             <View style={styles.editSection}>
-              <Text style={styles.editLabel}>Data de Alteração</Text>
-              <TextInput
-                style={styles.editInput}
-                value={newOpportunity?.alterDate || ''}
-                onChangeText={text => {
-                  setNewOpportunity(prev => ({
-                    ...prev,
-                    alterDate: text,
-                  }));
-                }}
-                placeholder="2025-10-10"
-                placeholderTextColor="#6c757d"
-              />
+              <Text style={styles.editLabel}>Data de Vencimento</Text>
+              <View style={styles.datePickerContainer}>
+                <TouchableOpacity
+                  style={[styles.dateSelectButton, {flex: 1}]}
+                  onPress={() => setDueDateDayPickerVisible(true)}>
+                  <Text style={styles.dateSelectText}>
+                    {newOpportunity?.dueDateDay || 'Dia'}
+                  </Text>
+                  <Icon name="chevron-down" size={16} color="#7f8c8d" />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.dateSelectButton, {flex: 2}]}
+                  onPress={() => setDueDateMonthPickerVisible(true)}>
+                  <Text style={styles.dateSelectText}>
+                    {newOpportunity?.dueDateMonth
+                      ? getMonthsArray().find(
+                          m => m.id === newOpportunity.dueDateMonth,
+                        )?.name
+                      : 'Mês'}
+                  </Text>
+                  <Icon name="chevron-down" size={16} color="#7f8c8d" />
+                </TouchableOpacity>
+
+                <TextInput
+                  style={[styles.dateSelectButton, styles.yearInput, {flex: 1}]}
+                  value={newOpportunity?.dueDateYear || ''}
+                  onChangeText={text => {
+                    setNewOpportunity(prev => ({
+                      ...prev,
+                      dueDateYear: text,
+                    }));
+                  }}
+                  placeholder="Ano"
+                  placeholderTextColor="#6c757d"
+                  keyboardType="numeric"
+                  maxLength={4}
+                />
+              </View>
             </View>
           </ScrollView>
 
@@ -961,7 +1201,16 @@ export default function CrmIndex() {
               shadowOpacity: 0.3,
               shadowRadius: 4,
             }}
-            onPress={() => setAddModalVisible(true)}>
+            onPress={() => {
+              const todayComponents = getCurrentDateComponents();
+              setNewOpportunity({
+                phones: [],
+                dueDateDay: todayComponents.day,
+                dueDateMonth: todayComponents.month,
+                dueDateYear: todayComponents.year,
+              });
+              setAddModalVisible(true);
+            }}>
             <IconAdd
               name="add"
               size={20}
@@ -975,6 +1224,62 @@ export default function CrmIndex() {
         </View>
       </View>
 
+      {/* Items per page selector */}
+      {!isLoading && opportunities && opportunities.length > 0 && !error && (
+        <View
+          style={{
+            backgroundColor: '#fff',
+            paddingHorizontal: 20,
+            paddingVertical: 12,
+            borderBottomWidth: 1,
+            borderBottomColor: '#e9ecef',
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginHorizontal: 20,
+            marginBottom: 16,
+          }}>
+          <Text style={{color: '#6c757d', fontSize: 14}}>
+            Mostrando {opportunities.length} de {totalItems} oportunidades
+          </Text>
+          <View style={{flexDirection: 'row', alignItems: 'center'}}>
+            <Text style={{color: '#6c757d', fontSize: 14, marginRight: 8}}>
+              Por página:
+            </Text>
+            <View style={{position: 'relative'}}>
+              <TouchableOpacity
+                onPress={() =>
+                  setShowItemsPerPageDropdown(!showItemsPerPageDropdown)
+                }
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  paddingHorizontal: 12,
+                  paddingVertical: 8,
+                  borderWidth: 1,
+                  borderColor: '#e9ecef',
+                  borderRadius: 6,
+                  backgroundColor: '#f8f9fa',
+                  minWidth: 60,
+                }}>
+                <Text style={{color: '#495057', fontSize: 14, marginRight: 4}}>
+                  {itemsPerPage}
+                </Text>
+                <Icon
+                  name={
+                    showItemsPerPageDropdown
+                      ? 'keyboard-arrow-up'
+                      : 'keyboard-arrow-down'
+                  }
+                  size={16}
+                  color="#6c757d"
+                />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
+
       <ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
@@ -982,7 +1287,7 @@ export default function CrmIndex() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
         contentContainerStyle={styles.scrollContent}>
-        {filteredOpportunities.length === 0 ? (
+        {opportunities.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Icon name="line-chart" size={64} color="#bdc3c7" />
             <Text style={styles.emptyTitle}>
@@ -998,8 +1303,117 @@ export default function CrmIndex() {
           </View>
         ) : (
           <View style={styles.opportunitiesContainer}>
-            {filteredOpportunities.map((opportunity, index) =>
+            {opportunities.map((opportunity, index) =>
               renderOpportunityCard(opportunity, index),
+            )}
+
+            {/* Pagination Controls */}
+            {totalItems > itemsPerPage && (
+              <View
+                style={{
+                  backgroundColor: '#fff',
+                  marginTop: 16,
+                  borderRadius: 16,
+                  padding: 20,
+                  shadowColor: '#000',
+                  shadowOffset: {width: 0, height: 3},
+                  shadowOpacity: 0.08,
+                  shadowRadius: 12,
+                  elevation: 4,
+                }}>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}>
+                  <TouchableOpacity
+                    onPress={() =>
+                      setCurrentPage(prev => Math.max(1, prev - 1))
+                    }
+                    disabled={currentPage === 1}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      paddingHorizontal: 16,
+                      paddingVertical: 10,
+                      borderRadius: 8,
+                      backgroundColor:
+                        currentPage === 1 ? '#f8f9fa' : '#2529a1',
+                      opacity: currentPage === 1 ? 0.5 : 1,
+                    }}>
+                    <Icon
+                      name="chevron-left"
+                      size={20}
+                      color={currentPage === 1 ? '#6c757d' : '#fff'}
+                    />
+                    <Text
+                      style={{
+                        color: currentPage === 1 ? '#6c757d' : '#fff',
+                        marginLeft: 4,
+                        fontWeight: '600',
+                      }}>
+                      Anterior
+                    </Text>
+                  </TouchableOpacity>
+
+                  <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                    <Text style={{color: '#6c757d', fontSize: 14}}>
+                      Página {currentPage} de{' '}
+                      {Math.ceil(totalItems / itemsPerPage)}
+                    </Text>
+                  </View>
+
+                  <TouchableOpacity
+                    onPress={() =>
+                      setCurrentPage(prev =>
+                        Math.min(
+                          Math.ceil(totalItems / itemsPerPage),
+                          prev + 1,
+                        ),
+                      )
+                    }
+                    disabled={
+                      currentPage >= Math.ceil(totalItems / itemsPerPage)
+                    }
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      paddingHorizontal: 16,
+                      paddingVertical: 10,
+                      borderRadius: 8,
+                      backgroundColor:
+                        currentPage >= Math.ceil(totalItems / itemsPerPage)
+                          ? '#f8f9fa'
+                          : '#2529a1',
+                      opacity:
+                        currentPage >= Math.ceil(totalItems / itemsPerPage)
+                          ? 0.5
+                          : 1,
+                    }}>
+                    <Text
+                      style={{
+                        color:
+                          currentPage >= Math.ceil(totalItems / itemsPerPage)
+                            ? '#6c757d'
+                            : '#fff',
+                        marginRight: 4,
+                        fontWeight: '600',
+                      }}>
+                      Próxima
+                    </Text>
+                    <Icon
+                      name="chevron-right"
+                      size={20}
+                      color={
+                        currentPage >= Math.ceil(totalItems / itemsPerPage)
+                          ? '#6c757d'
+                          : '#fff'
+                      }
+                    />
+                  </TouchableOpacity>
+                </View>
+              </View>
             )}
           </View>
         )}
@@ -1079,6 +1493,144 @@ export default function CrmIndex() {
       )}
 
       {renderBeneficiarySelectModal()}
+
+      {/* Date Pickers for Due Date */}
+      {renderSelectModal(
+        'Selecionar Dia',
+        getDaysArray(),
+        {
+          id: editModalVisible
+            ? editingOpportunity?.dueDateDay
+            : newOpportunity?.dueDateDay,
+        },
+        item => {
+          if (editModalVisible) {
+            setEditingOpportunity(prev => ({...prev, dueDateDay: item.id}));
+          } else {
+            setNewOpportunity(prev => ({...prev, dueDateDay: item.id}));
+          }
+        },
+        dueDateDayPickerVisible,
+        setDueDateDayPickerVisible,
+        'name',
+      )}
+
+      {renderSelectModal(
+        'Selecionar Mês',
+        getMonthsArray(),
+        {
+          id: editModalVisible
+            ? editingOpportunity?.dueDateMonth
+            : newOpportunity?.dueDateMonth,
+        },
+        item => {
+          if (editModalVisible) {
+            setEditingOpportunity(prev => ({...prev, dueDateMonth: item.id}));
+          } else {
+            setNewOpportunity(prev => ({...prev, dueDateMonth: item.id}));
+          }
+        },
+        dueDateMonthPickerVisible,
+        setDueDateMonthPickerVisible,
+        'name',
+      )}
+
+      {/* Date Pickers for Alter Date */}
+      {renderSelectModal(
+        'Selecionar Dia',
+        getDaysArray(),
+        {
+          id: editModalVisible
+            ? editingOpportunity?.alterDateDay
+            : newOpportunity?.alterDateDay,
+        },
+        item => {
+          if (editModalVisible) {
+            setEditingOpportunity(prev => ({...prev, alterDateDay: item.id}));
+          } else {
+            setNewOpportunity(prev => ({...prev, alterDateDay: item.id}));
+          }
+        },
+        'name',
+      )}
+
+      {renderSelectModal(
+        'Selecionar Mês',
+        getMonthsArray(),
+        {
+          id: editModalVisible
+            ? editingOpportunity?.alterDateMonth
+            : newOpportunity?.alterDateMonth,
+        },
+        item => {
+          if (editModalVisible) {
+            setEditingOpportunity(prev => ({...prev, alterDateMonth: item.id}));
+          } else {
+            setNewOpportunity(prev => ({...prev, alterDateMonth: item.id}));
+          }
+        },
+        'name',
+      )}
+
+      {/* Dropdown Overlay */}
+      {showItemsPerPageDropdown && (
+        <TouchableWithoutFeedback
+          onPress={() => setShowItemsPerPageDropdown(false)}>
+          <View
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              zIndex: 998,
+            }}>
+            <View
+              style={{
+                position: 'absolute',
+                top: 140,
+                right: 20,
+                backgroundColor: '#fff',
+                borderWidth: 1,
+                borderColor: '#e9ecef',
+                borderRadius: 6,
+                shadowColor: '#000',
+                shadowOffset: {width: 0, height: 2},
+                shadowOpacity: 0.1,
+                shadowRadius: 4,
+                elevation: 999,
+                zIndex: 999,
+              }}>
+              {[5, 10, 20, 50].map(size => (
+                <TouchableOpacity
+                  key={size}
+                  onPress={() => {
+                    setItemsPerPage(size);
+                    setCurrentPage(1);
+                    setShowItemsPerPageDropdown(false);
+                  }}
+                  style={{
+                    paddingHorizontal: 16,
+                    paddingVertical: 10,
+                    backgroundColor:
+                      itemsPerPage === size ? '#f8f9fa' : 'transparent',
+                    borderBottomWidth: size !== 50 ? 1 : 0,
+                    borderBottomColor: '#f1f3f4',
+                  }}>
+                  <Text
+                    style={{
+                      color: itemsPerPage === size ? '#2529a1' : '#495057',
+                      fontSize: 14,
+                      fontWeight: itemsPerPage === size ? '600' : '400',
+                    }}>
+                    {size}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        </TouchableWithoutFeedback>
+      )}
     </View>
   );
 }
@@ -1553,5 +2105,81 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontSize: 16,
     textAlign: 'center',
+  },
+  // Date Picker Styles
+  datePickerContainer: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  dateSelectButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    backgroundColor: '#fff',
+  },
+  dateSelectText: {
+    fontSize: 16,
+    color: '#2c3e50',
+  },
+  yearInput: {
+    textAlign: 'center',
+    justifyContent: 'center',
+  },
+  // Text Input Styles
+  textInput: {
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 16,
+    color: '#2c3e50',
+    backgroundColor: '#fff',
+    textAlignVertical: 'top',
+  },
+  helpText: {
+    fontSize: 12,
+    color: '#6c757d',
+    marginTop: 4,
+    fontStyle: 'italic',
+  },
+  // Phone Input Styles
+  phoneInputsContainer: {
+    gap: 12,
+  },
+  phoneInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  phoneInput: {
+    flex: 1,
+  },
+  addPhoneButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: '#27ae60',
+    borderRadius: 8,
+    backgroundColor: '#27ae6010',
+    gap: 8,
+  },
+  addPhoneText: {
+    color: '#27ae60',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  removePhoneButton: {
+    padding: 8,
+    borderRadius: 6,
+    backgroundColor: '#e74c3c10',
   },
 });

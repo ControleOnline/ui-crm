@@ -30,9 +30,9 @@ const CreateProposalsModal = ({visible, onClose, onSuccess}) => {
   const [selectedModel, setSelectedModel] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
   const [selectedBeneficiary, setSelectedBeneficiary] = useState('');
-  const [docKey, setDocKey] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [startDay, setStartDay] = useState('');
+  const [startMonth, setStartMonth] = useState('');
+  const [startYear, setStartYear] = useState('');
 
   // Modal states
   const [modelPickerVisible, setModelPickerVisible] = useState(false);
@@ -47,16 +47,13 @@ const CreateProposalsModal = ({visible, onClose, onSuccess}) => {
 
   const loadInitialData = async () => {
     try {
-      // Load people
       await peopleActions.getItems({
         company: '/people/' + currentCompany.id,
         link_type: 'client',
       });
 
-      // Load status
       await statusActions.getItems({context: 'relationship'});
 
-      // Load contract models
       await loadContractModels();
     } catch (error) {
       console.error('Erro ao carregar dados iniciais:', error);
@@ -75,8 +72,19 @@ const CreateProposalsModal = ({visible, onClose, onSuccess}) => {
     }
   };
 
+  const formatDate = (year, month, day) => {
+    if (!year || !month || !day) {
+      return null;
+    }
+
+    const formattedMonth = month.padStart(2, '0');
+    const formattedDay = day.padStart(2, '0');
+
+    return `${year}-${formattedMonth}-${formattedDay}`;
+  };
+
   const handleSubmit = async () => {
-    if (!selectedModel || !selectedBeneficiary || !selectedStatus) {
+    if (!selectedModel) {
       alert('Por favor, preencha todos os campos obrigatórios.');
       return;
     }
@@ -85,13 +93,8 @@ const CreateProposalsModal = ({visible, onClose, onSuccess}) => {
     try {
       const contractData = {
         contractModel: selectedModel,
-        status: selectedStatus,
-        beneficiary: selectedBeneficiary,
-        docKey: '3399ceaac8abbfd262afa479ccd273cc',
-        startDate: startDate,
-        endDate: null,
-        provider_id: currentCompany.id,
-        provider: currentCompany.id,
+        beneficiary: 'people/' + currentCompany.id,
+        startDate: formatDate(startYear, startMonth, startDay),
       };
 
       await contractActions.save(contractData);
@@ -111,9 +114,9 @@ const CreateProposalsModal = ({visible, onClose, onSuccess}) => {
     setSelectedModel('');
     setSelectedStatus('');
     setSelectedBeneficiary('');
-    setDocKey('');
-    setStartDate('');
-    setEndDate('');
+    setStartDay('');
+    setStartMonth('');
+    setStartYear('');
   };
 
   const handleClose = () => {
@@ -295,68 +298,68 @@ const CreateProposalsModal = ({visible, onClose, onSuccess}) => {
               </TouchableOpacity>
             </View>
 
-            {/* Beneficiário */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>
-                Beneficiário <Text style={styles.required}>*</Text>
-              </Text>
-              <TouchableOpacity
-                style={styles.selectInput}
-                onPress={() => setBeneficiaryPickerVisible(true)}>
-                <View style={styles.selectInputContent}>
-                  <Icon
-                    name="person"
-                    size={20}
-                    color="#2529a1"
-                    style={{marginRight: 8}}
-                  />
-                  <Text
-                    style={[
-                      styles.selectInputText,
-                      {color: selectedBeneficiary ? '#1A1A1A' : '#999999'},
-                    ]}>
-                    {selectedBeneficiary
-                      ? people?.find(p => p['@id'] === selectedBeneficiary)
-                          ?.name
-                      : 'Selecionar beneficiário'}
-                  </Text>
-                </View>
-                <Icon name="keyboard-arrow-down" size={24} color="#666666" />
-              </TouchableOpacity>
-            </View>
-
-            {/* Status */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>
-                Status <Text style={styles.required}>*</Text>
-              </Text>
-              <View style={styles.pickerContainer}>
-                <Picker
-                  selectedValue={selectedStatus}
-                  style={styles.picker}
-                  onValueChange={itemValue => setSelectedStatus(itemValue)}>
-                  <Picker.Item label="Selecionar status" value="" />
-                  {status.map(statusItem => (
-                    <Picker.Item
-                      key={statusItem['@id']}
-                      label={statusItem.realStatus || statusItem.status}
-                      value={statusItem['@id']}
-                    />
-                  ))}
-                </Picker>
-              </View>
-            </View>
-
-            {/* Data de Início */}
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Data de Início</Text>
-              <TextInput
-                style={styles.textInput}
-                value={startDate}
-                onChangeText={setStartDate}
-                placeholder="YYYY-MM-DD"
-                placeholderTextColor="#999999"
-              />
+              <View style={styles.dateContainer}>
+                {/* Dia */}
+                <View style={styles.datePickerContainer}>
+                  <Text style={styles.dateLabel}>Dia</Text>
+                  <View style={styles.pickerContainer}>
+                    <Picker
+                      selectedValue={startDay}
+                      style={styles.picker}
+                      onValueChange={itemValue => setStartDay(itemValue)}>
+                      <Picker.Item label="Dia" value="" />
+                      {Array.from({length: 31}, (_, i) => i + 1).map(day => (
+                        <Picker.Item
+                          key={day}
+                          label={day.toString()}
+                          value={day.toString()}
+                        />
+                      ))}
+                    </Picker>
+                  </View>
+                </View>
+
+                {/* Mês */}
+                <View style={styles.datePickerContainer}>
+                  <Text style={styles.dateLabel}>Mês</Text>
+                  <View style={styles.pickerContainer}>
+                    <Picker
+                      selectedValue={startMonth}
+                      style={styles.picker}
+                      onValueChange={itemValue => setStartMonth(itemValue)}>
+                      <Picker.Item label="Mês" value="" />
+                      <Picker.Item label="Janeiro" value="1" />
+                      <Picker.Item label="Fevereiro" value="2" />
+                      <Picker.Item label="Março" value="3" />
+                      <Picker.Item label="Abril" value="4" />
+                      <Picker.Item label="Maio" value="5" />
+                      <Picker.Item label="Junho" value="6" />
+                      <Picker.Item label="Julho" value="7" />
+                      <Picker.Item label="Agosto" value="8" />
+                      <Picker.Item label="Setembro" value="9" />
+                      <Picker.Item label="Outubro" value="10" />
+                      <Picker.Item label="Novembro" value="11" />
+                      <Picker.Item label="Dezembro" value="12" />
+                    </Picker>
+                  </View>
+                </View>
+
+                {/* Ano */}
+                <View style={styles.dateInputContainer}>
+                  <Text style={styles.dateLabel}>Ano</Text>
+                  <TextInput
+                    style={styles.yearInput}
+                    value={startYear}
+                    onChangeText={setStartYear}
+                    placeholder="2024"
+                    placeholderTextColor="#999999"
+                    keyboardType="numeric"
+                    maxLength={4}
+                  />
+                </View>
+              </View>
             </View>
           </ScrollView>
 
@@ -368,16 +371,10 @@ const CreateProposalsModal = ({visible, onClose, onSuccess}) => {
             <TouchableOpacity
               style={[
                 styles.createButton,
-                (!selectedModel || !selectedBeneficiary || !selectedStatus) &&
-                  styles.createButtonDisabled,
+                !selectedModel && styles.createButtonDisabled,
               ]}
               onPress={handleSubmit}
-              disabled={
-                isLoading ||
-                !selectedModel ||
-                !selectedBeneficiary ||
-                !selectedStatus
-              }>
+              disabled={isLoading || !selectedModel}>
               {isLoading ? (
                 <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (
@@ -621,6 +618,36 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666666',
     marginTop: 12,
+  },
+  // Date Styles
+  dateContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+  },
+  datePickerContainer: {
+    flex: 1,
+    marginRight: 8,
+  },
+  dateInputContainer: {
+    flex: 1,
+  },
+  dateLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#666666',
+    marginBottom: 4,
+  },
+  yearInput: {
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: '#1A1A1A',
+    backgroundColor: '#FFFFFF',
+    textAlign: 'center',
   },
 });
 
