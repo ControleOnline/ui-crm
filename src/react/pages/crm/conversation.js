@@ -12,7 +12,7 @@ import {Text} from 'react-native-animatable';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import IconMaterial from 'react-native-vector-icons/MaterialIcons';
 import {useNavigation, useRoute} from '@react-navigation/native';
-import {getStore} from '@store';
+import {useStores} from '@store';
 
 export default function CrmConversation() {
   const [message, setMessage] = useState('');
@@ -21,7 +21,9 @@ export default function CrmConversation() {
   const navigation = useNavigation();
   const route = useRoute();
   const {opportunity} = route.params;
-  const {getters, actions} = getStore('tasksInterations');
+  const tasksInterationsStore = useStores(state => state.tasksInterations);
+  const getters = tasksInterationsStore.getters;
+  const actions = tasksInterationsStore.actions;
   const {items} = getters;
 
   const formatTime = timestamp => {
