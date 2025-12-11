@@ -39,8 +39,7 @@ export default function CrmIndex() {
   const [dueDateDayPickerVisible, setDueDateDayPickerVisible] = useState(false);
   const [dueDateMonthPickerVisible, setDueDateMonthPickerVisible] =
     useState(false);
-  const {getters: opportunitiesGetters, actions: opportunitiesActions} =
-    getStore('tasks');
+  const {getters: opportunitiesGetters, actions: opportunitiesActions} = getStore('tasks');
   const {
     items: opportunities,
     totalItems,
@@ -50,8 +49,7 @@ export default function CrmIndex() {
   const {getters, actions: peopleActions} = getStore('people');
   const {getters: statusGetters, actions: statusActions} = getStore('status');
   const {items: status} = statusGetters;
-  const {getters: categoriesGetters, actions: categoriesActions} =
-    getStore('categories');
+  const {getters: categoriesGetters, actions: categoriesActions} = getStore('categories');
   const {items: categories} = categoriesGetters;
   const {currentCompany, items: people} = getters;
 
