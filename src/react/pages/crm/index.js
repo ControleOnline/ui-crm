@@ -15,7 +15,7 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 import IconAdd from 'react-native-vector-icons/MaterialIcons';
 import IconWhatsApp from 'react-native-vector-icons/FontAwesome';
 
-import {useStores} from '@store';
+import {useStore} from '@store';
 import {useFocusEffect, useNavigation} from '@react-navigation/native';
 
 export default function CrmIndex() {
@@ -39,7 +39,7 @@ export default function CrmIndex() {
   const [dueDateDayPickerVisible, setDueDateDayPickerVisible] = useState(false);
   const [dueDateMonthPickerVisible, setDueDateMonthPickerVisible] =
     useState(false);
-  const tasksStore = useStores(state => state.tasks);
+  const tasksStore = useStore('tasks');
   const opportunitiesGetters = tasksStore.getters;
   const opportunitiesActions = tasksStore.actions;
   const {
@@ -48,14 +48,14 @@ export default function CrmIndex() {
     isLoading,
     error,
   } = opportunitiesGetters;
-  const peopleStore = useStores(state => state.people);
+  const peopleStore = useStore('people');
   const getters = peopleStore.getters;
   const peopleActions = peopleStore.actions;
-  const statusStore = useStores(state => state.status);
+  const statusStore = useStore('status');
   const statusGetters = statusStore.getters;
   const statusActions = statusStore.actions;
   const {items: status} = statusGetters;
-  const categoriesStore = useStores(state => state.categories);
+  const categoriesStore = useStore('categories');
   const categoriesGetters = categoriesStore.getters;
   const categoriesActions = categoriesStore.actions;
   const {items: categories} = categoriesGetters;

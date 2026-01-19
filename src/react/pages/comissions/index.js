@@ -9,26 +9,26 @@ import {
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
-import {useStores} from '@store';
+import {useStore} from '@store';
 import StateStore from '@controleonline/ui-layout/src/react/components/StateStore';
 import css from '@controleonline/ui-orders/src/react/css/orders';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import {useNavigation, useFocusEffect} from '@react-navigation/native';
 
 const Invoices = ({navigation}) => {
-  const invoiceStore = useStores(state => state.invoice);
+  const invoiceStore = useStore('invoice');
   const getters = invoiceStore.getters;
   const invoicesActions = invoiceStore.actions;
   const {items, item, isLoading, error, columns} = getters;
   const {styles, globalStyles} = css();
-  const peopleStore = useStores(state => state.people);
+  const peopleStore = useStore('people');
   const peopleGetters = peopleStore.getters;
-  const authStore = useStores(state => state.auth);
+  const authStore = useStore('auth');
   const userGetters = authStore.getters;
   const authActions = authStore.actions;
   const {user} = userGetters;
   const {currentCompany, defaultCompany} = peopleGetters;
-  const device_configStore = useStores(state => state.device_config);
+  const device_configStore = useStore('device_config');
   const deviceConfigGetters = device_configStore.getters;
   const {item: device} = deviceConfigGetters;
   const [refreshing, setRefreshing] = useState(false);

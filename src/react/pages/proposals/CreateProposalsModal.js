@@ -9,20 +9,20 @@ import {
   Modal,
   StyleSheet,
 } from 'react-native';
-import {useStores} from '@store';
+import {useStore} from '@store';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import {Picker} from '@react-native-picker/picker';
 
 const CreateProposalsModal = ({visible, onClose, onSuccess}) => {
-  const contractStore = useStores(state => state.contract);
+  const contractStore = useStore('contract');
   const contractActions = contractStore.actions;
-  const peopleStore = useStores(state => state.people);
+  const peopleStore = useStore('people');
   const peopleGetters = peopleStore.getters;
   const peopleActions = peopleStore.actions;
-  const statusStore = useStores(state => state.status);
+  const statusStore = useStore('status');
   const statusGetters = statusStore.getters;
   const statusActions = statusStore.actions;
-  const modelsStore = useStores(state => state.models);
+  const modelsStore = useStore('models');
   const modelsActions = modelsStore.actions;
 
   const {items: people, currentCompany} = peopleGetters;

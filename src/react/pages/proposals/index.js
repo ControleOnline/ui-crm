@@ -11,15 +11,15 @@ import {
   TouchableWithoutFeedback,
 } from 'react-native';
 import {useNavigation, useFocusEffect} from '@react-navigation/native';
-import {useStores} from '@store';
+import {useStore} from '@store';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import CreateProposalsModal from './CreateProposalsModal';
 
 const ProposalsPage = () => {
-  const peopleStore = useStores(state => state.people);
+  const peopleStore = useStore('people');
   const peopleGetters = peopleStore.getters;
   const {currentCompany} = peopleGetters;
-  const contractStore = useStores(state => state.contract);
+  const contractStore = useStore('contract');
   const contractGetters = contractStore.getters;
   const contractActions = contractStore.actions;
   const {items: contracts, totalItems, isLoading, error} = contractGetters;

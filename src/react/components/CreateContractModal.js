@@ -1,6 +1,6 @@
 import { DateTimePicker } from '@react-native-community/datetimepicker';
 import { Picker } from '@react-native-picker/picker';
-import {useStores} from '@store';
+import {useStore} from '@store';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -15,12 +15,12 @@ import {
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
 const CreateContractModal = ({ visible, onClose, onSuccess }) => {
-  const contractStore = useStores(state => state.contract);
+  const contractStore = useStore('contract');
   const contractActions = contractStore.actions;
-  const peopleStore = useStores(state => state.people);
+  const peopleStore = useStore('people');
   const peopleGetters = peopleStore.getters;
   const peopleActions = peopleStore.actions;
-  const statusStore = useStores(state => state.status);
+  const statusStore = useStore('status');
   const statusGetters = statusStore.getters;
   const statusActions = statusStore.actions;
 
