@@ -4,12 +4,13 @@ import {
   View,
   TouchableOpacity,
   ScrollView,
-  SafeAreaView,
   ActivityIndicator,
   StyleSheet,
   TextInput,
   TouchableWithoutFeedback,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
 import {useNavigation, useFocusEffect} from '@react-navigation/native';
 import {useStore} from '@store';
 import Icon from 'react-native-vector-icons/MaterialIcons';

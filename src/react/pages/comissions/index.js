@@ -4,11 +4,12 @@ import {
   View,
   TouchableOpacity,
   ScrollView,
-  SafeAreaView,
   Alert,
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
 import {useStore} from '@store';
 import StateStore from '@controleonline/ui-layout/src/react/components/StateStore';
 import css from '@controleonline/ui-orders/src/react/css/orders';
