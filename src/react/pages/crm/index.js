@@ -1274,8 +1274,8 @@ export default function CrmIndex() {
                 <Icon
                   name={
                     showItemsPerPageDropdown
-                      ? 'keyboard-arrow-up'
-                      : 'keyboard-arrow-down'
+                      ? 'chevron-up'
+                      : 'chevron-down'
                   }
                   size={16}
                   color="#6c757d"
