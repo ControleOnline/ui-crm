@@ -10,6 +10,7 @@ const crmRoutes = [
     component: Comissions,
     options: {
       headerShown: true,
+      headerBackVisible: false,
       title: 'Comissões',
     },
   },
@@ -18,6 +19,7 @@ const crmRoutes = [
     component: CrmIndex,
     options: {
       headerShown: true,
+      headerBackVisible: false,
       title: 'Oportunidades',
     },
   },
@@ -27,6 +29,7 @@ const crmRoutes = [
     component: ContractsPage,
     options: {
       headerShown: true,
+      headerBackVisible: false,
       title: 'Contratos',
     },
   },
@@ -35,6 +38,7 @@ const crmRoutes = [
     component: ProposalsPage,
     options: {
       headerShown: true,
+      headerBackVisible: false,
       title: 'Propostas',
     },
   },
@@ -43,6 +47,7 @@ const crmRoutes = [
     component: CrmConversation,
     options: {
       headerShown: false,
+      headerBackVisible: false,
       title: 'Propostas',
     },
   },
