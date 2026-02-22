@@ -19,7 +19,7 @@ const crmRoutes = [
     component: CrmIndex,
     options: {
       headerShown: true,
-      headerBackVisible: false,
+      headerBackVisible: true,
       title: 'Oportunidades',
     },
   },
