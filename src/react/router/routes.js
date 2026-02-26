@@ -1,3 +1,4 @@
+import HomePage from '@controleonline/ui-crm/src/react/pages/home/index';
 import Comissions from '@controleonline/ui-crm/src/react/pages/comissions';
 import CrmIndex from '@controleonline/ui-crm/src/react/pages/crm/index';
 import ContractsPage from '@controleonline/ui-contracts/src/react/pages/ContractsPage';
@@ -6,12 +7,21 @@ import CrmConversation from '../pages/crm/conversation';
 
 const crmRoutes = [
   {
+    name: 'HomePage',
+    component: HomePage,
+    options: {
+      headerShown: false,
+      headerBackVisible: false,
+      headerLeft: () => null,
+    },
+  },
+  {
     name: 'ComissionsPage',
     component: Comissions,
     options: {
       headerShown: true,
       headerBackVisible: true,
-      title: 'Comissões',
+      title: 'Comissoes',
     },
   },
   {
@@ -21,9 +31,9 @@ const crmRoutes = [
       headerShown: true,
       headerBackVisible: true,
       title: 'Oportunidades',
+      headerLeft: () => null,
     },
   },
-
   {
     name: 'ContractsIndex',
     component: ContractsPage,

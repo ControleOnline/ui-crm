@@ -1,24 +1,36 @@
-import React, {useState, useEffect, useCallback} from 'react';
+﻿import React, { useState, useEffect, useCallback, useLayoutEffect } from 'react';
 import {
   StyleSheet,
   View,
   ScrollView,
   TouchableOpacity,
   RefreshControl,
-  Alert,
   Modal,
   TextInput,
   TouchableWithoutFeedback,
 } from 'react-native';
-import {Text} from 'react-native-animatable';
+import { Text } from 'react-native-animatable';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import IconAdd from 'react-native-vector-icons/MaterialIcons';
 import IconWhatsApp from 'react-native-vector-icons/FontAwesome';
 
-import {useStore} from '@store';
-import {useFocusEffect, useNavigation} from '@react-navigation/native';
+import CompanySelector from '../../components/CompanySelector';
+import AnimatedModal from '../../components/AnimatedModal';
+import { FlatList } from 'react-native';
+
+import { useStore } from '@store';
+import { colors } from '@controleonline/../../src/styles/colors';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import {useMessage} from '@controleonline/ui-common/src/react/components/MessageService';
+
+const FONT_AWESOME_GLYPH_MAP = Icon?.getRawGlyphMap
+  ? Icon.getRawGlyphMap()
+  : null;
 
 export default function CrmIndex() {
+  const {showSuccess, showError} = useMessage();
+  const navigation = useNavigation();
+  // ... rest of component
   const [refreshing, setRefreshing] = useState(false);
   const [editingOpportunity, setEditingOpportunity] = useState(null);
   const [editModalVisible, setEditModalVisible] = useState(false);
@@ -31,13 +43,22 @@ export default function CrmIndex() {
   const [beneficiaryPickerVisible, setBeneficiaryPickerVisible] =
     useState(false);
   const [reasonPickerVisible, setReasonPickerVisible] = useState(false);
+
+
   const [searchText, setSearchText] = useState('');
+  const [searchQuery, setSearchQuery] = useState(''); // Debounced value
+  const [selectedStatusFilterKey, setSelectedStatusFilterKey] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [allOpportunities, setAllOpportunities] = useState([]);
   const [showItemsPerPageDropdown, setShowItemsPerPageDropdown] =
     useState(false);
   const [dueDateDayPickerVisible, setDueDateDayPickerVisible] = useState(false);
   const [dueDateMonthPickerVisible, setDueDateMonthPickerVisible] =
+    useState(false);
+  const [alterDateDayPickerVisible, setAlterDateDayPickerVisible] =
+    useState(false);
+  const [alterDateMonthPickerVisible, setAlterDateMonthPickerVisible] =
     useState(false);
   const tasksStore = useStore('tasks');
   const opportunitiesGetters = tasksStore.getters;
@@ -54,45 +75,221 @@ export default function CrmIndex() {
   const statusStore = useStore('status');
   const statusGetters = statusStore.getters;
   const statusActions = statusStore.actions;
-  const {items: status} = statusGetters;
+  const { items: status } = statusGetters;
   const categoriesStore = useStore('categories');
   const categoriesGetters = categoriesStore.getters;
   const categoriesActions = categoriesStore.actions;
-  const {items: categories} = categoriesGetters;
-  const {currentCompany, items: people} = getters;
+  const { items: categories } = categoriesGetters;
+  const { currentCompany, items: people } = getters;
 
-  const navigation = useNavigation();
+  const getStatusFilterKey = useCallback(item => {
+    if (!item) {
+      return '';
+    }
+
+    if (item['@id']) {
+      return item['@id'];
+    }
+
+    if (item.id != null) {
+      return `/statuses/${item.id}`;
+    }
+
+    const realStatus = String(item.realStatus || item.status || '')
+      .trim()
+      .toLowerCase();
+    return realStatus ? `realStatus:${realStatus}` : '';
+  }, []);
+
+  const getStatusFilterLabel = useCallback(item => {
+    const normalized = String(item?.realStatus || item?.status || '')
+      .trim()
+      .toLowerCase();
+
+    const labels = {
+      open: 'Em Aberto',
+      pending: 'Pendente',
+      closed: 'Fechado',
+      cancelled: 'Cancelado',
+      cancelado: 'Cancelado',
+      ativo: 'Ativo',
+      inativo: 'Inativo',
+    };
+
+    return labels[normalized] || item?.status || 'Sem status';
+  }, []);
+
+  const getOptionIdentity = useCallback(item => {
+    if (!item) {
+      return '';
+    }
+    return (
+      item['@id'] ||
+      item.id ||
+      item.value ||
+      item.status ||
+      item.name ||
+      ''
+    );
+  }, []);
+
+  const isQuestionLikeIcon = useCallback(iconName => {
+    const normalized = String(iconName || '')
+      .trim()
+      .toLowerCase();
+    if (!normalized) {
+      return true;
+    }
+
+    if (
+      normalized === '?' ||
+      normalized === 'help' ||
+      normalized === 'unknown' ||
+      normalized.includes('question') ||
+      normalized.includes('help')
+    ) {
+      return true;
+    }
+
+    return false;
+  }, []);
+
+  const isValidFontAwesomeIcon = useCallback(iconName => {
+    const normalized = String(iconName || '').trim();
+    if (!normalized) {
+      return false;
+    }
+
+    if (!FONT_AWESOME_GLYPH_MAP) {
+      return true;
+    }
+
+    return Object.prototype.hasOwnProperty.call(
+      FONT_AWESOME_GLYPH_MAP,
+      normalized,
+    );
+  }, []);
+
+  const statusFilterParam = selectedStatusFilterKey || null;
+
+  const buildOpportunityParams = useCallback((overrides = {}) => {
+    if (!currentCompany?.id) {
+      return null;
+    }
+
+    const page = overrides.page ?? currentPage;
+    const query = String(overrides.searchQuery ?? searchQuery).trim();
+    const filterParam = overrides.statusFilterParam ?? statusFilterParam;
+
+    const params = {
+      type: 'relationship',
+      provider_id: currentCompany.id,
+      provider: currentCompany.id,
+      page,
+      itemsPerPage: itemsPerPage,
+    };
+
+    if (query) {
+      params['client.name'] = query;
+    }
+
+    if (filterParam) {
+      if (filterParam.startsWith('/statuses/')) {
+        params.taskStatus = filterParam;
+      } else if (filterParam.startsWith('realStatus:')) {
+        params['taskStatus.realStatus'] = filterParam.replace(
+          'realStatus:',
+          '',
+        );
+      }
+    }
+
+    return params;
+  }, [
+    currentCompany?.id,
+    currentPage,
+    itemsPerPage,
+    searchQuery,
+    statusFilterParam,
+  ]);
+
+
 
   useFocusEffect(
     useCallback(() => {
-      const params = {
-        type: 'relationship',
-        provider_id: currentCompany.id,
-        provider: currentCompany.id,
-        page: currentPage,
-        itemsPerPage: itemsPerPage,
-      };
-
-      // Adiciona o parâmetro de busca se houver
-      if (searchText.trim()) {
-        params['client.name'] = searchText.trim();
+      const params = buildOpportunityParams();
+      if (params) {
+        opportunitiesActions.getItems(params);
+        peopleActions.getItems({
+          company: '/people/' + currentCompany.id,
+          link_type: 'client',
+        });
       }
 
-      opportunitiesActions.getItems(params);
-      statusActions.getItems({context: 'relationship'});
+      statusActions.getItems({ context: 'relationship' });
       categoriesActions.getItems({
-        context: ['relationship-criticality', 'products'],
+        context: [
+          'relationship',
+          'relationship-criticality',
+          'relationship-reason',
+          'products',
+        ],
       });
-      peopleActions.getItems({
-        company: '/people/' + currentCompany.id,
-        link_type: 'client',
-      });
-    }, [currentCompany.id, currentPage, itemsPerPage, searchText]),
+    }, [buildOpportunityParams, currentCompany?.id]),
   );
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerTitle: 'Oportunidades',
+      headerRight: () => <CompanySelector mode="icon" />,
+    });
+  }, [navigation]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchText, itemsPerPage]);
+  }, [searchQuery, itemsPerPage, selectedStatusFilterKey]);
+
+  useEffect(() => {
+    if (isLoading) return;
+
+    if (opportunities && Array.isArray(opportunities)) {
+      if (currentPage === 1) {
+        setAllOpportunities(opportunities);
+      } else {
+        setAllOpportunities(prev => {
+          const newIds = new Set(opportunities.map(item => item.id));
+          const filteredPrev = prev.filter(item => !newIds.has(item.id));
+          return [...filteredPrev, ...opportunities];
+        });
+      }
+    }
+  }, [opportunities, currentPage, isLoading]);
+
+  useEffect(() => {
+    if (!selectedStatusFilterKey || status.length === 0) {
+      return;
+    }
+
+    const statusExists = status.some(
+      item => getStatusFilterKey(item) === selectedStatusFilterKey,
+    );
+
+    if (!statusExists) {
+      setSelectedStatusFilterKey('');
+    }
+  }, [status, selectedStatusFilterKey, getStatusFilterKey]);
+
+  // Debounce search input
+
+
+  // Debounce curto para busca em tempo real (300ms) !!IMPORTANTE PARA UMA BOA EXPERIÃŠNCIA DE USUÃRIO
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      setSearchQuery(searchText.trim());
+    }, 300);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchText]);
 
   const getCurrentDateComponents = () => {
     const today = new Date();
@@ -116,20 +313,11 @@ export default function CrmIndex() {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    const params = {
-      type: 'relationship',
-      provider_id: currentCompany.id,
-      provider: currentCompany.id,
-      page: currentPage,
-      itemsPerPage: itemsPerPage,
-    };
-
-    // Adiciona o parâmetro de busca se houver
-    if (searchText.trim()) {
-      params['client.name'] = searchText.trim();
+    const params = buildOpportunityParams({ page: 1 });
+    if (params) {
+      opportunitiesActions.getItems(params);
     }
-
-    opportunitiesActions.getItems(params);
+    setCurrentPage(1);
     setRefreshing(false);
   };
 
@@ -153,6 +341,11 @@ export default function CrmIndex() {
     return labels[status] || status;
   };
 
+  const getColorWithAlpha = (colorValue, alpha = '20') => {
+    const color = String(colorValue || '').trim();
+    return /^#[0-9a-fA-F]{6}$/.test(color) ? `${color}${alpha}` : '#EEF2FF';
+  };
+
   const formatDate = dateString => {
     const date = new Date(dateString);
     return date.toLocaleDateString('pt-BR', {
@@ -172,7 +365,7 @@ export default function CrmIndex() {
 
   const parseDateComponents = dateString => {
     if (!dateString) {
-      return {day: '', month: '', year: ''};
+      return { day: '', month: '', year: '' };
     }
     const date = new Date(dateString);
     return {
@@ -190,7 +383,7 @@ export default function CrmIndex() {
   };
 
   const getDaysArray = () => {
-    return Array.from({length: 31}, (_, i) => ({
+    return Array.from({ length: 31 }, (_, i) => ({
       id: String(i + 1).padStart(2, '0'),
       name: String(i + 1).padStart(2, '0'),
     }));
@@ -200,7 +393,7 @@ export default function CrmIndex() {
     const months = [
       'Janeiro',
       'Fevereiro',
-      'Março',
+      'MarÃ§o',
       'Abril',
       'Maio',
       'Junho',
@@ -218,19 +411,70 @@ export default function CrmIndex() {
   };
 
   const handleOpportunityPress = opportunity => {
-    navigation.navigate('CrmConversation', {opportunity});
+    navigation.navigate('CrmConversation', { opportunity });
+  };
+
+  const sanitizePhoneValue = value =>
+    String(value || '')
+      .replace(/\D/g, '')
+      .slice(0, 11);
+
+  const formatPhoneValue = value => {
+    const digits = sanitizePhoneValue(value);
+    if (!digits) {
+      return '';
+    }
+
+    const ddd = digits.slice(0, 2);
+    const number = digits.slice(2);
+
+    if (digits.length <= 2) {
+      return `(${ddd}`;
+    }
+
+    if (number.length <= 4) {
+      return `(${ddd}) ${number}`;
+    }
+
+    if (number.length <= 8) {
+      return `(${ddd}) ${number.slice(0, 4)}-${number.slice(4)}`;
+    }
+
+    return `(${ddd}) ${number.slice(0, 5)}-${number.slice(5, 9)}`;
   };
 
   const parsePhoneNumbers = announce => {
     if (!announce) {
       return [];
     }
+
+    const asFormattedList = value => {
+      const formatted = formatPhoneValue(value);
+      return formatted ? [formatted] : [];
+    };
+
     try {
       const parsed = JSON.parse(announce);
-      return Array.isArray(parsed) ? parsed : [];
+
+      if (Array.isArray(parsed)) {
+        return parsed.map(item => formatPhoneValue(item)).filter(Boolean);
+      }
+
+      if (typeof parsed === 'string' || typeof parsed === 'number') {
+        return asFormattedList(parsed);
+      }
+
+      if (parsed && typeof parsed === 'object') {
+        const mergedPhone = parsed.ddd && parsed.phone
+          ? `${parsed.ddd}${parsed.phone}`
+          : parsed.phone || parsed.number || parsed.value;
+        return asFormattedList(mergedPhone);
+      }
+
+      return [];
     } catch {
       // If it's not JSON, treat as single phone number
-      return announce.trim() ? [announce.trim()] : [];
+      return asFormattedList(announce);
     }
   };
 
@@ -273,9 +517,9 @@ export default function CrmIndex() {
       );
 
       // Format phones as JSON array for API
-      const validPhones = (editingOpportunity.phones || []).filter(phone =>
-        phone.trim(),
-      );
+      const validPhones = (editingOpportunity.phones || [])
+        .map(phone => sanitizePhoneValue(phone))
+        .filter(Boolean);
       const phoneData =
         validPhones.length > 0 ? JSON.stringify(validPhones) : '';
 
@@ -304,39 +548,86 @@ export default function CrmIndex() {
       setEditModalVisible(false);
       setEditingOpportunity(null);
 
-      Alert.alert('Sucesso', 'Oportunidade atualizada com sucesso!');
+      showSuccess('Oportunidade atualizada com sucesso!');
     } catch (error) {
       console.error('Erro ao salvar:', error);
-      Alert.alert('Erro', 'Não foi possível salvar as alterações');
+      showError('NÃ£o foi possÃ­vel salvar as alteraÃ§Ãµes');
     }
   };
 
   const handleSaveNewOpportunity = async () => {
     try {
+      const clientId =
+        newOpportunity?.client?.['@id'] || newOpportunity?.client?.id;
+      const taskStatusId =
+        newOpportunity?.taskStatus?.['@id'] || newOpportunity?.taskStatus?.id;
+      const categoryId =
+        newOpportunity?.category?.['@id'] || newOpportunity?.category?.id;
+      const criticalityId =
+        newOpportunity?.criticality?.['@id'] ||
+        newOpportunity?.criticality?.id;
+      const reasonId =
+        newOpportunity?.reason?.['@id'] || newOpportunity?.reason?.id;
+
+      const dueDateDay = newOpportunity?.dueDateDay;
+      const dueDateMonth = newOpportunity?.dueDateMonth;
+      const dueDateYear = (newOpportunity?.dueDateYear || '').trim();
+
+      const missingFields = [];
+      if (!clientId) missingFields.push('beneficiÃ¡rio');
+      if (!taskStatusId) missingFields.push('status');
+      if (!categoryId) missingFields.push('categoria');
+      if (!criticalityId) missingFields.push('criticidade');
+      if (!reasonId) missingFields.push('motivo');
+      if (!dueDateDay || !dueDateMonth || !dueDateYear) {
+        missingFields.push('data de retorno');
+      }
+
+      if (missingFields.length > 0) {
+        showError(
+          `Preencha os campos obrigatÃ³rios: ${missingFields.join(', ')}.`,
+        );
+        return;
+      }
+
+      if (!/^\d{4}$/.test(dueDateYear)) {
+        showError('Ano da data de vencimento invÃ¡lido.');
+        return;
+      }
+
       const dueDate = formatDateFromComponents(
-        newOpportunity?.dueDateDay,
-        newOpportunity?.dueDateMonth,
-        newOpportunity?.dueDateYear,
+        dueDateDay,
+        dueDateMonth,
+        dueDateYear,
       );
 
+      const dueDateObj = new Date(`${dueDate}T00:00:00`);
+      const isValidDueDate =
+        dueDate &&
+        !Number.isNaN(dueDateObj.getTime()) &&
+        String(dueDateObj.getDate()).padStart(2, '0') === dueDateDay &&
+        String(dueDateObj.getMonth() + 1).padStart(2, '0') === dueDateMonth &&
+        String(dueDateObj.getFullYear()) === dueDateYear;
+
+      if (!isValidDueDate) {
+        showError('Data de retorno invÃ¡lida.');
+        return;
+      }
+
       // Format phones as JSON array for API
-      const validPhones = (newOpportunity?.phones || []).filter(phone =>
-        phone.trim(),
-      );
+      const validPhones = (newOpportunity?.phones || [])
+        .map(phone => sanitizePhoneValue(phone))
+        .filter(Boolean);
       const phoneData =
         validPhones.length > 0 ? JSON.stringify(validPhones) : '';
 
       const dataToSave = {
-        client: newOpportunity.client?.['@id'] || newOpportunity.client?.id,
-        registeredBy:
-          newOpportunity.client?.['@id'] || newOpportunity.client?.id,
-        taskStatus:
-          newOpportunity.taskStatus?.['@id'] || newOpportunity.taskStatus?.id,
-        category:
-          newOpportunity.category?.['@id'] || newOpportunity.category?.id,
-        criticality:
-          newOpportunity.criticality?.['@id'] || newOpportunity.criticality?.id,
-        reason: newOpportunity.reason?.['@id'] || newOpportunity.reason?.id,
+        client: clientId,
+        registeredBy: clientId,
+        taskStatus: taskStatusId,
+        category: categoryId,
+        criticality: criticalityId,
+        reason: reasonId,
         type: 'relationship',
         dueDate: dueDate,
         announce: phoneData,
@@ -348,25 +639,16 @@ export default function CrmIndex() {
       setAddModalVisible(false);
       setNewOpportunity(null);
 
-      Alert.alert('Sucesso', 'Oportunidade criada com sucesso!');
+      showSuccess('Oportunidade criada com sucesso!');
 
-      const params = {
-        type: 'relationship',
-        provider_id: currentCompany.id,
-        provider: currentCompany.id,
-        page: currentPage,
-        itemsPerPage: itemsPerPage,
-      };
-
-      // Adiciona o parâmetro de busca se houver
-      if (searchText.trim()) {
-        params['client.name'] = searchText.trim();
+      const params = buildOpportunityParams({ page: 1 });
+      if (params) {
+        opportunitiesActions.getItems(params);
       }
-
-      opportunitiesActions.getItems(params);
+      setCurrentPage(1);
     } catch (error) {
       console.error('Erro ao criar:', error);
-      Alert.alert('Erro', 'Não foi possível criar a oportunidade');
+      showError('NÃ£o foi possÃ­vel criar a oportunidade');
     }
   };
 
@@ -408,18 +690,48 @@ export default function CrmIndex() {
   };
 
   const updatePhoneInput = (index, value, isEdit = true) => {
+    const maskedValue = formatPhoneValue(value);
+
     if (isEdit) {
       setEditingOpportunity(prev => ({
         ...prev,
-        phones: prev.phones.map((phone, i) => (i === index ? value : phone)),
+        phones: prev.phones.map((phone, i) => (i === index ? maskedValue : phone)),
       }));
     } else {
       setNewOpportunity(prev => ({
         ...prev,
-        phones: prev.phones.map((phone, i) => (i === index ? value : phone)),
+        phones: prev.phones.map((phone, i) => (i === index ? maskedValue : phone)),
       }));
     }
   };
+
+  const renderSkeletonCard = () => (
+    <View style={styles.cardWrapper}>
+      <View style={styles.card}>
+        <View style={styles.cardHeader}>
+          <View style={styles.titleContainer}>
+            <View style={[styles.skeletonLine, { width: '60%', height: 16, marginBottom: 8 }]} />
+            <View style={[styles.skeletonLine, { width: '80%', height: 13 }]} />
+          </View>
+          <View style={[styles.skeletonLine, { width: 72, height: 28, borderRadius: 10 }]} />
+        </View>
+        <View style={styles.cardBody}>
+          <View style={styles.infoRow}>
+            <View style={[styles.skeletonLine, { flex: 1, height: 12, marginRight: 8 }]} />
+            <View style={[styles.skeletonLine, { flex: 1, height: 12 }]} />
+          </View>
+          <View style={styles.infoRow}>
+            <View style={[styles.skeletonLine, { flex: 1, height: 12, marginRight: 8 }]} />
+            <View style={[styles.skeletonLine, { flex: 1, height: 12 }]} />
+          </View>
+        </View>
+        <View style={[styles.actionContainer, { marginTop: 12 }]}>
+          <View style={[styles.skeletonLine, { flex: 1, height: 40, borderRadius: 12 }]} />
+          <View style={[styles.skeletonLine, { flex: 1, height: 40, borderRadius: 12 }]} />
+        </View>
+      </View>
+    </View>
+  );
 
   const renderOpportunityCard = (opportunity, index) => (
     <View key={opportunity.id} style={styles.cardWrapper}>
@@ -430,7 +742,7 @@ export default function CrmIndex() {
               Oportunidade #{opportunity.id}
             </Text>
             <Text style={styles.clientName}>
-              {opportunity.client?.name || 'Cliente não informado'}
+              {opportunity.client?.name || 'Cliente nÃ£o informado'}
             </Text>
           </View>
           <TouchableOpacity
@@ -445,7 +757,7 @@ export default function CrmIndex() {
             <Text
               style={[
                 styles.stageText,
-                {color: getStageColor(opportunity.taskStatus?.realStatus)},
+                { color: getStageColor(opportunity.taskStatus?.realStatus) },
               ]}>
               {getStageLabel(opportunity.taskStatus?.realStatus)}
             </Text>
@@ -489,17 +801,7 @@ export default function CrmIndex() {
             <Icon name="bullhorn" size={12} color="#9b59b6" />
             <Text style={styles.announceText}>
               Telefones:{' '}
-              {(() => {
-                try {
-                  const parsed = JSON.parse(opportunity.announce);
-                  if (Array.isArray(parsed) && parsed.length > 0) {
-                    return parsed.join(', ');
-                  }
-                  return 'N/A';
-                } catch {
-                  return 'N/A';
-                }
-              })()}
+              {parsePhoneNumbers(opportunity.announce).join(', ') || 'N/A'}
             </Text>
           </View>
         )}
@@ -509,7 +811,7 @@ export default function CrmIndex() {
             style={[styles.actionButton, styles.chatButton]}
             onPress={() => handleOpportunityPress(opportunity)}>
             <IconWhatsApp name="whatsapp" size={16} color="#25D366" />
-            <Text style={[styles.actionButtonText, {color: '#25D366'}]}>
+            <Text style={[styles.actionButtonText, { color: '#25D366' }]}>
               Conversar
             </Text>
           </TouchableOpacity>
@@ -518,7 +820,7 @@ export default function CrmIndex() {
             style={[styles.actionButton, styles.editButton]}
             onPress={() => handleEditOpportunity(opportunity)}>
             <Icon name="edit" size={16} color="#f39c12" />
-            <Text style={[styles.actionButtonText, {color: '#f39c12'}]}>
+            <Text style={[styles.actionButtonText, { color: '#f39c12' }]}>
               Editar
             </Text>
           </TouchableOpacity>
@@ -526,6 +828,60 @@ export default function CrmIndex() {
       </View>
     </View>
   );
+
+  const getSelectModalEmptyConfig = (title) => {
+    const normalizedTitle = String(title || '').toLowerCase();
+
+    if (normalizedTitle.includes('categoria')) {
+      return {
+        icon: 'tags',
+        title: 'NÃ£o hÃ¡ categorias para exibir',
+        subtitle: 'Verifique se existem categorias cadastradas para esta empresa.',
+      };
+    }
+
+    if (normalizedTitle.includes('status')) {
+      return {
+        icon: 'flag',
+        title: 'NÃ£o hÃ¡ status para exibir',
+        subtitle: 'Verifique a configuraÃ§Ã£o de status disponÃ­vel no contexto atual.',
+      };
+    }
+
+    if (normalizedTitle.includes('criticidade')) {
+      return {
+        icon: 'exclamation-circle',
+        title: 'NÃ£o hÃ¡ criticidades para exibir',
+        subtitle: 'Verifique se hÃ¡ opÃ§Ãµes cadastradas para esta empresa.',
+      };
+    }
+
+    if (normalizedTitle.includes('motivo')) {
+      return {
+        icon: 'question-circle',
+        title: 'NÃ£o hÃ¡ motivos para exibir',
+        subtitle: 'Verifique se hÃ¡ motivos cadastrados no contexto atual.',
+      };
+    }
+
+    if (
+      normalizedTitle.includes('dia') ||
+      normalizedTitle.includes('mÃªs') ||
+      normalizedTitle.includes('mes')
+    ) {
+      return {
+        icon: 'calendar',
+        title: 'Nenhuma opÃ§Ã£o disponÃ­vel',
+        subtitle: 'Tente novamente em alguns instantes.',
+      };
+    }
+
+    return {
+      icon: 'inbox',
+      title: 'Nada para exibir',
+      subtitle: 'NÃ£o hÃ¡ opÃ§Ãµes disponÃ­veis no momento.',
+    };
+  };
 
   const renderSelectModal = (
     title,
@@ -535,13 +891,29 @@ export default function CrmIndex() {
     visible,
     setVisible,
     renderKey = 'name',
-  ) => (
-    <Modal
-      animationType="slide"
-      transparent={true}
-      visible={visible}
-      onRequestClose={() => setVisible(false)}>
-      <View style={styles.modalOverlay}>
+  ) => {
+    const emptyCfg = getSelectModalEmptyConfig(title);
+    const safeItems = Array.isArray(items) ? items : [];
+    const normalizedTitle = String(title || '').toLowerCase();
+    const selectedIdentity = getOptionIdentity(selectedItem);
+    const isStatusModal =
+      normalizedTitle.includes('status') ||
+      renderKey === 'status';
+    const isCategoryOrCriticalityModal =
+      normalizedTitle.includes('categoria') ||
+      normalizedTitle.includes('criticidade');
+    const isReasonModal = normalizedTitle.includes('motivo');
+    const itemsToRender =
+      selectedItem && selectedIdentity
+        ? safeItems.some(item => getOptionIdentity(item) === selectedIdentity)
+          ? safeItems
+          : [selectedItem, ...safeItems]
+        : safeItems;
+
+    return (
+      <AnimatedModal
+        visible={visible}
+        onRequestClose={() => setVisible(false)}>
         <View style={styles.selectModalContent}>
           <View style={styles.selectModalHeader}>
             <Text style={styles.selectModalTitle}>{title}</Text>
@@ -551,49 +923,81 @@ export default function CrmIndex() {
               <Icon name="times" size={20} color="#7f8c8d" />
             </TouchableOpacity>
           </View>
-          <ScrollView style={styles.selectModalBody}>
-            {items.map(item => (
-              <TouchableOpacity
-                key={item.id}
-                style={[
-                  styles.selectOption,
-                  selectedItem?.id === item.id && styles.selectOptionActive,
-                ]}
-                onPress={() => {
-                  onSelect(item);
-                  setVisible(false);
-                }}>
-                {item.color && (
-                  <View
-                    style={[
-                      styles.selectOptionDot,
-                      {backgroundColor: item.color},
-                    ]}
-                  />
-                )}
-                {item.icon && (
-                  <Icon
-                    name={item.icon}
-                    size={16}
-                    color={selectedItem?.id === item.id ? '#fff' : '#3498db'}
-                    style={styles.selectOptionIcon}
-                  />
-                )}
-                <Text
+
+          {itemsToRender.length === 0 ? (
+            <View style={styles.selectModalEmptyState}>
+              <View style={styles.selectModalEmptyIcon}>
+                <Icon name={emptyCfg.icon} size={22} color="#94A3B8" />
+              </View>
+              <Text style={styles.selectModalEmptyTitle}>{emptyCfg.title}</Text>
+              <Text style={styles.selectModalEmptySubtitle}>
+                {emptyCfg.subtitle}
+              </Text>
+            </View>
+          ) : (
+            <ScrollView
+              style={styles.selectModalBody}
+              contentContainerStyle={styles.selectModalBodyContent}>
+              {itemsToRender.map(item => {
+                const optionIdentity = getOptionIdentity(item);
+                const isSelected = selectedIdentity === optionIdentity;
+                const optionLabel = isStatusModal
+                  ? getStatusFilterLabel(item)
+                  : item[renderKey] || item.name || item.status || 'Sem nome';
+
+                return (
+                <TouchableOpacity
+                  key={String(optionIdentity || item[renderKey])}
                   style={[
-                    styles.selectOptionText,
-                    selectedItem?.id === item.id &&
-                      styles.selectOptionTextActive,
-                  ]}>
-                  {item[renderKey]}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+                    styles.selectOption,
+                    isSelected && styles.selectOptionActive,
+                  ]}
+                  onPress={() => {
+                    onSelect(item);
+                    setVisible(false);
+                  }}>
+                  {item.color && (
+                    <View
+                      style={[
+                        styles.selectOptionDot,
+                        { backgroundColor: item.color },
+                      ]}
+                    />
+                  )}
+                  {item.icon &&
+                    !isCategoryOrCriticalityModal &&
+                    (!isReasonModal ||
+                      (isValidFontAwesomeIcon(item.icon) &&
+                        !isQuestionLikeIcon(item.icon))) && (
+                    <Icon
+                      name={
+                        item.icon === 'keyboard-arrow-down'
+                          ? 'angle-down'
+                          : item.icon
+                      }
+                      size={16}
+                      color={
+                        isSelected ? colors.primary : '#3498db'
+                      }
+                      style={styles.selectOptionIcon}
+                    />
+                  )}
+                  <Text
+                    style={[
+                      styles.selectOptionText,
+                      isSelected && styles.selectOptionTextActive,
+                    ]}>
+                    {optionLabel}
+                  </Text>
+                </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          )}
         </View>
-      </View>
-    </Modal>
-  );
+      </AnimatedModal>
+    );
+  };
 
   const renderPhoneInputs = (phones = [], isEdit = true) => (
     <View style={styles.phoneInputsContainer}>
@@ -611,11 +1015,7 @@ export default function CrmIndex() {
           <TextInput
             style={[styles.textInput, styles.phoneInput]}
             value={phone}
-            onChangeText={text => {
-              // Remove formatting for storage but allow user to see formatted version
-              const cleaned = text.replace(/\D/g, '');
-              updatePhoneInput(index, cleaned, isEdit);
-            }}
+            onChangeText={text => updatePhoneInput(index, text, isEdit)}
             placeholder="(11) 99999-9999"
             placeholderTextColor="#6c757d"
             keyboardType="phone-pad"
@@ -641,572 +1041,480 @@ export default function CrmIndex() {
   );
 
   const renderBeneficiarySelectModal = () => (
-    <Modal
-      animationType="slide"
-      transparent={true}
+    <AnimatedModal
       visible={beneficiaryPickerVisible}
       onRequestClose={() => setBeneficiaryPickerVisible(false)}>
-      <View style={styles.modalOverlay}>
-        <View style={styles.selectModalContent}>
-          <View style={styles.selectModalHeader}>
-            <Text style={styles.selectModalTitle}>Selecionar Beneficiário</Text>
-            <TouchableOpacity
-              onPress={() => setBeneficiaryPickerVisible(false)}
-              style={styles.closeButton}>
-              <Icon name="times" size={20} color="#7f8c8d" />
-            </TouchableOpacity>
-          </View>
+      <View style={styles.selectModalContent}>
+        <View style={styles.selectModalHeader}>
+          <Text style={styles.selectModalTitle}>Selecionar BeneficiÃ¡rio</Text>
+          <TouchableOpacity
+            onPress={() => setBeneficiaryPickerVisible(false)}
+            style={styles.closeButton}>
+            <Icon name="times" size={20} color="#7f8c8d" />
+          </TouchableOpacity>
+        </View>
 
-          <ScrollView style={styles.selectModalBody}>
-            {people && people.length > 0 ? (
-              people.map(person => (
-                <TouchableOpacity
-                  key={person.name}
-                  style={[
-                    styles.selectOption,
-                    (editModalVisible
-                      ? editingOpportunity?.client?.id
-                      : newOpportunity?.client?.id) === person['@id'] &&
-                      styles.selectOptionActive,
-                  ]}
-                  onPress={() => {
-                    const clientData = {
-                      '@id': person['@id'] || person.id,
-                      id: person['@id'] || person.id,
-                      name: person.name,
-                      document: person.document,
-                    };
-
-                    if (editModalVisible) {
-                      setEditingOpportunity(prev => ({
-                        ...prev,
-                        client: clientData,
-                      }));
-                    } else {
-                      setNewOpportunity(prev => ({
-                        ...prev,
-                        client: clientData,
-                      }));
-                    }
-                    setBeneficiaryPickerVisible(false);
-                  }}>
-                  <View style={styles.personInfo}>
-                    <View style={styles.avatarContainer}>
-                      <Icon name="user" size={20} color="#3498db" />
-                    </View>
-                    <View style={styles.personDetails}>
-                      <Text
-                        style={[
-                          styles.personName,
-                          (editModalVisible
-                            ? editingOpportunity?.client?.id
-                            : newOpportunity?.client?.id) === person['@id'] &&
-                            styles.selectOptionTextActive,
-                        ]}>
-                        {person.name}
-                      </Text>
-                      {person.document && (
-                        <Text style={styles.personDocument}>
-                          {typeof person.document === 'string'
-                            ? person.document
-                            : 'Documento disponível'}
-                        </Text>
-                      )}
-                    </View>
-                  </View>
-                  {(editModalVisible
+        <ScrollView style={styles.selectModalBody}>
+          {people && people.length > 0 ? (
+            people.map(person => (
+              <TouchableOpacity
+                key={person.name}
+                style={[
+                  styles.selectOption,
+                  (editModalVisible
                     ? editingOpportunity?.client?.id
-                    : newOpportunity?.client?.id) === person.id && (
+                    : newOpportunity?.client?.id) === person['@id'] &&
+                  styles.selectOptionActive,
+                ]}
+                onPress={() => {
+                  const clientData = {
+                    '@id': person['@id'] || person.id,
+                    id: person['@id'] || person.id,
+                    name: person.name,
+                    document: person.document,
+                  };
+
+                  if (editModalVisible) {
+                    setEditingOpportunity(prev => ({
+                      ...prev,
+                      client: clientData,
+                    }));
+                  } else {
+                    setNewOpportunity(prev => ({
+                      ...prev,
+                      client: clientData,
+                    }));
+                  }
+                  setBeneficiaryPickerVisible(false);
+                }}>
+                <View style={styles.personInfo}>
+                  <View style={styles.avatarContainer}>
+                    <Icon name="user" size={20} color="#3498db" />
+                  </View>
+                  <View style={styles.personDetails}>
+                    <Text
+                      style={[
+                        styles.personName,
+                        (editModalVisible
+                          ? editingOpportunity?.client?.id
+                          : newOpportunity?.client?.id) === person['@id'] &&
+                        styles.selectOptionTextActive,
+                      ]}>
+                      {person.name}
+                    </Text>
+                    {person.document && (
+                      <Text style={styles.personDocument}>
+                        {typeof person.document === 'string'
+                          ? person.document
+                          : 'Documento disponÃ­vel'}
+                      </Text>
+                    )}
+                  </View>
+                </View>
+                {(editModalVisible
+                  ? editingOpportunity?.client?.id
+                  : newOpportunity?.client?.id) === person.id && (
                     <Icon name="check-circle" size={20} color="#27ae60" />
                   )}
-                </TouchableOpacity>
-              ))
-            ) : (
-              <View style={styles.emptyState}>
-                <Icon name="user" size={48} color="#bdc3c7" />
-                <Text style={styles.emptyText}>
-                  Nenhum beneficiário encontrado
-                </Text>
-              </View>
-            )}
-          </ScrollView>
-        </View>
+              </TouchableOpacity>
+            ))
+          ) : (
+            <View style={styles.emptyState}>
+              <Icon name="user" size={48} color="#bdc3c7" />
+              <Text style={styles.emptyText}>
+                Nenhum beneficiÃ¡rio encontrado
+              </Text>
+            </View>
+          )}
+        </ScrollView>
       </View>
-    </Modal>
+    </AnimatedModal>
   );
 
   const renderEditModal = () => (
-    <Modal
-      animationType="slide"
-      transparent={true}
+    <AnimatedModal
       visible={editModalVisible}
       onRequestClose={() => setEditModalVisible(false)}>
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>
-              Editar Oportunidade #{editingOpportunity?.id}
-            </Text>
+      <View style={styles.modalContent}>
+        <View style={styles.modalHeader}>
+          <Text style={styles.modalTitle}>
+            Editar Oportunidade #{editingOpportunity?.id}
+          </Text>
+          <TouchableOpacity
+            onPress={() => setEditModalVisible(false)}
+            style={styles.closeButton}>
+            <Icon name="times" size={20} color="#7f8c8d" />
+          </TouchableOpacity>
+        </View>
+
+        <ScrollView style={styles.modalBody}>
+          <View style={styles.editSection}>
+            <Text style={styles.editLabel}>BeneficiÃ¡rio</Text>
             <TouchableOpacity
-              onPress={() => setEditModalVisible(false)}
-              style={styles.closeButton}>
-              <Icon name="times" size={20} color="#7f8c8d" />
+              style={styles.selectButton}
+              onPress={() => setBeneficiaryPickerVisible(true)}>
+              <View style={styles.selectButtonContent}>
+                <Icon
+                  name="user"
+                  size={16}
+                  color="#3498db"
+                  style={styles.selectButtonIcon}
+                />
+                <Text style={styles.selectButtonText}>
+                  {editingOpportunity?.client?.name ||
+                    'Selecione um beneficiÃ¡rio'}
+                </Text>
+              </View>
+              <Icon name="chevron-down" size={16} color="#7f8c8d" />
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={styles.modalBody}>
-            <View style={styles.editSection}>
-              <Text style={styles.editLabel}>Beneficiário</Text>
-              <TouchableOpacity
-                style={styles.selectButton}
-                onPress={() => setBeneficiaryPickerVisible(true)}>
-                <View style={styles.selectButtonContent}>
+          <View style={styles.editSection}>
+            <Text style={styles.editLabel}>Status</Text>
+            <TouchableOpacity
+              style={styles.selectButton}
+              onPress={() => setStatusPickerVisible(true)}>
+              <View style={styles.selectButtonContent}>
+                {editingOpportunity?.taskStatus?.color && (
+                  <View
+                    style={[
+                      styles.selectButtonDot,
+                      { backgroundColor: editingOpportunity.taskStatus.color },
+                    ]}
+                  />
+                )}
+                <Text style={styles.selectButtonText}>
+                  {getStatusFilterLabel(editingOpportunity?.taskStatus) ||
+                    'Selecione um status'}
+                </Text>
+              </View>
+              <Icon name="chevron-down" size={16} color="#7f8c8d" />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.editSection}>
+            <Text style={styles.editLabel}>Categoria</Text>
+            <TouchableOpacity
+              style={styles.selectButton}
+              onPress={() => setCategoryPickerVisible(true)}>
+              <View style={styles.selectButtonContent}>
+                <Text style={styles.selectButtonText}>
+                  {editingOpportunity?.category?.name ||
+                    'Selecione uma categoria'}
+                </Text>
+              </View>
+              <Icon name="chevron-down" size={16} color="#7f8c8d" />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.editSection}>
+            <Text style={styles.editLabel}>Criticidade</Text>
+            <TouchableOpacity
+              style={styles.selectButton}
+              onPress={() => setCriticalityPickerVisible(true)}>
+              <View style={styles.selectButtonContent}>
+                <Text style={styles.selectButtonText}>
+                  {editingOpportunity?.criticality?.name ||
+                    'Selecione uma criticidade'}
+                </Text>
+              </View>
+              <Icon name="chevron-down" size={16} color="#7f8c8d" />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.editSection}>
+            <Text style={styles.editLabel}>Motivo</Text>
+            <TouchableOpacity
+              style={styles.selectButton}
+              onPress={() => setReasonPickerVisible(true)}>
+              <View style={styles.selectButtonContent}>
+                {editingOpportunity?.reason?.icon &&
+                isValidFontAwesomeIcon(editingOpportunity?.reason?.icon) &&
+                !isQuestionLikeIcon(editingOpportunity?.reason?.icon) && (
                   <Icon
-                    name="user"
+                    name={editingOpportunity.reason.icon}
                     size={16}
-                    color="#3498db"
+                    color="#9b59b6"
                     style={styles.selectButtonIcon}
                   />
-                  <Text style={styles.selectButtonText}>
-                    {editingOpportunity?.client?.name ||
-                      'Selecione um beneficiário'}
-                  </Text>
-                </View>
-                <Icon name="chevron-down" size={16} color="#7f8c8d" />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.editSection}>
-              <Text style={styles.editLabel}>Status</Text>
-              <TouchableOpacity
-                style={styles.selectButton}
-                onPress={() => setStatusPickerVisible(true)}>
-                <View style={styles.selectButtonContent}>
-                  {editingOpportunity?.taskStatus?.color && (
-                    <View
-                      style={[
-                        styles.selectButtonDot,
-                        {backgroundColor: editingOpportunity.taskStatus.color},
-                      ]}
-                    />
-                  )}
-                  <Text style={styles.selectButtonText}>
-                    {editingOpportunity?.taskStatus?.status ||
-                      'Selecione um status'}
-                  </Text>
-                </View>
-                <Icon name="chevron-down" size={16} color="#7f8c8d" />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.editSection}>
-              <Text style={styles.editLabel}>Categoria</Text>
-              <TouchableOpacity
-                style={styles.selectButton}
-                onPress={() => setCategoryPickerVisible(true)}>
-                <View style={styles.selectButtonContent}>
-                  {editingOpportunity?.category?.icon && (
-                    <Icon
-                      name={editingOpportunity.category.icon}
-                      size={16}
-                      color="#3498db"
-                      style={styles.selectButtonIcon}
-                    />
-                  )}
-                  <Text style={styles.selectButtonText}>
-                    {editingOpportunity?.category?.name ||
-                      'Selecione uma categoria'}
-                  </Text>
-                </View>
-                <Icon name="chevron-down" size={16} color="#7f8c8d" />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.editSection}>
-              <Text style={styles.editLabel}>Criticidade</Text>
-              <TouchableOpacity
-                style={styles.selectButton}
-                onPress={() => setCriticalityPickerVisible(true)}>
-                <View style={styles.selectButtonContent}>
-                  {editingOpportunity?.criticality?.icon && (
-                    <Icon
-                      name={editingOpportunity.criticality.icon}
-                      size={16}
-                      color="#e67e22"
-                      style={styles.selectButtonIcon}
-                    />
-                  )}
-                  <Text style={styles.selectButtonText}>
-                    {editingOpportunity?.criticality?.name ||
-                      'Selecione uma criticidade'}
-                  </Text>
-                </View>
-                <Icon name="chevron-down" size={16} color="#7f8c8d" />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.editSection}>
-              <Text style={styles.editLabel}>Motivo</Text>
-              <TouchableOpacity
-                style={styles.selectButton}
-                onPress={() => setReasonPickerVisible(true)}>
-                <View style={styles.selectButtonContent}>
-                  {editingOpportunity?.reason?.icon && (
-                    <Icon
-                      name={editingOpportunity.reason.icon}
-                      size={16}
-                      color="#9b59b6"
-                      style={styles.selectButtonIcon}
-                    />
-                  )}
-                  <Text style={styles.selectButtonText}>
-                    {editingOpportunity?.reason?.name || 'Selecione um motivo'}
-                  </Text>
-                </View>
-                <Icon name="chevron-down" size={16} color="#7f8c8d" />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.editSection}>
-              <Text style={styles.editLabel}>Telefones</Text>
-              {renderPhoneInputs(editingOpportunity?.phones || [], true)}
-            </View>
-
-            <View style={styles.editSection}>
-              <Text style={styles.editLabel}>Data de Vencimento</Text>
-              <View style={styles.datePickerContainer}>
-                <TouchableOpacity
-                  style={[styles.dateSelectButton, {flex: 1}]}
-                  onPress={() => setDueDateDayPickerVisible(true)}>
-                  <Text style={styles.dateSelectText}>
-                    {editingOpportunity?.dueDateDay || 'Dia'}
-                  </Text>
-                  <Icon name="chevron-down" size={16} color="#7f8c8d" />
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.dateSelectButton, {flex: 2}]}
-                  onPress={() => setDueDateMonthPickerVisible(true)}>
-                  <Text style={styles.dateSelectText}>
-                    {editingOpportunity?.dueDateMonth
-                      ? getMonthsArray().find(
-                          m => m.id === editingOpportunity.dueDateMonth,
-                        )?.name
-                      : 'Mês'}
-                  </Text>
-                  <Icon name="chevron-down" size={16} color="#7f8c8d" />
-                </TouchableOpacity>
-
-                <TextInput
-                  style={[styles.dateSelectButton, styles.yearInput, {flex: 1}]}
-                  value={editingOpportunity?.dueDateYear || ''}
-                  onChangeText={text => {
-                    setEditingOpportunity(prev => ({
-                      ...prev,
-                      dueDateYear: text,
-                    }));
-                  }}
-                  placeholder="Ano"
-                  placeholderTextColor="#6c757d"
-                  keyboardType="numeric"
-                  maxLength={4}
-                />
+                )}
+                <Text style={styles.selectButtonText}>
+                  {editingOpportunity?.reason?.name || 'Selecione um motivo'}
+                </Text>
               </View>
-            </View>
-          </ScrollView>
-
-          <View style={styles.modalFooter}>
-            <TouchableOpacity
-              style={[styles.modalButton, styles.cancelButton]}
-              onPress={() => setEditModalVisible(false)}>
-              <Text style={styles.cancelButtonText}>Cancelar</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.modalButton, styles.saveButton]}
-              onPress={handleSaveEdit}>
-              <Text style={styles.saveButtonText}>Salvar</Text>
+              <Icon name="chevron-down" size={16} color="#7f8c8d" />
             </TouchableOpacity>
           </View>
+
+          <View style={styles.editSection}>
+            <Text style={styles.editLabel}>Telefones</Text>
+            {renderPhoneInputs(editingOpportunity?.phones || [], true)}
+          </View>
+
+          <View style={styles.editSection}>
+            <Text style={styles.editLabel}>Data de Retorno</Text>
+            <View style={styles.datePickerContainer}>
+              <TouchableOpacity
+                style={[styles.dateSelectButton, { flex: 1 }]}
+                onPress={() => setDueDateDayPickerVisible(true)}>
+                <Text style={styles.dateSelectText}>
+                  {editingOpportunity?.dueDateDay || 'Dia'}
+                </Text>
+                <Icon name="chevron-down" size={16} color="#7f8c8d" />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.dateSelectButton, { flex: 2 }]}
+                onPress={() => setDueDateMonthPickerVisible(true)}>
+                <Text style={styles.dateSelectText}>
+                  {editingOpportunity?.dueDateMonth
+                    ? getMonthsArray().find(
+                      m => m.id === editingOpportunity.dueDateMonth,
+                    )?.name
+                    : 'MÃªs'}
+                </Text>
+                <Icon name="chevron-down" size={16} color="#7f8c8d" />
+              </TouchableOpacity>
+
+              <TextInput
+                style={[styles.dateSelectButton, styles.yearInput, { flex: 1 }]}
+                value={editingOpportunity?.dueDateYear || ''}
+                onChangeText={text => {
+                  setEditingOpportunity(prev => ({
+                    ...prev,
+                    dueDateYear: text,
+                  }));
+                }}
+                placeholder="Ano"
+                placeholderTextColor="#6c757d"
+                keyboardType="numeric"
+                maxLength={4}
+              />
+            </View>
+          </View>
+        </ScrollView>
+
+        <View style={styles.modalFooter}>
+          <TouchableOpacity
+            style={[styles.modalButton, styles.cancelButton]}
+            onPress={() => setEditModalVisible(false)}>
+            <Text style={styles.cancelButtonText}>Cancelar</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.modalButton, styles.saveButton]}
+            onPress={handleSaveEdit}>
+            <Text style={styles.saveButtonText}>Salvar</Text>
+          </TouchableOpacity>
         </View>
       </View>
-    </Modal>
+    </AnimatedModal>
   );
 
   const renderAddModal = () => (
-    <Modal
-      animationType="slide"
-      transparent={true}
+    <AnimatedModal
       visible={addModalVisible}
       onRequestClose={() => setAddModalVisible(false)}>
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Nova Oportunidade</Text>
+      <View style={styles.modalContent}>
+        <View style={styles.modalHeader}>
+          <Text style={styles.modalTitle}>Nova Oportunidade</Text>
+          <TouchableOpacity
+            onPress={() => setAddModalVisible(false)}
+            style={styles.closeButton}>
+            <Icon name="times" size={20} color="#7f8c8d" />
+          </TouchableOpacity>
+        </View>
+
+        <ScrollView style={styles.modalBody}>
+          <View style={styles.editSection}>
+            <Text style={styles.editLabel}>BeneficiÃ¡rio</Text>
             <TouchableOpacity
-              onPress={() => setAddModalVisible(false)}
-              style={styles.closeButton}>
-              <Icon name="times" size={20} color="#7f8c8d" />
+              style={styles.selectButton}
+              onPress={() => setBeneficiaryPickerVisible(true)}>
+              <View style={styles.selectButtonContent}>
+                <Icon
+                  name="user"
+                  size={16}
+                  color="#3498db"
+                  style={styles.selectButtonIcon}
+                />
+                <Text style={styles.selectButtonText}>
+                  {newOpportunity?.client?.name ||
+                    'Selecione um beneficiÃ¡rio'}
+                </Text>
+              </View>
+              <Icon name="chevron-down" size={16} color="#7f8c8d" />
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={styles.modalBody}>
-            <View style={styles.editSection}>
-              <Text style={styles.editLabel}>Beneficiário</Text>
-              <TouchableOpacity
-                style={styles.selectButton}
-                onPress={() => setBeneficiaryPickerVisible(true)}>
-                <View style={styles.selectButtonContent}>
+          <View style={styles.editSection}>
+            <Text style={styles.editLabel}>Status</Text>
+            <TouchableOpacity
+              style={styles.selectButton}
+              onPress={() => setStatusPickerVisible(true)}>
+              <View style={styles.selectButtonContent}>
+                {newOpportunity?.taskStatus?.color && (
+                  <View
+                    style={[
+                      styles.selectButtonDot,
+                      { backgroundColor: newOpportunity.taskStatus.color },
+                    ]}
+                  />
+                )}
+                <Text style={styles.selectButtonText}>
+                  {getStatusFilterLabel(newOpportunity?.taskStatus) ||
+                    'Selecione um status'}
+                </Text>
+              </View>
+              <Icon name="chevron-down" size={16} color="#7f8c8d" />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.editSection}>
+            <Text style={styles.editLabel}>Categoria</Text>
+            <TouchableOpacity
+              style={styles.selectButton}
+              onPress={() => setCategoryPickerVisible(true)}>
+              <View style={styles.selectButtonContent}>
+                <Text style={styles.selectButtonText}>
+                  {newOpportunity?.category?.name ||
+                    'Selecione uma categoria'}
+                </Text>
+              </View>
+              <Icon name="chevron-down" size={16} color="#7f8c8d" />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.editSection}>
+            <Text style={styles.editLabel}>Criticidade</Text>
+            <TouchableOpacity
+              style={styles.selectButton}
+              onPress={() => setCriticalityPickerVisible(true)}>
+              <View style={styles.selectButtonContent}>
+                <Text style={styles.selectButtonText}>
+                  {newOpportunity?.criticality?.name ||
+                    'Selecione uma criticidade'}
+                </Text>
+              </View>
+              <Icon name="chevron-down" size={16} color="#7f8c8d" />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.editSection}>
+            <Text style={styles.editLabel}>Motivo</Text>
+            <TouchableOpacity
+              style={styles.selectButton}
+              onPress={() => setReasonPickerVisible(true)}>
+              <View style={styles.selectButtonContent}>
+                {newOpportunity?.reason?.icon &&
+                isValidFontAwesomeIcon(newOpportunity?.reason?.icon) &&
+                !isQuestionLikeIcon(newOpportunity?.reason?.icon) && (
                   <Icon
-                    name="user"
+                    name={newOpportunity.reason.icon}
                     size={16}
-                    color="#3498db"
+                    color="#9b59b6"
                     style={styles.selectButtonIcon}
                   />
-                  <Text style={styles.selectButtonText}>
-                    {newOpportunity?.client?.name ||
-                      'Selecione um beneficiário'}
-                  </Text>
-                </View>
-                <Icon name="chevron-down" size={16} color="#7f8c8d" />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.editSection}>
-              <Text style={styles.editLabel}>Status</Text>
-              <TouchableOpacity
-                style={styles.selectButton}
-                onPress={() => setStatusPickerVisible(true)}>
-                <View style={styles.selectButtonContent}>
-                  {newOpportunity?.taskStatus?.color && (
-                    <View
-                      style={[
-                        styles.selectButtonDot,
-                        {backgroundColor: newOpportunity.taskStatus.color},
-                      ]}
-                    />
-                  )}
-                  <Text style={styles.selectButtonText}>
-                    {newOpportunity?.taskStatus?.status ||
-                      'Selecione um status'}
-                  </Text>
-                </View>
-                <Icon name="chevron-down" size={16} color="#7f8c8d" />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.editSection}>
-              <Text style={styles.editLabel}>Categoria</Text>
-              <TouchableOpacity
-                style={styles.selectButton}
-                onPress={() => setCategoryPickerVisible(true)}>
-                <View style={styles.selectButtonContent}>
-                  {newOpportunity?.category?.icon && (
-                    <Icon
-                      name={newOpportunity.category.icon}
-                      size={16}
-                      color="#3498db"
-                      style={styles.selectButtonIcon}
-                    />
-                  )}
-                  <Text style={styles.selectButtonText}>
-                    {newOpportunity?.category?.name ||
-                      'Selecione uma categoria'}
-                  </Text>
-                </View>
-                <Icon name="chevron-down" size={16} color="#7f8c8d" />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.editSection}>
-              <Text style={styles.editLabel}>Criticidade</Text>
-              <TouchableOpacity
-                style={styles.selectButton}
-                onPress={() => setCriticalityPickerVisible(true)}>
-                <View style={styles.selectButtonContent}>
-                  {newOpportunity?.criticality?.icon && (
-                    <Icon
-                      name={newOpportunity.criticality.icon}
-                      size={16}
-                      color="#e67e22"
-                      style={styles.selectButtonIcon}
-                    />
-                  )}
-                  <Text style={styles.selectButtonText}>
-                    {newOpportunity?.criticality?.name ||
-                      'Selecione uma criticidade'}
-                  </Text>
-                </View>
-                <Icon name="chevron-down" size={16} color="#7f8c8d" />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.editSection}>
-              <Text style={styles.editLabel}>Motivo</Text>
-              <TouchableOpacity
-                style={styles.selectButton}
-                onPress={() => setReasonPickerVisible(true)}>
-                <View style={styles.selectButtonContent}>
-                  {newOpportunity?.reason?.icon && (
-                    <Icon
-                      name={newOpportunity.reason.icon}
-                      size={16}
-                      color="#9b59b6"
-                      style={styles.selectButtonIcon}
-                    />
-                  )}
-                  <Text style={styles.selectButtonText}>
-                    {newOpportunity?.reason?.name || 'Selecione um motivo'}
-                  </Text>
-                </View>
-                <Icon name="chevron-down" size={16} color="#7f8c8d" />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.editSection}>
-              <Text style={styles.editLabel}>Telefones</Text>
-              {renderPhoneInputs(newOpportunity?.phones || [], false)}
-            </View>
-
-            <View style={styles.editSection}>
-              <Text style={styles.editLabel}>Data de Vencimento</Text>
-              <View style={styles.datePickerContainer}>
-                <TouchableOpacity
-                  style={[styles.dateSelectButton, {flex: 1}]}
-                  onPress={() => setDueDateDayPickerVisible(true)}>
-                  <Text style={styles.dateSelectText}>
-                    {newOpportunity?.dueDateDay || 'Dia'}
-                  </Text>
-                  <Icon name="chevron-down" size={16} color="#7f8c8d" />
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.dateSelectButton, {flex: 2}]}
-                  onPress={() => setDueDateMonthPickerVisible(true)}>
-                  <Text style={styles.dateSelectText}>
-                    {newOpportunity?.dueDateMonth
-                      ? getMonthsArray().find(
-                          m => m.id === newOpportunity.dueDateMonth,
-                        )?.name
-                      : 'Mês'}
-                  </Text>
-                  <Icon name="chevron-down" size={16} color="#7f8c8d" />
-                </TouchableOpacity>
-
-                <TextInput
-                  style={[styles.dateSelectButton, styles.yearInput, {flex: 1}]}
-                  value={newOpportunity?.dueDateYear || ''}
-                  onChangeText={text => {
-                    setNewOpportunity(prev => ({
-                      ...prev,
-                      dueDateYear: text,
-                    }));
-                  }}
-                  placeholder="Ano"
-                  placeholderTextColor="#6c757d"
-                  keyboardType="numeric"
-                  maxLength={4}
-                />
+                )}
+                <Text style={styles.selectButtonText}>
+                  {newOpportunity?.reason?.name || 'Selecione um motivo'}
+                </Text>
               </View>
-            </View>
-          </ScrollView>
-
-          <View style={styles.modalFooter}>
-            <TouchableOpacity
-              style={[styles.modalButton, styles.cancelButton]}
-              onPress={() => setAddModalVisible(false)}>
-              <Text style={styles.cancelButtonText}>Cancelar</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.modalButton, styles.saveButton]}
-              onPress={handleSaveNewOpportunity}>
-              <Text style={styles.saveButtonText}>Criar</Text>
+              <Icon name="chevron-down" size={16} color="#7f8c8d" />
             </TouchableOpacity>
           </View>
+
+          <View style={styles.editSection}>
+            <Text style={styles.editLabel}>Telefones</Text>
+            {renderPhoneInputs(newOpportunity?.phones || [], false)}
+          </View>
+
+          <View style={styles.editSection}>
+            <Text style={styles.editLabel}>Data de Retorno</Text>
+            <View style={styles.datePickerContainer}>
+              <TouchableOpacity
+                style={[styles.dateSelectButton, { flex: 1 }]}
+                onPress={() => setDueDateDayPickerVisible(true)}>
+                <Text style={styles.dateSelectText}>
+                  {newOpportunity?.dueDateDay || 'Dia'}
+                </Text>
+                <Icon name="chevron-down" size={16} color="#7f8c8d" />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.dateSelectButton, { flex: 2 }]}
+                onPress={() => setDueDateMonthPickerVisible(true)}>
+                <Text style={styles.dateSelectText}>
+                  {newOpportunity?.dueDateMonth
+                    ? getMonthsArray().find(
+                      m => m.id === newOpportunity.dueDateMonth,
+                    )?.name
+                    : 'MÃªs'}
+                </Text>
+                <Icon name="chevron-down" size={16} color="#7f8c8d" />
+              </TouchableOpacity>
+
+              <TextInput
+                style={[styles.dateSelectButton, styles.yearInput, { flex: 1 }]}
+                value={newOpportunity?.dueDateYear || ''}
+                onChangeText={text => {
+                  setNewOpportunity(prev => ({
+                    ...prev,
+                    dueDateYear: text,
+                  }));
+                }}
+                placeholder="Ano"
+                placeholderTextColor="#6c757d"
+                keyboardType="numeric"
+                maxLength={4}
+              />
+            </View>
+          </View>
+        </ScrollView>
+
+        <View style={styles.modalFooter}>
+          <TouchableOpacity
+            style={[styles.modalButton, styles.cancelButton]}
+            onPress={() => setAddModalVisible(false)}>
+            <Text style={styles.cancelButtonText}>Cancelar</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.modalButton, styles.saveButton]}
+            onPress={handleSaveNewOpportunity}>
+            <Text style={styles.saveButtonText}>Criar</Text>
+          </TouchableOpacity>
         </View>
       </View>
-    </Modal>
+    </AnimatedModal>
   );
-
-  if (isLoading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>Carregando oportunidades...</Text>
-      </View>
-    );
-  }
-
-  if (error) {
-    return (
-      <View style={styles.loadingContainer}>
-        <Icon name="exclamation-triangle" size={48} color="#e74c3c" />
-        <Text style={styles.loadingText}>Erro ao carregar dados</Text>
-      </View>
-    );
-  }
 
   return (
     <View style={styles.container}>
-      <View
-        style={{
-          backgroundColor: '#fff',
-          paddingHorizontal: 20,
-          paddingVertical: 16,
-          borderBottomWidth: 1,
-          borderBottomColor: '#e9ecef',
-          shadowColor: '#000',
-          shadowOffset: {width: 0, height: 2},
-          shadowOpacity: 0.05,
-          shadowRadius: 3,
-          elevation: 2,
-          margin: 20,
-        }}>
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 12,
-          }}>
-          <View
-            style={{
-              flex: 1,
-              flexDirection: 'row',
-              alignItems: 'center',
-              backgroundColor: '#f8f9fa',
-              borderRadius: 12,
-              paddingHorizontal: 16,
-              borderWidth: 1,
-              borderColor: '#e9ecef',
-            }}>
-            <Icon name="search" size={20} color="#6c757d" />
+
+
+
+
+      <View style={styles.subHeader}>
+        <View style={styles.searchRow}>
+          <View style={styles.searchInputContainer}>
+            <Icon name="search" size={16} color="#94A3B8" />
             <TextInput
+              style={styles.searchInput}
               placeholder="Buscar cliente..."
+              placeholderTextColor="#94A3B8"
               value={searchText}
               onChangeText={setSearchText}
-              style={{
-                flex: 1,
-                paddingVertical: 12,
-                paddingHorizontal: 12,
-                color: '#212529',
-                fontSize: 16,
-                width: '100%',
-              }}
-              placeholderTextColor="#6c757d"
+              underlineColorAndroid="transparent"
             />
+            {searchText.length > 0 && (
+              <TouchableOpacity
+                onPress={() => setSearchText('')}
+                style={styles.clearSearchButton}>
+                <Icon name="times-circle" size={16} color="#94A3B8" />
+              </TouchableOpacity>
+            )}
           </View>
           <TouchableOpacity
-            style={{
-              backgroundColor: '#2529a1',
-              paddingHorizontal: 16,
-              paddingVertical: 12,
-              borderRadius: 12,
-              flexDirection: 'row',
-              alignItems: 'center',
-              elevation: 2,
-              shadowColor: '#2529a1',
-              shadowOffset: {width: 0, height: 2},
-              shadowOpacity: 0.3,
-              shadowRadius: 4,
-            }}
+            style={styles.addButton}
             onPress={() => {
               const todayComponents = getCurrentDateComponents();
               setNewOpportunity({
@@ -1217,566 +1525,470 @@ export default function CrmIndex() {
               });
               setAddModalVisible(true);
             }}>
-            <IconAdd
-              name="add"
-              size={20}
-              color="#FFFFFF"
-              style={{marginRight: 4}}
-            />
-            <Text style={{color: '#FFFFFF', fontWeight: '600', fontSize: 14}}>
-              Criar
-            </Text>
+            <IconAdd name="add" size={24} color="#FFFFFF" />
           </TouchableOpacity>
+        </View>
+
+        <View style={styles.statusFilterSection}>
+          <Text style={styles.statusFilterLabel}>Status</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.statusFilterRow}>
+            <TouchableOpacity
+              onPress={() => setSelectedStatusFilterKey('')}
+              style={[
+                styles.statusFilterChip,
+                !selectedStatusFilterKey && styles.statusFilterChipActive,
+              ]}>
+              <Text
+                style={[
+                  styles.statusFilterChipText,
+                  !selectedStatusFilterKey && styles.statusFilterChipTextActive,
+                ]}>
+                Todos
+              </Text>
+            </TouchableOpacity>
+
+            {status.map(item => {
+              const statusKey = getStatusFilterKey(item);
+              const isActive =
+                selectedStatusFilterKey &&
+                selectedStatusFilterKey === statusKey;
+              const chipColor = item?.color || colors.primary;
+
+              return (
+                <TouchableOpacity
+                  key={statusKey || String(item.id || item.status)}
+                  onPress={() => setSelectedStatusFilterKey(statusKey)}
+                  style={[
+                    styles.statusFilterChip,
+                    isActive && styles.statusFilterChipActive,
+                    {
+                      borderColor: isActive ? chipColor : '#DCE3EC',
+                      backgroundColor: isActive
+                        ? getColorWithAlpha(chipColor, '24')
+                        : '#F8FAFC',
+                    },
+                  ]}>
+                  <Text
+                    style={[
+                      styles.statusFilterChipText,
+                      { color: isActive ? chipColor : '#64748B' },
+                    ]}>
+                    {getStatusFilterLabel(item)}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
         </View>
       </View>
 
-      {/* Items per page selector */}
-      {!isLoading && opportunities && opportunities.length > 0 && !error && (
-        <View
-          style={{
-            backgroundColor: '#fff',
-            paddingHorizontal: 20,
-            paddingVertical: 12,
-            borderBottomWidth: 1,
-            borderBottomColor: '#e9ecef',
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            marginHorizontal: 20,
-            marginBottom: 16,
-          }}>
-          <Text style={{color: '#6c757d', fontSize: 14}}>
-            Mostrando {opportunities.length} de {totalItems} oportunidades
-          </Text>
-          <View style={{flexDirection: 'row', alignItems: 'center'}}>
-            <Text style={{color: '#6c757d', fontSize: 14, marginRight: 8}}>
-              Por página:
-            </Text>
-            <View style={{position: 'relative'}}>
-              <TouchableOpacity
-                onPress={() =>
-                  setShowItemsPerPageDropdown(!showItemsPerPageDropdown)
-                }
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  paddingHorizontal: 12,
-                  paddingVertical: 8,
-                  borderWidth: 1,
-                  borderColor: '#e9ecef',
-                  borderRadius: 6,
-                  backgroundColor: '#f8f9fa',
-                  minWidth: 60,
-                }}>
-                <Text style={{color: '#495057', fontSize: 14, marginRight: 4}}>
-                  {itemsPerPage}
-                </Text>
-                <Icon
-                  name={
-                    showItemsPerPageDropdown
-                      ? 'chevron-up'
-                      : 'chevron-down'
-                  }
-                  size={16}
-                  color="#6c757d"
-                />
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      )}
-
-      <ScrollView
-        style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
+      <FlatList
+        data={allOpportunities}
+        keyExtractor={item => String(item.id)}
+        renderItem={({ item, index }) => renderOpportunityCard(item, index)}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
-        contentContainerStyle={styles.scrollContent}>
-        {opportunities.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Icon name="line-chart" size={64} color="#bdc3c7" />
-            <Text style={styles.emptyTitle}>
-              {searchText
-                ? 'Nenhuma oportunidade encontrada'
-                : 'Nenhuma oportunidade'}
-            </Text>
-            <Text style={styles.emptySubtitle}>
-              {searchText
-                ? 'Tente buscar com outros termos'
-                : 'Adicione sua primeira oportunidade'}
-            </Text>
-          </View>
-        ) : (
-          <View style={styles.opportunitiesContainer}>
-            {opportunities.map((opportunity, index) =>
-              renderOpportunityCard(opportunity, index),
-            )}
+        contentContainerStyle={[
+          styles.scrollContent,
+          isLoading && allOpportunities.length === 0 && styles.scrollContentSkeleton,
+        ]}
+        ListEmptyComponent={() =>
+          isLoading ? (
+            <View style={styles.skeletonListWrapper}>
+              {[1, 2, 3, 4, 5].map(key => (
+                <View key={key}>{renderSkeletonCard()}</View>
+              ))}
+            </View>
+          ) : (
+            <View style={styles.emptyContainer}>
+              {error ? (
+                <>
+                  <Icon name="exclamation-triangle" size={48} color="#e74c3c" />
+                  <Text style={styles.loadingText}>Erro ao carregar dados</Text>
+                </>
+              ) : (
+                <>
+                  <Icon name="line-chart" size={64} color="#bdc3c7" />
+                  <Text style={styles.emptyTitle}>
+                    {searchQuery
+                      ? 'Nenhuma oportunidade encontrada'
+                      : 'Nenhuma oportunidade'}
+                  </Text>
+                  <Text style={styles.emptySubtitle}>
+                    {searchQuery
+                      ? 'Tente buscar com outros termos'
+                      : 'Adicione sua primeira oportunidade'}
+                  </Text>
+                </>
+              )}
+            </View>
+          )
+        }
+        onEndReached={() => {
+          if (!isLoading && allOpportunities.length < totalItems) {
+            setCurrentPage(prev => prev + 1);
+          }
+        }}
+        onEndReachedThreshold={0.5}
+        ListFooterComponent={() =>
+          isLoading && allOpportunities.length > 0 ? (
+            <View style={styles.skeletonFooter}>
+              {renderSkeletonCard()}
+              {renderSkeletonCard()}
+            </View>
+          ) : null
+        }
+      />
 
-            {/* Pagination Controls */}
-            {totalItems > itemsPerPage && (
-              <View
-                style={{
-                  backgroundColor: '#fff',
-                  marginTop: 16,
-                  borderRadius: 16,
-                  padding: 20,
-                  shadowColor: '#000',
-                  shadowOffset: {width: 0, height: 3},
-                  shadowOpacity: 0.08,
-                  shadowRadius: 12,
-                  elevation: 4,
-                }}>
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                  }}>
-                  <TouchableOpacity
-                    onPress={() =>
-                      setCurrentPage(prev => Math.max(1, prev - 1))
-                    }
-                    disabled={currentPage === 1}
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      paddingHorizontal: 16,
-                      paddingVertical: 10,
-                      borderRadius: 8,
-                      backgroundColor:
-                        currentPage === 1 ? '#f8f9fa' : '#2529a1',
-                      opacity: currentPage === 1 ? 0.5 : 1,
-                    }}>
-                    <Icon
-                      name="chevron-left"
-                      size={20}
-                      color={currentPage === 1 ? '#6c757d' : '#fff'}
-                    />
-                    <Text
-                      style={{
-                        color: currentPage === 1 ? '#6c757d' : '#fff',
-                        marginLeft: 4,
-                        fontWeight: '600',
-                      }}>
-                      Anterior
-                    </Text>
-                  </TouchableOpacity>
-
-                  <View style={{flexDirection: 'row', alignItems: 'center'}}>
-                    <Text style={{color: '#6c757d', fontSize: 14}}>
-                      Página {currentPage} de{' '}
-                      {Math.ceil(totalItems / itemsPerPage)}
-                    </Text>
-                  </View>
-
-                  <TouchableOpacity
-                    onPress={() =>
-                      setCurrentPage(prev =>
-                        Math.min(
-                          Math.ceil(totalItems / itemsPerPage),
-                          prev + 1,
-                        ),
-                      )
-                    }
-                    disabled={
-                      currentPage >= Math.ceil(totalItems / itemsPerPage)
-                    }
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      paddingHorizontal: 16,
-                      paddingVertical: 10,
-                      borderRadius: 8,
-                      backgroundColor:
-                        currentPage >= Math.ceil(totalItems / itemsPerPage)
-                          ? '#f8f9fa'
-                          : '#2529a1',
-                      opacity:
-                        currentPage >= Math.ceil(totalItems / itemsPerPage)
-                          ? 0.5
-                          : 1,
-                    }}>
-                    <Text
-                      style={{
-                        color:
-                          currentPage >= Math.ceil(totalItems / itemsPerPage)
-                            ? '#6c757d'
-                            : '#fff',
-                        marginRight: 4,
-                        fontWeight: '600',
-                      }}>
-                      Próxima
-                    </Text>
-                    <Icon
-                      name="chevron-right"
-                      size={20}
-                      color={
-                        currentPage >= Math.ceil(totalItems / itemsPerPage)
-                          ? '#6c757d'
-                          : '#fff'
-                      }
-                    />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            )}
-          </View>
-        )}
-      </ScrollView>
 
       {renderEditModal()}
       {renderAddModal()}
 
-      {renderSelectModal(
-        'Selecionar Status',
-        status,
-        editModalVisible
-          ? editingOpportunity?.taskStatus
-          : newOpportunity?.taskStatus,
-        item => {
-          if (editModalVisible) {
-            setEditingOpportunity(prev => ({...prev, taskStatus: item}));
-          } else {
-            setNewOpportunity(prev => ({...prev, taskStatus: item}));
-          }
-        },
-        statusPickerVisible,
-        setStatusPickerVisible,
-        'status',
-      )}
+      {
+        renderSelectModal(
+          'Selecionar Status',
+          status,
+          editModalVisible
+            ? editingOpportunity?.taskStatus
+            : newOpportunity?.taskStatus,
+          item => {
+            if (editModalVisible) {
+              setEditingOpportunity(prev => ({ ...prev, taskStatus: item }));
+            } else {
+              setNewOpportunity(prev => ({ ...prev, taskStatus: item }));
+            }
+          },
+          statusPickerVisible,
+          setStatusPickerVisible,
+          'status',
+        )
+      }
 
-      {renderSelectModal(
-        'Selecionar Categoria',
-        productCategories,
-        editModalVisible
-          ? editingOpportunity?.category
-          : newOpportunity?.category,
-        item => {
-          if (editModalVisible) {
-            setEditingOpportunity(prev => ({...prev, category: item}));
-          } else {
-            setNewOpportunity(prev => ({...prev, category: item}));
-          }
-        },
-        categoryPickerVisible,
-        setCategoryPickerVisible,
-        'name',
-      )}
+      {
+        renderSelectModal(
+          'Selecionar Categoria',
+          productCategories,
+          editModalVisible
+            ? editingOpportunity?.category
+            : newOpportunity?.category,
+          item => {
+            if (editModalVisible) {
+              setEditingOpportunity(prev => ({ ...prev, category: item }));
+            } else {
+              setNewOpportunity(prev => ({ ...prev, category: item }));
+            }
+          },
+          categoryPickerVisible,
+          setCategoryPickerVisible,
+          'name',
+        )
+      }
 
-      {renderSelectModal(
-        'Selecionar Criticidade',
-        criticalityCategories,
-        editModalVisible
-          ? editingOpportunity?.criticality
-          : newOpportunity?.criticality,
-        item => {
-          if (editModalVisible) {
-            setEditingOpportunity(prev => ({...prev, criticality: item}));
-          } else {
-            setNewOpportunity(prev => ({...prev, criticality: item}));
-          }
-        },
-        criticalityPickerVisible,
-        setCriticalityPickerVisible,
-        'name',
-      )}
+      {
+        renderSelectModal(
+          'Selecionar Criticidade',
+          criticalityCategories,
+          editModalVisible
+            ? editingOpportunity?.criticality
+            : newOpportunity?.criticality,
+          item => {
+            if (editModalVisible) {
+              setEditingOpportunity(prev => ({ ...prev, criticality: item }));
+            } else {
+              setNewOpportunity(prev => ({ ...prev, criticality: item }));
+            }
+          },
+          criticalityPickerVisible,
+          setCriticalityPickerVisible,
+          'name',
+        )
+      }
 
-      {renderSelectModal(
-        'Selecionar Motivo',
-        reasonCategories,
-        editModalVisible ? editingOpportunity?.reason : newOpportunity?.reason,
-        item => {
-          if (editModalVisible) {
-            setEditingOpportunity(prev => ({...prev, reason: item}));
-          } else {
-            setNewOpportunity(prev => ({...prev, reason: item}));
-          }
-        },
-        reasonPickerVisible,
-        setReasonPickerVisible,
-        'name',
-      )}
+      {
+        renderSelectModal(
+          'Selecionar Motivo',
+          reasonCategories,
+          editModalVisible ? editingOpportunity?.reason : newOpportunity?.reason,
+          item => {
+            if (editModalVisible) {
+              setEditingOpportunity(prev => ({ ...prev, reason: item }));
+            } else {
+              setNewOpportunity(prev => ({ ...prev, reason: item }));
+            }
+          },
+          reasonPickerVisible,
+          setReasonPickerVisible,
+          'name',
+        )
+      }
 
       {renderBeneficiarySelectModal()}
 
       {/* Date Pickers for Due Date */}
-      {renderSelectModal(
-        'Selecionar Dia',
-        getDaysArray(),
-        {
-          id: editModalVisible
-            ? editingOpportunity?.dueDateDay
-            : newOpportunity?.dueDateDay,
-        },
-        item => {
-          if (editModalVisible) {
-            setEditingOpportunity(prev => ({...prev, dueDateDay: item.id}));
-          } else {
-            setNewOpportunity(prev => ({...prev, dueDateDay: item.id}));
-          }
-        },
-        dueDateDayPickerVisible,
-        setDueDateDayPickerVisible,
-        'name',
-      )}
+      {
+        renderSelectModal(
+          'Selecionar Dia',
+          getDaysArray(),
+          {
+            id: editModalVisible
+              ? editingOpportunity?.dueDateDay
+              : newOpportunity?.dueDateDay,
+          },
+          item => {
+            if (editModalVisible) {
+              setEditingOpportunity(prev => ({ ...prev, dueDateDay: item.id }));
+            } else {
+              setNewOpportunity(prev => ({ ...prev, dueDateDay: item.id }));
+            }
+          },
+          dueDateDayPickerVisible,
+          setDueDateDayPickerVisible,
+          'name',
+        )
+      }
 
-      {renderSelectModal(
-        'Selecionar Mês',
-        getMonthsArray(),
-        {
-          id: editModalVisible
-            ? editingOpportunity?.dueDateMonth
-            : newOpportunity?.dueDateMonth,
-        },
-        item => {
-          if (editModalVisible) {
-            setEditingOpportunity(prev => ({...prev, dueDateMonth: item.id}));
-          } else {
-            setNewOpportunity(prev => ({...prev, dueDateMonth: item.id}));
-          }
-        },
-        dueDateMonthPickerVisible,
-        setDueDateMonthPickerVisible,
-        'name',
-      )}
+      {
+        renderSelectModal(
+          'Selecionar MÃªs',
+          getMonthsArray(),
+          {
+            id: editModalVisible
+              ? editingOpportunity?.dueDateMonth
+              : newOpportunity?.dueDateMonth,
+          },
+          item => {
+            if (editModalVisible) {
+              setEditingOpportunity(prev => ({ ...prev, dueDateMonth: item.id }));
+            } else {
+              setNewOpportunity(prev => ({ ...prev, dueDateMonth: item.id }));
+            }
+          },
+          dueDateMonthPickerVisible,
+          setDueDateMonthPickerVisible,
+          'name',
+        )
+      }
 
       {/* Date Pickers for Alter Date */}
-      {renderSelectModal(
-        'Selecionar Dia',
-        getDaysArray(),
-        {
-          id: editModalVisible
-            ? editingOpportunity?.alterDateDay
-            : newOpportunity?.alterDateDay,
-        },
-        item => {
-          if (editModalVisible) {
-            setEditingOpportunity(prev => ({...prev, alterDateDay: item.id}));
-          } else {
-            setNewOpportunity(prev => ({...prev, alterDateDay: item.id}));
-          }
-        },
-        'name',
-      )}
+      {
+        renderSelectModal(
+          'Selecionar Dia',
+          getDaysArray(),
+          {
+            id: editModalVisible
+              ? editingOpportunity?.alterDateDay
+              : newOpportunity?.alterDateDay,
+          },
+          item => {
+            if (editModalVisible) {
+              setEditingOpportunity(prev => ({ ...prev, alterDateDay: item.id }));
+            } else {
+              setNewOpportunity(prev => ({ ...prev, alterDateDay: item.id }));
+            }
+          },
+          alterDateDayPickerVisible,
+          setAlterDateDayPickerVisible,
+          'name',
+        )
+      }
 
-      {renderSelectModal(
-        'Selecionar Mês',
-        getMonthsArray(),
-        {
-          id: editModalVisible
-            ? editingOpportunity?.alterDateMonth
-            : newOpportunity?.alterDateMonth,
-        },
-        item => {
-          if (editModalVisible) {
-            setEditingOpportunity(prev => ({...prev, alterDateMonth: item.id}));
-          } else {
-            setNewOpportunity(prev => ({...prev, alterDateMonth: item.id}));
-          }
-        },
-        'name',
-      )}
+      {
+        renderSelectModal(
+          'Selecionar MÃªs',
+          getMonthsArray(),
+          {
+            id: editModalVisible
+              ? editingOpportunity?.alterDateMonth
+              : newOpportunity?.alterDateMonth,
+          },
+          item => {
+            if (editModalVisible) {
+              setEditingOpportunity(prev => ({ ...prev, alterDateMonth: item.id }));
+            } else {
+              setNewOpportunity(prev => ({ ...prev, alterDateMonth: item.id }));
+            }
+          },
+          alterDateMonthPickerVisible,
+          setAlterDateMonthPickerVisible,
+          'name',
+        )
+      }
 
       {/* Dropdown Overlay */}
-      {showItemsPerPageDropdown && (
-        <TouchableWithoutFeedback
-          onPress={() => setShowItemsPerPageDropdown(false)}>
-          <View
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              zIndex: 998,
-            }}>
-            <View
-              style={{
-                position: 'absolute',
-                top: 140,
-                right: 20,
-                backgroundColor: '#fff',
-                borderWidth: 1,
-                borderColor: '#e9ecef',
-                borderRadius: 6,
-                shadowColor: '#000',
-                shadowOffset: {width: 0, height: 2},
-                shadowOpacity: 0.1,
-                shadowRadius: 4,
-                elevation: 999,
-                zIndex: 999,
-              }}>
-              {[5, 10, 20, 50].map(size => (
-                <TouchableOpacity
-                  key={size}
-                  onPress={() => {
-                    setItemsPerPage(size);
-                    setCurrentPage(1);
-                    setShowItemsPerPageDropdown(false);
-                  }}
-                  style={{
-                    paddingHorizontal: 16,
-                    paddingVertical: 10,
-                    backgroundColor:
-                      itemsPerPage === size ? '#f8f9fa' : 'transparent',
-                    borderBottomWidth: size !== 50 ? 1 : 0,
-                    borderBottomColor: '#f1f3f4',
-                  }}>
-                  <Text
-                    style={{
-                      color: itemsPerPage === size ? '#2529a1' : '#495057',
-                      fontSize: 14,
-                      fontWeight: itemsPerPage === size ? '600' : '400',
-                    }}>
-                    {size}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-        </TouchableWithoutFeedback>
-      )}
-    </View>
+      {
+
+      }
+    </View >
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#F8FAFC',
   },
-  header: {
-    backgroundColor: '#ffffff',
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 16,
+  subHeader: {
+    paddingHorizontal: 16,
+    paddingTop: 9,
+    paddingBottom: 12,
+    backgroundColor: colors.white,
     borderBottomWidth: 1,
-    borderBottomColor: '#e9ecef',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    borderBottomColor: colors.border,
   },
-  headerTop: {
+  searchRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
-  },
-  searchContainer: {
-    marginTop: 4,
   },
   searchInputContainer: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f8f9fa',
-    borderRadius: 12,
-    paddingHorizontal: 16,
+    backgroundColor: colors.background,
+    borderRadius: 8,
+    paddingHorizontal: 12,
     borderWidth: 1,
-    borderColor: '#e9ecef',
-    gap: 12,
+    borderColor: colors.border,
+    height: 40,
   },
   searchInput: {
     flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    color: '#212529',
-    fontSize: 16,
-    width: '100%',
+    height: '100%',
+    paddingHorizontal: 8,
+    color: colors.text,
+    fontSize: 14,
   },
   clearSearchButton: {
     padding: 4,
-    marginLeft: 8,
+  },
+  statusFilterSection: {
+    marginTop: 10,
+  },
+  statusFilterLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#64748B',
+    marginBottom: 8,
+  },
+  statusFilterRow: {
+    paddingRight: 8,
+  },
+  statusFilterChip: {
+    borderWidth: 1,
+    borderColor: '#DCE3EC',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    marginRight: 8,
+  },
+  statusFilterChipActive: {
+    borderColor: colors.primary,
+    backgroundColor: '#E7F3FF',
+  },
+  statusFilterChipText: {
+    fontSize: 12,
+    color: '#64748B',
+    fontWeight: '600',
+  },
+  statusFilterChipTextActive: {
+    color: colors.primary,
+  },
+  scrollContent: {
+    padding: 16,
+    paddingBottom: 32,
+  },
+  scrollContentSkeleton: {
+    flexGrow: 1,
+  },
+  skeletonListWrapper: {
+    paddingTop: 8,
+  },
+  skeletonFooter: {
+    paddingVertical: 12,
+    paddingHorizontal: 0,
+  },
+  skeletonLine: {
+    backgroundColor: '#E2E8F0',
+    borderRadius: 6,
+  },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: '600',
-    color: '#2c3e50',
+    fontWeight: '700',
+    color: '#0F172A',
     flex: 1,
+    letterSpacing: -0.3,
   },
   addButton: {
-    backgroundColor: '#27ae60',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 8,
-    flexDirection: 'row',
+    backgroundColor: colors.primary,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
+    justifyContent: 'center',
+    marginLeft: 12,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 3,
   },
-  addButtonText: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '600',
-    marginLeft: 6,
-  },
   scrollView: {
     flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 30,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#F8FAFC',
   },
   loadingText: {
-    fontSize: 16,
-    color: '#7f8c8d',
-    marginTop: 16,
+    fontSize: 14,
+    color: '#94A3B8',
+    marginTop: 14,
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingTop: 100,
+    paddingTop: 80,
   },
   emptyTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '600',
-    color: '#2c3e50',
-    marginTop: 16,
-    marginBottom: 8,
+    color: '#0F172A',
+    marginTop: 14,
+    marginBottom: 6,
   },
   emptySubtitle: {
-    fontSize: 16,
-    color: '#7f8c8d',
+    fontSize: 14,
+    color: '#94A3B8',
     textAlign: 'center',
   },
   opportunitiesContainer: {
-    gap: 16,
+    gap: 12,
   },
   cardWrapper: {
-    marginBottom: 16,
+    marginBottom: 12,
   },
   card: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
+    backgroundColor: '#fff',
+    borderRadius: 16,
     padding: 16,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowRadius: 12,
+    elevation: 4,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -1786,27 +1998,28 @@ const styles = StyleSheet.create({
   },
   titleContainer: {
     flex: 1,
-    marginRight: 12,
+    marginRight: 10,
   },
   opportunityTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#2c3e50',
-    marginBottom: 4,
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginBottom: 3,
   },
   clientName: {
-    fontSize: 14,
-    color: '#7f8c8d',
+    fontSize: 13,
+    color: '#64748B',
     fontWeight: '400',
   },
   stageTag: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 10,
   },
   stageText: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.2,
   },
   cardBody: {
     marginBottom: 12,
@@ -1814,28 +2027,28 @@ const styles = StyleSheet.create({
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   infoContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
-    marginRight: 8,
+    marginRight: 6,
   },
   infoText: {
     fontSize: 12,
-    color: '#7f8c8d',
-    marginLeft: 4,
+    color: '#64748B',
+    marginLeft: 5,
     flex: 1,
   },
   cardFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: 12,
+    paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: '#e9ecef',
-    marginBottom: 12,
+    borderTopColor: '#F1F5F9',
+    marginBottom: 10,
   },
   responsibleContainer: {
     flexDirection: 'row',
@@ -1844,8 +2057,8 @@ const styles = StyleSheet.create({
   },
   responsibleText: {
     fontSize: 12,
-    color: '#7f8c8d',
-    marginLeft: 6,
+    color: '#64748B',
+    marginLeft: 5,
   },
   statusContainer: {
     flexDirection: 'row',
@@ -1859,21 +2072,23 @@ const styles = StyleSheet.create({
   announceContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 10,
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: '#f8f9fa',
+    borderTopColor: '#F1F5F9',
   },
   announceText: {
     fontSize: 12,
-    color: '#9b59b6',
-    marginLeft: 4,
-    fontStyle: 'italic',
+    color: '#8B5CF6',
+    marginLeft: 5,
   },
   actionContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: 12,
+    gap: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+    paddingTop: 12,
   },
   actionButton: {
     flex: 1,
@@ -1881,84 +2096,90 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 8,
+    paddingHorizontal: 12,
+    borderRadius: 12,
     borderWidth: 1,
   },
   chatButton: {
-    borderColor: '#25D366',
-    backgroundColor: '#25D36610',
+    borderColor: '#10B981',
+    backgroundColor: '#10B98110',
   },
   editButton: {
-    borderColor: '#f39c12',
-    backgroundColor: '#f39c1210',
+    borderColor: '#F59E0B',
+    backgroundColor: '#F59E0B10',
   },
   actionButtonText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
-    marginLeft: 6,
-  },
-  // Modal Styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    marginLeft: 5,
   },
   modalContent: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    width: '90%',
-    maxHeight: '80%',
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    width: '100%',
+    height: '92%', // Almost full height
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 20,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.4)',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
+    padding: 18,
     borderBottomWidth: 1,
-    borderBottomColor: '#e9ecef',
+    borderBottomColor: '#F1F5F9',
   },
   modalTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#2c3e50',
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#0F172A',
   },
   closeButton: {
     padding: 4,
   },
   modalBody: {
-    padding: 20,
+    padding: 18,
   },
   editSection: {
-    marginBottom: 20,
+    marginBottom: 18,
   },
   editLabel: {
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: '600',
-    color: '#2c3e50',
+    color: '#334155',
     marginBottom: 8,
+    letterSpacing: 0.2,
   },
   editInput: {
-    borderWidth: 1,
-    borderColor: '#e9ecef',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 16,
-    color: '#2c3e50',
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: '#0F172A',
+    backgroundColor: '#F8FAFC',
   },
-  // Select Styles
   selectButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderWidth: 1,
-    borderColor: '#e9ecef',
-    borderRadius: 8,
-    paddingHorizontal: 12,
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    paddingHorizontal: 14,
     paddingVertical: 12,
-    backgroundColor: '#fff',
+    backgroundColor: '#F8FAFC',
   },
   selectButtonContent: {
     flexDirection: 'row',
@@ -1966,115 +2187,152 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   selectButtonDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
     marginRight: 8,
   },
   selectButtonIcon: {
     marginRight: 8,
   },
   selectButtonText: {
-    fontSize: 16,
-    color: '#2c3e50',
+    fontSize: 15,
+    color: '#0F172A',
   },
-  // Date Picker Styles
   dateButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#e9ecef',
-    borderRadius: 8,
-    paddingHorizontal: 12,
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    paddingHorizontal: 14,
     paddingVertical: 12,
-    backgroundColor: '#fff',
+    backgroundColor: '#F8FAFC',
   },
   dateButtonText: {
-    fontSize: 16,
-    color: '#2c3e50',
+    fontSize: 15,
+    color: '#0F172A',
     marginLeft: 8,
   },
-  // Select Modal Styles
   selectModalContent: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    width: '90%',
-    maxHeight: '60%',
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    width: '100%',
+    height: '82%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 20,
   },
   selectModalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
+    padding: 18,
     borderBottomWidth: 1,
-    borderBottomColor: '#e9ecef',
+    borderBottomColor: '#F1F5F9',
   },
   selectModalTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#2c3e50',
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#0F172A',
   },
   selectModalBody: {
-    maxHeight: 300,
+    flex: 1,
+  },
+  selectModalBodyContent: {
+    paddingBottom: 8,
+  },
+  selectModalEmptyState: {
+    flex: 1,
+    paddingHorizontal: 22,
+    paddingVertical: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  selectModalEmptyIcon: {
+    width: 54,
+    height: 54,
+    borderRadius: 16,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  selectModalEmptyTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginBottom: 6,
+    textAlign: 'center',
+  },
+  selectModalEmptySubtitle: {
+    fontSize: 13,
+    color: '#94A3B8',
+    textAlign: 'center',
+    lineHeight: 18,
   },
   selectOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#f8f9fa',
+    borderBottomColor: '#F8FAFC',
   },
   selectOptionActive: {
-    backgroundColor: '#3498db10',
+    backgroundColor: '#EEF2FF',
   },
   selectOptionDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    marginRight: 12,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginRight: 10,
   },
   selectOptionIcon: {
-    marginRight: 12,
+    marginRight: 10,
   },
   selectOptionText: {
-    fontSize: 16,
-    color: '#2c3e50',
+    fontSize: 15,
+    color: '#0F172A',
   },
   selectOptionTextActive: {
-    color: '#3498db',
+    color: colors.primary,
     fontWeight: '600',
   },
   modalFooter: {
     flexDirection: 'row',
-    padding: 20,
+    padding: 18,
     borderTopWidth: 1,
-    borderTopColor: '#e9ecef',
-    gap: 12,
+    borderTopColor: '#F1F5F9',
+    gap: 10,
   },
   modalButton: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
+    paddingVertical: 13,
+    borderRadius: 12,
     alignItems: 'center',
   },
   cancelButton: {
-    backgroundColor: '#95a5a6',
+    backgroundColor: '#94A3B8',
   },
   saveButton: {
-    backgroundColor: '#27ae60',
+    backgroundColor: colors.primary,
   },
   cancelButtonText: {
-    color: '#ffffff',
-    fontSize: 16,
+    color: '#fff',
+    fontSize: 15,
     fontWeight: '600',
   },
   saveButtonText: {
-    color: '#ffffff',
-    fontSize: 16,
+    color: '#fff',
+    fontSize: 15,
     fontWeight: '600',
   },
-  // Beneficiary Modal Styles
   personInfo: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -2083,8 +2341,8 @@ const styles = StyleSheet.create({
   avatarContainer: {
     width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: '#3498db20',
+    borderRadius: 12,
+    backgroundColor: '#EEF2FF',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -2093,26 +2351,25 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   personName: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
-    color: '#2c3e50',
+    color: '#0F172A',
     marginBottom: 2,
   },
   personDocument: {
     fontSize: 12,
-    color: '#7f8c8d',
+    color: '#94A3B8',
   },
   emptyState: {
     padding: 40,
     alignItems: 'center',
   },
   emptyText: {
-    color: '#7f8c8d',
+    color: '#94A3B8',
     marginTop: 12,
-    fontSize: 16,
+    fontSize: 14,
     textAlign: 'center',
   },
-  // Date Picker Styles
   datePickerContainer: {
     flexDirection: 'row',
     gap: 8,
@@ -2121,42 +2378,39 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderWidth: 1,
-    borderColor: '#e9ecef',
-    borderRadius: 8,
-    paddingHorizontal: 12,
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    paddingHorizontal: 14,
     paddingVertical: 12,
-    backgroundColor: '#fff',
+    backgroundColor: '#F8FAFC',
   },
   dateSelectText: {
-    fontSize: 16,
-    color: '#2c3e50',
+    fontSize: 15,
+    color: '#0F172A',
   },
   yearInput: {
     textAlign: 'center',
     justifyContent: 'center',
   },
-  // Text Input Styles
   textInput: {
-    borderWidth: 1,
-    borderColor: '#e9ecef',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 16,
-    color: '#2c3e50',
-    backgroundColor: '#fff',
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: '#0F172A',
+    backgroundColor: '#F8FAFC',
     textAlignVertical: 'top',
   },
   helpText: {
-    fontSize: 12,
-    color: '#6c757d',
+    fontSize: 11,
+    color: '#94A3B8',
     marginTop: 4,
-    fontStyle: 'italic',
   },
-  // Phone Input Styles
   phoneInputsContainer: {
-    gap: 12,
+    gap: 10,
   },
   phoneInputRow: {
     flexDirection: 'row',
@@ -2170,22 +2424,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderWidth: 1,
-    borderColor: '#27ae60',
-    borderRadius: 8,
-    backgroundColor: '#27ae6010',
-    gap: 8,
+    paddingVertical: 11,
+    paddingHorizontal: 14,
+    borderWidth: 1.5,
+    borderColor: '#10B981',
+    borderRadius: 12,
+    backgroundColor: '#10B98110',
+    gap: 6,
   },
   addPhoneText: {
-    color: '#27ae60',
-    fontSize: 14,
+    color: '#10B981',
+    fontSize: 13,
     fontWeight: '600',
   },
   removePhoneButton: {
     padding: 8,
-    borderRadius: 6,
-    backgroundColor: '#e74c3c10',
+    borderRadius: 10,
+    backgroundColor: '#F43F5E10',
   },
 });

@@ -1,59 +1,91 @@
-import React, {useState, useEffect, useRef} from 'react';
+﻿import React, {useEffect, useRef, useState} from 'react';
 import {
-  StyleSheet,
-  View,
-  ScrollView,
-  TouchableOpacity,
-  TextInput,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import {Text} from 'react-native-animatable';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import IconMaterial from 'react-native-vector-icons/MaterialIcons';
 import {useNavigation, useRoute} from '@react-navigation/native';
 import {useStore} from '@store';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {useMessage} from '@controleonline/ui-common/src/react/components/MessageService';
 
 export default function CrmConversation() {
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState([]);
-  const scrollViewRef = useRef();
+  const scrollViewRef = useRef(null);
   const navigation = useNavigation();
   const route = useRoute();
-  const {opportunity} = route.params;
-  const tasksInterationsStore = useStore('tasksInterations');
-  const getters = tasksInterationsStore.getters;
-  const actions = tasksInterationsStore.actions;
-  const {items} = getters;
+  const insets = useSafeAreaInsets();
+  const {showError} = useMessage();
 
-  const formatTime = timestamp => {
-    return timestamp.toLocaleTimeString('pt-BR', {
+  const opportunity = route.params?.opportunity || null;
+  const taskInteractionsStore = useStore('task_interations');
+  const getters = taskInteractionsStore?.getters || {};
+  const actions = taskInteractionsStore?.actions || {};
+  const items = getters?.items || [];
+
+  const taskResource =
+    opportunity?.['@id'] || (opportunity?.id ? `/tasks/${opportunity.id}` : null);
+
+  const canSend = !!message.trim() && !!taskResource;
+
+  const formatTime = timestamp =>
+    timestamp.toLocaleTimeString('pt-BR', {
       hour: '2-digit',
       minute: '2-digit',
     });
-  };
 
   useEffect(() => {
-    actions.getItems({task: opportunity.id});
-  }, [opportunity.id]);
-
-  useEffect(() => {
-    if (items && items.length > 0) {
-      const transformedMessages = items
-        .filter(item => item.body && item.body !== 'null')
-        .map(item => ({
-          id: item.id,
-          text: item.body.replace(/"/g, ''), // Remove quotes from body
-          timestamp: new Date(item.createdAt),
-          isFromUser: item.visibility === 'private', // Assuming private messages are from current user
-          author:
-            item.registeredBy?.name || item.registeredBy?.alias || 'Usuário',
-        }))
-        .sort((a, b) => a.timestamp - b.timestamp); // Sort by timestamp
-
-      setMessages(transformedMessages);
+    if (!opportunity) {
+      showError('Oportunidade nao encontrada para abrir a conversa.');
+      navigation.goBack();
     }
+  }, [opportunity, navigation, showError]);
+
+  useEffect(() => {
+    if (!taskResource || typeof actions.getItems !== 'function') {
+      return;
+    }
+
+    actions.getItems({task: taskResource}).catch(error => {
+      console.error('Erro ao carregar conversa:', error);
+      showError('Nao foi possivel carregar as mensagens da conversa.');
+    });
+  }, [taskResource, actions, showError]);
+
+  useEffect(() => {
+    if (!Array.isArray(items) || items.length === 0) {
+      setMessages([]);
+      return;
+    }
+
+    const transformedMessages = items
+      .filter(item => item?.body && item.body !== 'null')
+      .map(item => ({
+        id: item.id,
+        text: String(item.body).replace(/"/g, ''),
+        timestamp: new Date(item.createdAt),
+        isFromUser: item.visibility === 'private',
+      }))
+      .sort((a, b) => a.timestamp - b.timestamp);
+
+    setMessages(transformedMessages);
   }, [items]);
+
+  useEffect(() => {
+    if (messages.length > 0) {
+      requestAnimationFrame(() => {
+        scrollViewRef.current?.scrollToEnd({animated: true});
+      });
+    }
+  }, [messages]);
 
   const formatDate = timestamp => {
     const today = new Date();
@@ -77,20 +109,36 @@ export default function CrmConversation() {
     });
   };
 
-  const sendMessage = () => {
-    if (!message.trim()) {
+  const sendMessage = async () => {
+    if (!canSend || typeof actions.save !== 'function') {
       return;
     }
 
-    actions.save({
-      body: message.trim(),
-      file: null,
-      task: opportunity['@id'],
-      type: 'comment',
-      visibility: 'private',
-    });
+    try {
+      await actions.save({
+        body: message.trim(),
+        file: null,
+        task: taskResource,
+        type: 'comment',
+        visibility: 'private',
+      });
 
-    setMessage(''); // Clear input after sending
+      setMessage('');
+      await actions.getItems?.({task: taskResource});
+    } catch (error) {
+      console.error('Erro ao enviar mensagem:', error);
+      showError('Nao foi possivel enviar a mensagem.');
+    }
+  };
+
+  const handleInputKeyPress = event => {
+    const key = event?.nativeEvent?.key;
+    const shift = !!event?.nativeEvent?.shiftKey;
+
+    if (key === 'Enter' && !shift) {
+      event?.preventDefault?.();
+      sendMessage();
+    }
   };
 
   const renderMessage = (msg, index) => {
@@ -99,7 +147,7 @@ export default function CrmConversation() {
       formatDate(msg.timestamp) !== formatDate(messages[index - 1].timestamp);
 
     return (
-      <View key={msg.id}>
+      <View key={msg.id || `${msg.timestamp}-${index}`}>
         {showDate && (
           <View style={styles.dateContainer}>
             <Text style={styles.dateText}>{formatDate(msg.timestamp)}</Text>
@@ -143,63 +191,77 @@ export default function CrmConversation() {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      {/* Header */}
-      <View style={styles.header}>
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <View style={[styles.header, {paddingTop: Math.max(insets.top, 10)}]}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}>
-          <Icon name="arrow-left" size={20} color="#FFFFFF" />
+          <Icon name="arrow-left" size={22} color="#FFFFFF" />
         </TouchableOpacity>
 
         <View style={styles.headerInfo}>
           <View style={styles.avatar}>
-            <Icon name="user" size={20} color="#FFFFFF" />
+            <Icon name="user" size={18} color="#FFFFFF" />
           </View>
           <View style={styles.headerText}>
             <Text style={styles.headerName}>
-              {opportunity.client?.name || 'Cliente'}
+              {opportunity?.client?.name || 'Cliente'}
             </Text>
           </View>
         </View>
       </View>
 
-      {/* Messages */}
       <ScrollView
         ref={scrollViewRef}
         style={styles.messagesContainer}
-        contentContainerStyle={styles.messagesContent}
+        contentContainerStyle={[
+          styles.messagesContent,
+          messages.length === 0 && styles.messagesContentEmpty,
+        ]}
         showsVerticalScrollIndicator={false}>
-        {messages.map((msg, index) => renderMessage(msg, index))}
+        {messages.length === 0 ? (
+          <View style={styles.emptyStateContainer}>
+            <View style={styles.emptyStateIconCircle}>
+              <IconMaterial name="chat-bubble-outline" size={72} color="#94A3B8" />
+            </View>
+            <Text style={styles.emptyStateTitle}>Nenhuma mensagem ainda</Text>
+            <Text style={styles.emptyStateSubtitle}>
+              Inicie a conversa enviando a primeira mensagem.
+            </Text>
+          </View>
+        ) : (
+          messages.map((msg, index) => renderMessage(msg, index))
+        )}
       </ScrollView>
 
-      {/* Input */}
-      <View style={styles.inputContainer}>
+      <View style={[styles.inputContainer, {paddingBottom: Math.max(insets.bottom, 8)}]}>
         <View style={styles.inputWrapper}>
           <TextInput
             style={styles.textInput}
             value={message}
             onChangeText={setMessage}
             placeholder="Digite uma mensagem..."
-            placeholderTextColor="#7f8c8d"
-            multiline
+            placeholderTextColor="#7A8794"
+            multiline={false}
             maxLength={1000}
+            returnKeyType="send"
+            blurOnSubmit={false}
+            onSubmitEditing={sendMessage}
+            onKeyPress={handleInputKeyPress}
           />
         </View>
 
         <TouchableOpacity
           style={[
             styles.sendButton,
-            message.trim()
-              ? styles.sendButtonActive
-              : styles.sendButtonInactive,
+            canSend ? styles.sendButtonActive : styles.sendButtonInactive,
           ]}
           onPress={sendMessage}
-          disabled={!message.trim()}>
+          disabled={!canSend}>
           <IconMaterial
             name="send"
             size={20}
-            color={message.trim() ? '#FFFFFF' : '#bdc3c7'}
+            color={canSend ? '#FFFFFF' : '#B8C2CC'}
           />
         </TouchableOpacity>
       </View>
@@ -210,27 +272,20 @@ export default function CrmConversation() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#e5ddd5',
+    backgroundColor: '#EEEAE5',
   },
   header: {
-    backgroundColor: '#25D366',
+    backgroundColor: '#26C865',
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    paddingTop: Platform.OS === 'ios' ? 50 : 12,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 4,
+    paddingHorizontal: 14,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.04)',
   },
   backButton: {
-    marginRight: 16,
-    padding: 4,
+    marginRight: 12,
+    padding: 6,
   },
   headerInfo: {
     flex: 1,
@@ -238,56 +293,75 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: 10,
   },
   headerText: {
     flex: 1,
   },
   headerName: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 17,
+    fontWeight: '400',
     color: '#FFFFFF',
-  },
-  headerStatus: {
-    fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.8)',
-    marginTop: 2,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  headerAction: {
-    marginLeft: 20,
-    padding: 4,
   },
   messagesContainer: {
     flex: 1,
   },
   messagesContent: {
-    paddingVertical: 16,
+    paddingTop: 10,
+    paddingBottom: 14,
+  },
+  messagesContentEmpty: {
+    flexGrow: 1,
+    justifyContent: 'center',
+  },
+  emptyStateContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 28,
+  },
+  emptyStateIconCircle: {
+    width: 132,
+    height: 132,
+    borderRadius: 66,
+    backgroundColor: '#E7EDF3',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 18,
+  },
+  emptyStateTitle: {
+    fontSize: 18,
+    color: '#334155',
+    fontWeight: '400',
+    marginBottom: 6,
+    textAlign: 'center',
+  },
+  emptyStateSubtitle: {
+    fontSize: 14,
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 20,
   },
   dateContainer: {
     alignItems: 'center',
-    marginVertical: 16,
+    marginVertical: 14,
   },
   dateText: {
-    backgroundColor: 'rgba(0, 0, 0, 0.1)',
-    color: '#7f8c8d',
+    backgroundColor: '#D9D4CD',
+    color: '#73808F',
     fontSize: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
+    paddingHorizontal: 11,
+    paddingVertical: 3,
     borderRadius: 12,
   },
   messageContainer: {
     marginVertical: 2,
-    marginHorizontal: 16,
+    marginHorizontal: 12,
   },
   userMessage: {
     alignItems: 'flex-end',
@@ -297,20 +371,21 @@ const styles = StyleSheet.create({
   },
   messageBubble: {
     maxWidth: '80%',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 18,
+    paddingHorizontal: 11,
+    paddingTop: 8,
+    paddingBottom: 7,
+    borderRadius: 14,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 1,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    shadowOpacity: 0.06,
+    shadowRadius: 1.5,
     elevation: 1,
   },
   userBubble: {
-    backgroundColor: '#dcf8c6',
+    backgroundColor: '#D8F3C1',
     borderBottomRightRadius: 4,
   },
   otherBubble: {
@@ -319,86 +394,80 @@ const styles = StyleSheet.create({
   },
   messageText: {
     fontSize: 16,
-    lineHeight: 20,
+    lineHeight: 21,
+    fontWeight: '400',
   },
   userMessageText: {
-    color: '#000000',
+    color: '#111827',
   },
   otherMessageText: {
-    color: '#000000',
+    color: '#111827',
   },
   messageTime: {
-    fontSize: 11,
+    fontSize: 10,
     marginTop: 4,
     alignSelf: 'flex-end',
   },
   userMessageTime: {
-    color: '#7f8c8d',
+    color: '#718175',
   },
   otherMessageTime: {
-    color: '#7f8c8d',
+    color: '#8893A0',
   },
   inputContainer: {
-    backgroundColor: '#f0f0f0',
+    backgroundColor: '#F2F4F6',
     flexDirection: 'row',
-    alignItems: 'flex-end',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    paddingBottom: Platform.OS === 'ios' ? 24 : 8,
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#E6EBF1',
   },
   inputWrapper: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'flex-end',
     backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    marginRight: 8,
+    borderRadius: 28,
+    paddingHorizontal: 15,
     minHeight: 48,
+    justifyContent: 'center',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 1,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  attachButton: {
-    marginRight: 8,
-    padding: 4,
+    shadowOpacity: 0.04,
+    shadowRadius: 1.5,
+    elevation: 0,
   },
   textInput: {
-    flex: 1,
-    fontSize: 16,
-    color: '#000000',
-    maxHeight: 100,
-    paddingVertical: 4,
-  },
-  emojiButton: {
-    marginLeft: 8,
-    padding: 4,
+    fontSize: 17,
+    color: '#2A3440',
+    paddingVertical: 10,
+    borderWidth: 0,
+    outlineStyle: 'none',
+    outlineWidth: 0,
+    outlineColor: 'transparent',
   },
   sendButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    marginLeft: 8,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 1,
     },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 4,
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    elevation: 1,
   },
   sendButtonActive: {
-    backgroundColor: '#25D366',
+    backgroundColor: '#2ECF6E',
   },
   sendButtonInactive: {
-    backgroundColor: '#e0e0e0',
+    backgroundColor: '#E7EBEF',
   },
 });

@@ -12,6 +12,7 @@ import {
   View,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import {useMessage} from '@controleonline/ui-common/src/react/components/MessageService';
 
 const Dropdown = ({ label, value, options, onChange }) => (
   <View style={{ marginBottom: 20 }}>
@@ -37,6 +38,7 @@ const Dropdown = ({ label, value, options, onChange }) => (
 );
 
 const CreateContractModal = ({ visible, onClose, onSuccess }) => {
+  const {showError, showSuccess} = useMessage();
   const contractStore = useStore('contract');
   const contractActions = contractStore.actions;
   const peopleStore = useStore('people');
@@ -86,16 +88,19 @@ const CreateContractModal = ({ visible, onClose, onSuccess }) => {
   };
 
   const handleSubmit = async () => {
-    if (!selectedModel || !selectedBeneficiary || !selectedStatus) return alert('Preencha todos os campos obrigatórios.');
+    if (!selectedModel || !selectedBeneficiary || !selectedStatus) {
+      showError('Preencha todos os campos obrigatórios.');
+      return;
+    }
     setIsLoading(true);
     try {
       const contractData = { contractModel: selectedModel, status: selectedStatus, beneficiary: selectedBeneficiary, docKey: docKey || undefined, startDate: startDate || new Date().toISOString(), endDate: endDate || undefined, creationDate: new Date().toISOString(), alterDate: new Date().toISOString(), peoples: [] };
       await contractActions.save(contractData);
-      alert('Contrato criado com sucesso!');
+      showSuccess('Contrato criado com sucesso!');
       resetForm();
       onSuccess && onSuccess();
       onClose();
-    } catch (e) { console.error(e); alert('Erro ao criar contrato.'); }
+    } catch (e) { console.error(e); showError('Erro ao criar contrato.'); }
     finally { setIsLoading(false); }
   };
 

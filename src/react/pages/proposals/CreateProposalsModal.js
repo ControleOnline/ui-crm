@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import {
   Text,
   View,
@@ -8,11 +8,15 @@ import {
   TextInput,
   Modal,
   StyleSheet,
+  Keyboard,
 } from 'react-native';
-import {useStore} from '@store';
+import { useStore } from '@store';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import AnimatedModal from '@controleonline/ui-crm/src/react/components/AnimatedModal';
+import {useMessage} from '@controleonline/ui-common/src/react/components/MessageService';
 
-const CreateProposalsModal = ({visible, onClose, onSuccess}) => {
+const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
+  const {showError} = useMessage();
   const contractStore = useStore('contract');
   const contractActions = contractStore.actions;
   const peopleStore = useStore('people');
@@ -21,10 +25,10 @@ const CreateProposalsModal = ({visible, onClose, onSuccess}) => {
   const statusStore = useStore('status');
   const statusGetters = statusStore.getters;
   const statusActions = statusStore.actions;
-  const modelsStore = useStore('models');
+  const modelsStore = useStore('model');
   const modelsActions = modelsStore.actions;
 
-  const {items: people, currentCompany} = peopleGetters;
+  const { items: people, currentCompany } = peopleGetters;
 
   const [isLoading, setIsLoading] = useState(false);
   const [contractModels, setContractModels] = useState([]);
@@ -53,7 +57,7 @@ const CreateProposalsModal = ({visible, onClose, onSuccess}) => {
         company: '/people/' + currentCompany.id,
         link_type: 'client',
       });
-      await statusActions.getItems({context: 'relationship'});
+      await statusActions.getItems({ context: 'relationship' });
       await loadContractModels();
     } catch (error) {
       console.error(error);
@@ -63,7 +67,7 @@ const CreateProposalsModal = ({visible, onClose, onSuccess}) => {
   const loadContractModels = async () => {
     setLoadingModels(true);
     try {
-      const response = await modelsActions.getItems({context: 'proposal'});
+      const response = await modelsActions.getItems({ context: 'proposal' });
       setContractModels(response);
     } catch (error) {
     } finally {
@@ -78,7 +82,7 @@ const CreateProposalsModal = ({visible, onClose, onSuccess}) => {
 
   const handleSubmit = async () => {
     if (!selectedModel) {
-      alert('Por favor, preencha todos os campos obrigatórios.');
+      showError('Por favor, preencha todos os campos obrigatÃ³rios.');
       return;
     }
     setIsLoading(true);
@@ -90,10 +94,10 @@ const CreateProposalsModal = ({visible, onClose, onSuccess}) => {
       };
       await contractActions.save(contractData);
       onSuccess && onSuccess();
-      onClose();
+      handleClose();
     } catch (error) {
       console.error(error);
-      alert('Erro ao criar contrato. Tente novamente.');
+      showError('Erro ao criar proposta. Tente novamente.');
     } finally {
       setIsLoading(false);
     }
@@ -114,15 +118,15 @@ const CreateProposalsModal = ({visible, onClose, onSuccess}) => {
 
   const renderModelSelectModal = () => (
     <Modal animationType="slide" transparent visible={modelPickerVisible} onRequestClose={() => setModelPickerVisible(false)}>
-      <View style={styles.modalOverlay}>
-        <View style={styles.selectModalContent}>
-          <View style={styles.selectModalHeader}>
-            <Text style={styles.selectModalTitle}>Selecionar Modelo</Text>
+      <View style={styles.pickerModalOverlay}>
+        <View style={styles.pickerModalContent}>
+          <View style={styles.pickerModalHeader}>
+            <Text style={styles.pickerModalTitle}>Selecionar Modelo</Text>
             <TouchableOpacity onPress={() => setModelPickerVisible(false)}>
               <Icon name="close" size={24} color="#666666" />
             </TouchableOpacity>
           </View>
-          <ScrollView style={styles.selectModalBody}>
+          <ScrollView style={styles.pickerModalBody}>
             {loadingModels ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="small" color="#2529a1" />
@@ -162,15 +166,15 @@ const CreateProposalsModal = ({visible, onClose, onSuccess}) => {
 
   const renderBeneficiarySelectModal = () => (
     <Modal animationType="slide" transparent visible={beneficiaryPickerVisible} onRequestClose={() => setBeneficiaryPickerVisible(false)}>
-      <View style={styles.modalOverlay}>
-        <View style={styles.selectModalContent}>
-          <View style={styles.selectModalHeader}>
-            <Text style={styles.selectModalTitle}>Selecionar Beneficiário</Text>
+      <View style={styles.pickerModalOverlay}>
+        <View style={styles.pickerModalContent}>
+          <View style={styles.pickerModalHeader}>
+            <Text style={styles.pickerModalTitle}>Selecionar BeneficiÃ¡rio</Text>
             <TouchableOpacity onPress={() => setBeneficiaryPickerVisible(false)}>
               <Icon name="close" size={24} color="#666666" />
             </TouchableOpacity>
           </View>
-          <ScrollView style={styles.selectModalBody}>
+          <ScrollView style={styles.pickerModalBody}>
             {people && people.length > 0 ? (
               people.map(person => (
                 <TouchableOpacity
@@ -204,16 +208,16 @@ const CreateProposalsModal = ({visible, onClose, onSuccess}) => {
   );
 
   const renderDayPicker = () => (
-    <Modal transparent visible={dayPickerVisible} animationType="slide">
-      <View style={styles.modalOverlay}>
-        <View style={styles.selectModalContent}>
-          <View style={styles.selectModalHeader}>
-            <Text style={styles.selectModalTitle}>Selecionar Dia</Text>
+    <Modal transparent visible={dayPickerVisible} animationType="slide" onRequestClose={() => setDayPickerVisible(false)}>
+      <View style={styles.pickerModalOverlay}>
+        <View style={styles.pickerModalContent}>
+          <View style={styles.pickerModalHeader}>
+            <Text style={styles.pickerModalTitle}>Selecionar Dia</Text>
             <TouchableOpacity onPress={() => setDayPickerVisible(false)}>
               <Icon name="close" size={24} color="#666" />
             </TouchableOpacity>
           </View>
-          <ScrollView style={styles.selectModalBody}>
+          <ScrollView style={styles.pickerModalBody}>
             {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
               <TouchableOpacity
                 key={day}
@@ -232,27 +236,27 @@ const CreateProposalsModal = ({visible, onClose, onSuccess}) => {
   );
 
   const renderMonthPicker = () => {
-    const months = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+    const months = ['Janeiro', 'Fevereiro', 'MarÃ§o', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
     return (
-      <Modal transparent visible={monthPickerVisible} animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={styles.selectModalContent}>
-            <View style={styles.selectModalHeader}>
-              <Text style={styles.selectModalTitle}>Selecionar Mês</Text>
+      <Modal transparent visible={monthPickerVisible} animationType="slide" onRequestClose={() => setMonthPickerVisible(false)}>
+        <View style={styles.pickerModalOverlay}>
+          <View style={styles.pickerModalContent}>
+            <View style={styles.pickerModalHeader}>
+              <Text style={styles.pickerModalTitle}>Selecionar MÃªs</Text>
               <TouchableOpacity onPress={() => setMonthPickerVisible(false)}>
                 <Icon name="close" size={24} color="#666" />
               </TouchableOpacity>
             </View>
-            <ScrollView style={styles.selectModalBody}>
+            <ScrollView style={styles.pickerModalBody}>
               {months.map((month, index) => (
                 <TouchableOpacity
                   key={index}
-                  style={[styles.selectOption, startMonth === (index+1).toString() && styles.selectOptionActive]}
+                  style={[styles.selectOption, startMonth === (index + 1).toString() && styles.selectOptionActive]}
                   onPress={() => {
-                    setStartMonth((index+1).toString());
+                    setStartMonth((index + 1).toString());
                     setMonthPickerVisible(false);
                   }}>
-                  <Text style={[styles.modelName, startMonth === (index+1).toString() && styles.selectOptionTextActive]}>{month}</Text>
+                  <Text style={[styles.modelName, startMonth === (index + 1).toString() && styles.selectOptionTextActive]}>{month}</Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -263,70 +267,81 @@ const CreateProposalsModal = ({visible, onClose, onSuccess}) => {
   };
 
   return (
-    <Modal animationType="slide" transparent visible={visible} onRequestClose={handleClose}>
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Criar Nova Proposta</Text>
-            <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-              <Icon name="close" size={24} color="#666666" />
-            </TouchableOpacity>
-          </View>
+    <AnimatedModal visible={visible} onRequestClose={handleClose} style={{ justifyContent: 'flex-end' }}>
+      <View style={styles.modalContainer}>
+        <View style={styles.modalHeader}>
+          <Text style={styles.modalTitle}>Criar Nova Proposta</Text>
+          <TouchableOpacity onPress={handleClose} style={styles.headerCloseButton}>
+            <Icon name="close" size={20} color="#64748B" />
+          </TouchableOpacity>
+        </View>
 
-          <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>
-                Modelo do Contrato <Text style={styles.required}>*</Text>
-              </Text>
-              <TouchableOpacity style={styles.selectInput} onPress={() => setModelPickerVisible(true)}>
-                <View style={styles.selectInputContent}>
-                  <Icon name="description" size={20} color="#2529a1" style={{marginRight: 8}} />
-                  <Text style={[styles.selectInputText, {color: selectedModel ? '#1A1A1A' : '#999999'}]}>
-                    {selectedModel ? contractModels.find(m => m['@id'] === selectedModel)?.model : 'Selecionar modelo'}
-                  </Text>
-                </View>
-                <Icon name="chevron-down" size={24} color="#666666" />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Data de Início</Text>
-              <View style={styles.dateContainer}>
-                <TouchableOpacity style={styles.selectInput} onPress={() => setDayPickerVisible(true)}>
-                  <Text style={styles.selectInputText}>{startDay || 'Dia'}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.selectInput} onPress={() => setMonthPickerVisible(true)}>
-                  <Text style={styles.selectInputText}>
-                    {startMonth ? ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'][parseInt(startMonth)-1] : 'Mês'}
-                  </Text>
-                </TouchableOpacity>
-                <TextInput
-                  style={[styles.yearInput, {flex: 1}]}
-                  value={startYear}
-                  onChangeText={setStartYear}
-                  placeholder="2024"
-                  placeholderTextColor="#999999"
-                  keyboardType="numeric"
-                  maxLength={4}
-                />
+        <ScrollView
+          style={styles.modalBody}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag">
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>
+              Modelo da Proposta <Text style={styles.required}>*</Text>
+            </Text>
+            <TouchableOpacity style={styles.selectInput} onPress={() => setModelPickerVisible(true)}>
+              <View style={styles.selectInputContent}>
+                <Icon name="description" size={20} color="#2529a1" style={{ marginRight: 8 }} />
+                <Text style={[styles.selectInputText, { color: selectedModel ? '#1A1A1A' : '#999999' }]}>
+                  {selectedModel ? contractModels.find(m => m['@id'] === selectedModel)?.model : 'Selecionar modelo'}
+                </Text>
               </View>
-            </View>
-          </ScrollView>
-
-          <View style={styles.modalFooter}>
-            <TouchableOpacity style={styles.cancelButton} onPress={handleClose}>
-              <Text style={styles.cancelButtonText}>Cancelar</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.createButton, !selectedModel && styles.createButtonDisabled]}
-              onPress={handleSubmit}
-              disabled={isLoading || !selectedModel}>
-              {isLoading ? <ActivityIndicator size="small" color="#FFFFFF" /> : <>
-                <Icon name="add" size={20} color="#FFFFFF" style={{marginRight: 8}} />
-                <Text style={styles.createButtonText}>Criar Contrato</Text>
-              </>}
+              <Icon name="keyboard-arrow-down" size={24} color="#666666" />
             </TouchableOpacity>
           </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Data de InÃ­cio</Text>
+            <View style={styles.dateContainer}>
+              <TouchableOpacity style={styles.selectInputDate} onPress={() => setDayPickerVisible(true)}>
+                <Text style={[styles.selectInputText, !startDay && { color: '#999' }]}>{startDay || 'Dia'}</Text>
+                <Icon name="arrow-drop-down" size={20} color="#666" />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.selectInputDate} onPress={() => setMonthPickerVisible(true)}>
+                <Text style={[styles.selectInputText, !startMonth && { color: '#999' }]}>
+                  {startMonth ? ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'][parseInt(startMonth) - 1] : 'MÃªs'}
+                </Text>
+                <Icon name="arrow-drop-down" size={20} color="#666" />
+              </TouchableOpacity>
+              <TextInput
+                style={styles.yearInput}
+                value={startYear}
+                onChangeText={setStartYear}
+                placeholder="2024"
+                placeholderTextColor="#999999"
+                keyboardType="numeric"
+                maxLength={4}
+              />
+            </View>
+          </View>
+        </ScrollView>
+
+        <View style={styles.modalFooter}>
+          <TouchableOpacity
+            style={styles.cancelButton}
+            onPress={() => {
+              Keyboard.dismiss();
+              handleClose();
+            }}>
+            <Text style={styles.cancelButtonText}>Cancelar</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.createButton, !selectedModel && styles.createButtonDisabled]}
+            onPress={() => {
+              Keyboard.dismiss();
+              handleSubmit();
+            }}
+            disabled={isLoading || !selectedModel}>
+            {isLoading ? <ActivityIndicator size="small" color="#FFFFFF" /> : (
+              <Text style={styles.createButtonText}>Salvar</Text>
+            )}
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -334,47 +349,125 @@ const CreateProposalsModal = ({visible, onClose, onSuccess}) => {
       {renderBeneficiarySelectModal()}
       {renderDayPicker()}
       {renderMonthPicker()}
-    </Modal>
+    </AnimatedModal>
   );
 };
 
 const styles = StyleSheet.create({
-  modalOverlay: {flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center'},
-  modalContent: {backgroundColor: '#fff', borderRadius: 16, width: '90%', maxHeight: '80%', elevation: 10, shadowColor: '#000', shadowOffset: {width:0,height:4}, shadowOpacity:0.25, shadowRadius:8},
-  modalHeader: {flexDirection: 'row', justifyContent: 'space-between', alignItems:'center', paddingHorizontal:20,paddingVertical:16, borderBottomWidth:1,borderBottomColor:'#E9ECEF'},
-  modalTitle: {fontSize:20,fontWeight:'600',color:'#1A1A1A'},
-  closeButton: {padding:4},
-  modalBody: {paddingHorizontal:20,paddingVertical:16,maxHeight:400},
-  inputGroup: {marginBottom:20},
-  inputLabel: {fontSize:16,fontWeight:'500',color:'#1A1A1A',marginBottom:8},
-  required: {color:'#FF4444'},
-  selectInput: {flexDirection:'row',alignItems:'center',justifyContent:'space-between',borderWidth:1,borderColor:'#E0E0E0',borderRadius:8,paddingHorizontal:12,paddingVertical:12,backgroundColor:'#FFFFFF'},
-  selectInputContent:{flexDirection:'row',alignItems:'center',flex:1},
-  selectInputText:{fontSize:16,flex:1},
-  yearInput: {borderWidth:1,borderColor:'#E0E0E0',borderRadius:8,paddingHorizontal:12,paddingVertical:12,fontSize:16,color:'#1A1A1A',backgroundColor:'#FFFFFF',textAlign:'center'},
-  modalFooter:{flexDirection:'row',justifyContent:'space-between',paddingHorizontal:20,paddingVertical:16,borderTopWidth:1,borderTopColor:'#E9ECEF'},
-  cancelButton:{flex:1,paddingVertical:12,marginRight:8,borderRadius:8,borderWidth:1,borderColor:'#E0E0E0',alignItems:'center'},
-  cancelButtonText:{fontSize:16,fontWeight:'600',color:'#666666'},
-  createButton:{flex:1,flexDirection:'row',paddingVertical:12,marginLeft:8,borderRadius:8,backgroundColor:'#2529a1',alignItems:'center',justifyContent:'center'},
-  createButtonDisabled:{backgroundColor:'#CCCCCC'},
-  createButtonText:{fontSize:16,fontWeight:'600',color:'#FFFFFF'},
-  selectModalContent:{backgroundColor:'#FFFFFF',borderRadius:16,width:'90%',maxHeight:'70%',elevation:10,shadowColor:'#000',shadowOffset:{width:0,height:4},shadowOpacity:0.25,shadowRadius:8},
-  selectModalHeader:{flexDirection:'row',justifyContent:'space-between',alignItems:'center',paddingHorizontal:20,paddingVertical:16,borderBottomWidth:1,borderBottomColor:'#E9ECEF'},
-  selectModalTitle:{fontSize:18,fontWeight:'600',color:'#1A1A1A'},
-  selectModalBody:{maxHeight:300},
-  selectOption:{flexDirection:'row',alignItems:'center',paddingHorizontal:20,paddingVertical:16,borderBottomWidth:1,borderBottomColor:'#F1F3F4'},
-  selectOptionActive:{backgroundColor:'#F8F9FF'},
-  selectOptionTextActive:{color:'#2529a1',fontWeight:'600'},
-  modelInfo:{flexDirection:'row',alignItems:'center',flex:1},
-  personInfo:{flexDirection:'row',alignItems:'center',flex:1},
-  iconContainer:{width:40,height:40,borderRadius:20,backgroundColor:'#F8F9FF',alignItems:'center',justifyContent:'center',marginRight:12},
-  modelName:{fontSize:16,color:'#1A1A1A'},
-  personName:{fontSize:16,color:'#1A1A1A'},
-  emptyState:{alignItems:'center',paddingVertical:40},
-  emptyText:{fontSize:16,color:'#999999',marginTop:12},
-  loadingContainer:{alignItems:'center',paddingVertical:40},
-  loadingText:{fontSize:16,color:'#666666',marginTop:12},
-  dateContainer:{flexDirection:'row',justifyContent:'space-between',alignItems:'flex-end'}
+  modalContainer: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '90%',
+    width: '100%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 10,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  headerCloseButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalBody: {
+    padding: 24,
+  },
+  inputGroup: {
+    marginBottom: 20,
+  },
+  inputLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#212529',
+    marginBottom: 8,
+  },
+  required: {
+    color: '#FF4444',
+  },
+  selectInput: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#f8f9fa',
+  },
+  selectInputContent: { flexDirection: 'row', alignItems: 'center', flex: 1 },
+  selectInputText: { fontSize: 16, flex: 1, color: '#1A1A1A' },
+  dateContainer: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  selectInputDate: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    backgroundColor: '#f8f9fa',
+  },
+  yearInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: '#1A1A1A',
+    backgroundColor: '#f8f9fa',
+    textAlign: 'center',
+  },
+  modalFooter: { flexDirection: 'row', padding: 20, gap: 12, borderTopWidth: 1, borderTopColor: '#e9ecef' },
+  cancelButton: { flex: 1, paddingVertical: 14, borderRadius: 12, borderWidth: 1, borderColor: '#6c757d', alignItems: 'center' },
+  cancelButtonText: { fontSize: 16, fontWeight: '600', color: '#6c757d' },
+  createButton: { flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: '#007bff', alignItems: 'center', justifyContent: 'center' },
+  createButtonDisabled: { backgroundColor: '#6c757d' },
+  createButtonText: { fontSize: 16, fontWeight: '600', color: '#FFFFFF' },
+  pickerModalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  pickerModalContent: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 20, borderTopRightRadius: 20, width: '100%', maxHeight: '50%', elevation: 10 },
+  pickerModalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#E9ECEF' },
+  pickerModalTitle: { fontSize: 18, fontWeight: '600', color: '#1A1A1A' },
+  pickerModalBody: { maxHeight: '100%' },
+  selectOption: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#F1F3F4' },
+  selectOptionActive: { backgroundColor: '#F8F9FF' },
+  selectOptionTextActive: { color: '#2529a1', fontWeight: '600' },
+  modelInfo: { flexDirection: 'row', alignItems: 'center', flex: 1 },
+  personInfo: { flexDirection: 'row', alignItems: 'center', flex: 1 },
+  iconContainer: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#F8F9FF', alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+  modelName: { fontSize: 16, color: '#1A1A1A' },
+  personName: { fontSize: 16, color: '#1A1A1A' },
+  emptyState: { alignItems: 'center', paddingVertical: 40 },
+  emptyText: { fontSize: 16, color: '#999999', marginTop: 12 },
+  loadingContainer: { alignItems: 'center', paddingVertical: 40 },
+  loadingText: { fontSize: 16, color: '#666666', marginTop: 12 },
 });
 
 export default CreateProposalsModal;
+

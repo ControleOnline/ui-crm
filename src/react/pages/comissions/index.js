@@ -4,7 +4,6 @@ import {
   View,
   TouchableOpacity,
   ScrollView,
-  Alert,
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
@@ -13,10 +12,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import {useStore} from '@store';
 import StateStore from '@controleonline/ui-layout/src/react/components/StateStore';
 import css from '@controleonline/ui-orders/src/react/css/orders';
+import {useMessage} from '@controleonline/ui-common/src/react/components/MessageService';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import {useNavigation, useFocusEffect} from '@react-navigation/native';
 
 const Invoices = ({navigation}) => {
+  const {showDialog} = useMessage();
   const invoiceStore = useStore('invoice');
   const getters = invoiceStore.getters;
   const invoicesActions = invoiceStore.actions;
@@ -78,13 +79,13 @@ const Invoices = ({navigation}) => {
   };
 
   const handleInvoicePress = invoice => {
-    Alert.alert(
-      'Detalhes da Fatura',
-      `ID: ${invoice.id}\nValor: ${formatCurrency(invoice.price)}\nStatus: ${
+    showDialog({
+      title: 'Detalhes da Fatura',
+      message: `ID: ${invoice.id}\nValor: ${formatCurrency(invoice.price)}\nStatus: ${
         invoice.status?.status
       }\nVencimento: ${formatDate(invoice.dueDate)}`,
-      [{text: 'OK'}],
-    );
+      confirmLabel: 'OK',
+    });
   };
 
   return (

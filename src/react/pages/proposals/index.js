@@ -1,727 +1,597 @@
-import React, {useCallback, useState, useEffect} from 'react';
+﻿import React, { useCallback, useState, useEffect, useLayoutEffect } from 'react';
 import {
   Text,
   View,
   TouchableOpacity,
-  ScrollView,
+  FlatList,
   ActivityIndicator,
   StyleSheet,
   TextInput,
-  TouchableWithoutFeedback,
+  RefreshControl,
+  Platform,
+  ScrollView,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-
-import {useNavigation, useFocusEffect} from '@react-navigation/native';
-import {useStore} from '@store';
-import Icon from 'react-native-vector-icons/MaterialIcons';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useStore } from '@store';
+import { colors } from '@controleonline/../../src/styles/colors';
+import Icon from 'react-native-vector-icons/FontAwesome';
+import IconAdd from 'react-native-vector-icons/MaterialIcons';
+import MaterialIcon from 'react-native-vector-icons/MaterialIcons';
 import CreateProposalsModal from './CreateProposalsModal';
+import CompanySelector from '../../components/CompanySelector';
+import Formatter from '@controleonline/ui-common/src/utils/formatter';
 
 const ProposalsPage = () => {
   const peopleStore = useStore('people');
-  const peopleGetters = peopleStore.getters;
-  const {currentCompany} = peopleGetters;
+  const { currentCompany } = peopleStore.getters;
   const contractStore = useStore('contract');
   const contractGetters = contractStore.getters;
   const contractActions = contractStore.actions;
-  const {items: contracts, totalItems, isLoading, error} = contractGetters;
+  const { items: contracts, totalItems, isLoading, error } = contractGetters;
   const navigation = useNavigation();
   const [createModalVisible, setCreateModalVisible] = useState(false);
   const [search, setSearch] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [showItemsPerPageDropdown, setShowItemsPerPageDropdown] =
-    useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [allContracts, setAllContracts] = useState([]);
+  const [selectedStatusFilterKey, setSelectedStatusFilterKey] = useState('');
 
-  useFocusEffect(
-    useCallback(() => {
+  const fetchContracts = useCallback(
+    (query, page) => {
+      if (!currentCompany?.id) {
+        return;
+      }
+
       const params = {
         beneficiary: currentCompany.id,
         'contractModel.context': 'proposal',
-        page: currentPage,
-        itemsPerPage: itemsPerPage,
+        page: page ?? currentPage,
+        itemsPerPage,
       };
 
-      // Adiciona o parâmetro de busca se houver
-      if (search.trim()) {
-        params['peoples.people.name'] = search.trim();
+      if (String(query ?? searchQuery).trim()) {
+        params['peoples.people.name'] = String(query ?? searchQuery).trim();
       }
 
       contractActions.getItems(params);
-    }, [currentCompany.id, currentPage, itemsPerPage, search]),
+    },
+    [currentCompany?.id, currentPage, itemsPerPage, searchQuery],
+  );
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerTitle: 'Propostas',
+      headerRight: () => <CompanySelector mode="icon" />,
+    });
+  }, [navigation]);
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setSearchQuery(search.trim());
+      setCurrentPage(1);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchContracts(searchQuery, currentPage);
+    }, [fetchContracts, searchQuery, currentPage]),
   );
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, itemsPerPage]);
+  }, [itemsPerPage]);
+
+  useEffect(() => {
+    if (isLoading) return;
+
+    if (contracts && Array.isArray(contracts)) {
+      if (currentPage === 1) {
+        setAllContracts(contracts);
+      } else {
+        setAllContracts(prev => {
+          const newIds = new Set(contracts.map(c => c.id));
+          const filteredPrev = prev.filter(p => !newIds.has(p.id));
+          return [...filteredPrev, ...contracts];
+        });
+      }
+    }
+  }, [contracts, currentPage, isLoading]);
 
   const handleCreateSuccess = () => {
-    const params = {
-      beneficiary: currentCompany.id,
-      'contractModel.context': 'proposal',
-      page: currentPage,
-      itemsPerPage: itemsPerPage,
-      contractModel: 'proposal',
-    };
-
-    // Adiciona o parâmetro de busca se houver
-    if (search.trim()) {
-      params['peoples.people.name'] = search.trim();
-    }
-
-    contractActions.getItems(params);
+    fetchContracts(searchQuery, 1);
+    setCurrentPage(1);
   };
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchContracts(searchQuery, 1);
+    setCurrentPage(1);
+    setRefreshing(false);
+  }, [fetchContracts, searchQuery]);
+
+  const normalizeStatusKey = status =>
+    String(status || '')
+      .trim()
+      .toLowerCase()
+      .replace(/[_-]+/g, ' ')
+      .replace(/\s+/g, ' ');
 
   const getStatusColor = status => {
-    switch (status?.toLowerCase()) {
+    const normalized = normalizeStatusKey(status);
+
+    switch (normalized) {
       case 'ativo':
-        return '#4CAF50';
+      case 'active':
+      case 'assinado':
+      case 'signed':
+        return '#10B981'; // Green
       case 'inativo':
-        return '#F44336';
+      case 'inactive':
+      case 'cancelado':
+      case 'cancelled':
+      case 'canceled':
+        return '#EF4444'; // Red
       case 'pendente':
-        return '#FF9800';
+      case 'pending':
+        return '#F59E0B'; // Orange
+      case 'open':
+      case 'aberto':
+        return '#3B82F6'; // Blue
       default:
-        return '#757575';
+        return '#64748B'; // Gray
     }
   };
 
-  const renderContract = contract => (
-    <View key={contract.id} style={contractStyles.contractCard}>
-      <View style={contractStyles.contractHeader}>
-        <View style={contractStyles.headerContent}>
-          <Text style={contractStyles.contractTitle}>
-            {contract.contractModel.model}
-          </Text>
-          <View
-            style={[
-              contractStyles.statusBadge,
-              {backgroundColor: getStatusColor(contract.status.status)},
-            ]}>
-            <Text style={contractStyles.statusText}>
-              {contract.status.status}
-            </Text>
+  const getStatusLabel = status => {
+    const normalized = normalizeStatusKey(status);
+    const map = {
+      ativo: 'Ativo',
+      active: 'Ativo',
+      inativo: 'Inativo',
+      inactive: 'Inativo',
+      pendente: 'Pendente',
+      pending: 'Pendente',
+      open: 'Aberto',
+      aberto: 'Aberto',
+      closed: 'Fechado',
+      fechado: 'Fechado',
+      cancelado: 'Cancelado',
+      cancelled: 'Cancelado',
+      canceled: 'Cancelado',
+      'waiting signature': 'Aguardando Assinatura',
+      'awaiting signature': 'Aguardando Assinatura',
+      'signature pending': 'Aguardando Assinatura',
+      assinado: 'Assinado',
+      signed: 'Assinado',
+      draft: 'Rascunho',
+      rascunho: 'Rascunho',
+    };
+
+    return map[normalized] || status || '-';
+  };
+
+  const statusFilterOptions = [];
+  const seenStatusKeys = new Set();
+  allContracts.forEach(contract => {
+    const rawStatus = contract?.status?.status;
+    const statusKey = normalizeStatusKey(rawStatus);
+    if (!statusKey || seenStatusKeys.has(statusKey)) {
+      return;
+    }
+
+    seenStatusKeys.add(statusKey);
+    statusFilterOptions.push({
+      key: statusKey,
+      label: getStatusLabel(rawStatus),
+      color: getStatusColor(rawStatus),
+    });
+  });
+
+  useEffect(() => {
+    if (!selectedStatusFilterKey) {
+      return;
+    }
+
+    const stillExists = allContracts.some(
+      contract =>
+        normalizeStatusKey(contract?.status?.status) === selectedStatusFilterKey,
+    );
+
+    if (!stillExists) {
+      setSelectedStatusFilterKey('');
+    }
+  }, [allContracts, selectedStatusFilterKey]);
+
+  const filteredContracts = selectedStatusFilterKey
+    ? allContracts.filter(
+        contract =>
+          normalizeStatusKey(contract?.status?.status) ===
+          selectedStatusFilterKey,
+      )
+    : allContracts;
+
+  const renderProposal = ({ item: contract }) => (
+    <TouchableOpacity
+      style={styles.card}
+      onPress={() => navigation.navigate('ContractDetails', { contractId: contract.id })}
+      activeOpacity={0.9}
+    >
+      <View style={styles.cardHeader}>
+        <View style={styles.headerContent}>
+          <Text style={styles.cardTitle}>{contract.contractModel?.model || 'Sem título'}</Text>
+          <View style={[styles.statusBadge, { backgroundColor: getStatusColor(contract.status?.status) }]}>
+            <Text style={styles.statusText}>{getStatusLabel(contract.status?.status)}</Text>
           </View>
         </View>
       </View>
 
-      <View style={contractStyles.contractBody}>
-        {/* People Section */}
-        {contract.peoples && contract.peoples.length > 0 && (
-          <View style={contractStyles.peopleSection}>
-            <View style={contractStyles.sectionHeader}>
-              <Icon name="people" size={16} color="#666" />
-              <Text style={contractStyles.sectionTitle}>Pessoas</Text>
+      <View style={styles.cardBody}>
+        <View style={styles.datesContainer}>
+          <View style={styles.dateBadge}>
+            <MaterialIcon name="event" size={14} color="#64748B" />
+            <Text style={styles.dateText}>Início: {contract.startDate ? Formatter.formatDateYmdTodmY(contract.startDate) : '-'}</Text>
+          </View>
+          {contract.endDate && (
+            <View style={styles.dateBadge}>
+              <MaterialIcon name="event-available" size={14} color="#64748B" />
+              <Text style={styles.dateText}>Fim: {Formatter.formatDateYmdTodmY(contract.endDate)}</Text>
             </View>
-            {contract.peoples.map((contractPeople, index) => (
-              <View key={contractPeople.id} style={contractStyles.personItem}>
-                <View style={contractStyles.personInfo}>
-                  <Text style={contractStyles.personName}>
-                    {contractPeople.people.name}
-                  </Text>
-                  <Text style={contractStyles.personType}>
-                    {contractPeople.peopleType}
-                  </Text>
-                </View>
-                <View style={contractStyles.personTypeIndicator}>
-                  <Text style={contractStyles.personTypeText}>
-                    {contractPeople.people.peopleType === 'F' ? 'PF' : 'PJ'}
-                  </Text>
-                </View>
-              </View>
-            ))}
-          </View>
-        )}
-
-        <View style={contractStyles.dateContainer}>
-          <View style={contractStyles.dateItem}>
-            <Icon name="event" size={16} color="#666" />
-            <Text style={contractStyles.dateLabel}>Início</Text>
-            <Text style={contractStyles.dateValue}>
-              {new Date(contract.startDate).toLocaleDateString('pt-BR')}
-            </Text>
-          </View>
-          <View style={contractStyles.dateItem}>
-            <Icon name="event-available" size={16} color="#666" />
-            <Text style={contractStyles.dateLabel}>Término</Text>
-            <Text style={contractStyles.dateValue}>
-              {new Date(contract.endDate).toLocaleDateString('pt-BR')}
-            </Text>
-          </View>
+          )}
         </View>
       </View>
 
-      <TouchableOpacity
-        style={contractStyles.viewButton}
-        onPress={() =>
-          navigation.navigate('ContractDetails', {contractId: contract.id})
-        }>
-        <Text style={contractStyles.viewButtonText}>Ver Detalhes</Text>
-        <Icon name="arrow-forward" size={16} color="#FFFFFF" />
-      </TouchableOpacity>
-    </View>
+      <View style={styles.cardFooter}>
+        <Text style={styles.viewDetailsText}>Ver detalhes</Text>
+        <Icon name="chevron-right" size={12} color={colors.primary} />
+      </View>
+    </TouchableOpacity>
   );
 
   return (
-    <SafeAreaView style={contractStyles.container}>
-      {/* Header com botão de criar */}
-      <View
-        style={{
-          backgroundColor: '#fff',
-          paddingHorizontal: 20,
-          paddingVertical: 16,
-          borderBottomWidth: 1,
-          borderBottomColor: '#e9ecef',
-          shadowColor: '#000',
-          shadowOffset: {width: 0, height: 2},
-          shadowOpacity: 0.05,
-          shadowRadius: 3,
-          elevation: 2,
-          margin: 20,
-        }}>
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 12,
-          }}>
-          <View
-            style={{
-              flex: 1,
-              flexDirection: 'row',
-              alignItems: 'center',
-              backgroundColor: '#f8f9fa',
-              borderRadius: 12,
-              paddingHorizontal: 16,
-              borderWidth: 1,
-              borderColor: '#e9ecef',
-            }}>
-            <Icon name="search" size={20} color="#6c757d" />
+    <View style={styles.container}>
+      <View style={styles.subHeader}>
+        <View style={styles.searchRow}>
+          <View style={styles.searchInputContainer}>
+            <Icon name="search" size={16} color="#94A3B8" />
             <TextInput
-              placeholder="Buscar cliente..."
+              style={styles.searchInput}
+              placeholder="Buscar proposta..."
+              placeholderTextColor="#94A3B8"
               value={search}
               onChangeText={setSearch}
-              style={{
-                flex: 1,
-                paddingVertical: 12,
-                paddingHorizontal: 12,
-                color: '#212529',
-                fontSize: 16,
-                width: '100%',
-              }}
-              placeholderTextColor="#6c757d"
+              underlineColorAndroid="transparent"
             />
+            {search.length > 0 && (
+              <TouchableOpacity
+                onPress={() => setSearch('')}
+                style={styles.clearSearchButton}>
+                <Icon name="times-circle" size={16} color="#94A3B8" />
+              </TouchableOpacity>
+            )}
           </View>
           <TouchableOpacity
-            style={{
-              backgroundColor: '#2529a1',
-              paddingHorizontal: 16,
-              paddingVertical: 12,
-              borderRadius: 12,
-              flexDirection: 'row',
-              alignItems: 'center',
-              elevation: 2,
-              shadowColor: '#2529a1',
-              shadowOffset: {width: 0, height: 2},
-              shadowOpacity: 0.3,
-              shadowRadius: 4,
-            }}
-            onPress={() => setCreateModalVisible(true)}>
-            <Icon
-              name="add"
-              size={20}
-              color="#FFFFFF"
-              style={{marginRight: 4}}
-            />
-            <Text style={{color: '#FFFFFF', fontWeight: '600', fontSize: 14}}>
-              Criar
-            </Text>
+            style={styles.addButton}
+            onPress={() => setCreateModalVisible(true)}
+            activeOpacity={0.8}>
+            <IconAdd name="add" size={24} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
-      </View>
-      {isLoading ? (
-        <View style={contractStyles.centerContent}>
-          <ActivityIndicator size="large" color="#2529a1" />
-          <Text style={contractStyles.loadingText}>
-            Carregando contratos...
-          </Text>
-        </View>
-      ) : error ? (
-        <View style={contractStyles.centerContent}>
-          <Icon name="error-outline" size={48} color="#F44336" />
-          <Text style={contractStyles.errorText}>
-            Erro ao carregar contratos
-          </Text>
-          <Text style={contractStyles.errorDetail}>{error}</Text>
-        </View>
-      ) : contracts.length === 0 ? (
-        <View style={contractStyles.centerContent}>
-          <Icon name="description" size={48} color="#CCCCCC" />
-          <Text style={contractStyles.emptyTitle}>
-            Nenhum contrato encontrado
-          </Text>
-          <Text style={contractStyles.emptySubtitle}>
-            Os contratos aparecerão aqui quando disponíveis
-          </Text>
-        </View>
-      ) : (
-        <>
-          {/* Items per page selector */}
-          {!isLoading && contracts && contracts.length > 0 && !error && (
-            <View
-              style={{
-                backgroundColor: '#fff',
-                paddingHorizontal: 20,
-                paddingVertical: 12,
-                borderBottomWidth: 1,
-                borderBottomColor: '#e9ecef',
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                marginHorizontal: 20,
-                marginBottom: 16,
-              }}>
-              <Text style={{color: '#6c757d', fontSize: 14}}>
-                Mostrando {contracts.length} de {totalItems} propostas
-              </Text>
-              <View style={{flexDirection: 'row', alignItems: 'center'}}>
-                <Text style={{color: '#6c757d', fontSize: 14, marginRight: 8}}>
-                  Por página:
-                </Text>
-                <View style={{position: 'relative'}}>
-                  <TouchableOpacity
-                    onPress={() =>
-                      setShowItemsPerPageDropdown(!showItemsPerPageDropdown)
-                    }
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      paddingHorizontal: 12,
-                      paddingVertical: 8,
-                      borderWidth: 1,
-                      borderColor: '#e9ecef',
-                      borderRadius: 6,
-                      backgroundColor: '#f8f9fa',
-                      minWidth: 60,
-                    }}>
-                    <Text
-                      style={{color: '#495057', fontSize: 14, marginRight: 4}}>
-                      {itemsPerPage}
-                    </Text>
-                    <Icon
-                      name={
-                        showItemsPerPageDropdown
-                          ? 'chevron-up'
-                          : 'chevron-down'
-                      }
-                      size={16}
-                      color="#6c757d"
-                    />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </View>
-          )}
 
+        <View style={styles.statusFilterSection}>
+          <Text style={styles.statusFilterLabel}>Status</Text>
           <ScrollView
-            style={contractStyles.scrollView}
-            showsVerticalScrollIndicator={false}>
-            {contracts.map(renderContract)}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.statusFilterRow}>
+            <TouchableOpacity
+              onPress={() => setSelectedStatusFilterKey('')}
+              style={[
+                styles.statusFilterChip,
+                !selectedStatusFilterKey && styles.statusFilterChipActive,
+              ]}>
+              <Text
+                style={[
+                  styles.statusFilterChipText,
+                  !selectedStatusFilterKey && styles.statusFilterChipTextActive,
+                ]}>
+                Todos
+              </Text>
+            </TouchableOpacity>
 
-            {/* Pagination Controls */}
-            {totalItems > itemsPerPage && (
-              <View
-                style={{
-                  backgroundColor: '#fff',
-                  marginHorizontal: 16,
-                  marginTop: 16,
-                  borderRadius: 16,
-                  padding: 20,
-                  shadowColor: '#000',
-                  shadowOffset: {width: 0, height: 3},
-                  shadowOpacity: 0.08,
-                  shadowRadius: 12,
-                  elevation: 4,
-                }}>
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                  }}>
-                  <TouchableOpacity
-                    onPress={() =>
-                      setCurrentPage(prev => Math.max(1, prev - 1))
-                    }
-                    disabled={currentPage === 1}
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      paddingHorizontal: 16,
-                      paddingVertical: 10,
-                      borderRadius: 8,
-                      backgroundColor:
-                        currentPage === 1 ? '#f8f9fa' : '#2529a1',
-                      opacity: currentPage === 1 ? 0.5 : 1,
-                    }}>
-                    <Icon
-                      name="chevron-left"
-                      size={20}
-                      color={currentPage === 1 ? '#6c757d' : '#fff'}
-                    />
-                    <Text
-                      style={{
-                        color: currentPage === 1 ? '#6c757d' : '#fff',
-                        marginLeft: 4,
-                        fontWeight: '600',
-                      }}>
-                      Anterior
-                    </Text>
-                  </TouchableOpacity>
+            {statusFilterOptions.map(item => {
+              const isActive = selectedStatusFilterKey === item.key;
 
-                  <View style={{flexDirection: 'row', alignItems: 'center'}}>
-                    <Text style={{color: '#6c757d', fontSize: 14}}>
-                      Página {currentPage} de{' '}
-                      {Math.ceil(totalItems / itemsPerPage)}
-                    </Text>
-                  </View>
-
-                  <TouchableOpacity
-                    onPress={() =>
-                      setCurrentPage(prev =>
-                        Math.min(
-                          Math.ceil(totalItems / itemsPerPage),
-                          prev + 1,
-                        ),
-                      )
-                    }
-                    disabled={
-                      currentPage >= Math.ceil(totalItems / itemsPerPage)
-                    }
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      paddingHorizontal: 16,
-                      paddingVertical: 10,
-                      borderRadius: 8,
-                      backgroundColor:
-                        currentPage >= Math.ceil(totalItems / itemsPerPage)
-                          ? '#f8f9fa'
-                          : '#2529a1',
-                      opacity:
-                        currentPage >= Math.ceil(totalItems / itemsPerPage)
-                          ? 0.5
-                          : 1,
-                    }}>
-                    <Text
-                      style={{
-                        color:
-                          currentPage >= Math.ceil(totalItems / itemsPerPage)
-                            ? '#6c757d'
-                            : '#fff',
-                        marginRight: 4,
-                        fontWeight: '600',
-                      }}>
-                      Próxima
-                    </Text>
-                    <Icon
-                      name="chevron-right"
-                      size={20}
-                      color={
-                        currentPage >= Math.ceil(totalItems / itemsPerPage)
-                          ? '#6c757d'
-                          : '#fff'
-                      }
-                    />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            )}
-
-            <View style={contractStyles.bottomPadding} />
+              return (
+                <TouchableOpacity
+                  key={item.key}
+                  onPress={() => setSelectedStatusFilterKey(item.key)}
+                  style={[
+                    styles.statusFilterChip,
+                    isActive && styles.statusFilterChipActive,
+                    {
+                      borderColor: isActive ? item.color : '#DCE3EC',
+                      backgroundColor: isActive ? `${item.color}24` : '#F8FAFC',
+                    },
+                  ]}>
+                  <Text
+                    style={[
+                      styles.statusFilterChipText,
+                      { color: isActive ? item.color : '#64748B' },
+                    ]}>
+                    {item.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </ScrollView>
-        </>
-      )}
+        </View>
+      </View>
+
+      <FlatList
+        data={filteredContracts}
+        keyExtractor={(item) => String(item.id)}
+        renderItem={renderProposal}
+        contentContainerStyle={styles.listContent}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        showsVerticalScrollIndicator={false}
+        ListEmptyComponent={() => {
+          if (isLoading && allContracts.length === 0) {
+            return (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color={colors.primary} />
+                <Text style={styles.loadingText}>Carregando propostas...</Text>
+              </View>
+            );
+          }
+          if (error && allContracts.length === 0) {
+            return (
+              <View style={styles.emptyContainer}>
+                <MaterialIcon name="error-outline" size={48} color="#EF4444" />
+                <Text style={styles.emptyTitle}>Erro ao carregar</Text>
+                <Text style={styles.emptySubtitle}>{error}</Text>
+              </View>
+            );
+          }
+          if (!isLoading && filteredContracts.length === 0) {
+            return (
+              <View style={styles.emptyContainer}>
+                <Icon name="file-text-o" size={48} color="#CBD5E1" />
+                <Text style={styles.emptyTitle}>
+                  {selectedStatusFilterKey
+                    ? 'Nenhuma proposta com este status'
+                    : 'Nenhuma proposta encontrada'}
+                </Text>
+                {searchQuery ? (
+                  <Text style={styles.emptySubtitle}>Tente buscar por outro termo</Text>
+                ) : selectedStatusFilterKey ? (
+                  <Text style={styles.emptySubtitle}>Selecione outro status</Text>
+                ) : (
+                  <Text style={styles.emptySubtitle}>Use o botão + para criar uma nova proposta</Text>
+                )}
+              </View>
+            );
+          }
+          return null;
+        }}
+        ListFooterComponent={() => isLoading && allContracts.length > 0 ? <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: 20 }} /> : null}
+        onEndReached={() => {
+          if (!isLoading && allContracts.length < totalItems) {
+            setCurrentPage(p => p + 1);
+          }
+        }}
+        onEndReachedThreshold={0.5}
+      />
 
       <CreateProposalsModal
         visible={createModalVisible}
         onClose={() => setCreateModalVisible(false)}
         onSuccess={handleCreateSuccess}
       />
-
-      {/* Dropdown Overlay */}
-      {showItemsPerPageDropdown && (
-        <TouchableWithoutFeedback
-          onPress={() => setShowItemsPerPageDropdown(false)}>
-          <View
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              zIndex: 998,
-            }}>
-            <View
-              style={{
-                position: 'absolute',
-                top: 140,
-                right: 20,
-                backgroundColor: '#fff',
-                borderWidth: 1,
-                borderColor: '#e9ecef',
-                borderRadius: 6,
-                shadowColor: '#000',
-                shadowOffset: {width: 0, height: 2},
-                shadowOpacity: 0.1,
-                shadowRadius: 4,
-                elevation: 999,
-                zIndex: 999,
-              }}>
-              {[5, 10, 20, 50].map(size => (
-                <TouchableOpacity
-                  key={size}
-                  onPress={() => {
-                    setItemsPerPage(size);
-                    setCurrentPage(1);
-                    setShowItemsPerPageDropdown(false);
-                  }}
-                  style={{
-                    paddingHorizontal: 16,
-                    paddingVertical: 10,
-                    backgroundColor:
-                      itemsPerPage === size ? '#f8f9fa' : 'transparent',
-                    borderBottomWidth: size !== 50 ? 1 : 0,
-                    borderBottomColor: '#f1f3f4',
-                  }}>
-                  <Text
-                    style={{
-                      color: itemsPerPage === size ? '#2529a1' : '#495057',
-                      fontSize: 14,
-                      fontWeight: itemsPerPage === size ? '600' : '400',
-                    }}>
-                    {size}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-        </TouchableWithoutFeedback>
-      )}
-    </SafeAreaView>
+    </View>
   );
 };
 
-const contractStyles = StyleSheet.create({
+const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: colors.background,
   },
-  header: {
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+  subHeader: {
+    paddingHorizontal: 16,
+    paddingTop: 9,
+    paddingBottom: 9,
+    backgroundColor: colors.white,
     borderBottomWidth: 1,
-    borderBottomColor: '#E9ECEF',
+    borderBottomColor: colors.border,
   },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#212529',
-    marginBottom: 4,
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  headerSubtitle: {
-    fontSize: 14,
-    color: '#6C757D',
+  statusFilterSection: {
+    marginTop: 10,
   },
-  scrollView: {
+  statusFilterLabel: {
+    fontSize: 12,
+    color: '#64748B',
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  statusFilterRow: {
+    paddingRight: 4,
+  },
+  statusFilterChip: {
+    borderWidth: 1,
+    borderColor: '#DCE3EC',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    marginRight: 8,
+  },
+  statusFilterChipActive: {
+    borderColor: colors.primary,
+    backgroundColor: '#E7F3FF',
+  },
+  statusFilterChipText: {
+    fontSize: 12,
+    color: '#64748B',
+    fontWeight: '600',
+  },
+  statusFilterChipTextActive: {
+    color: colors.primary,
+  },
+  searchInputContainer: {
     flex: 1,
-    paddingTop: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.background,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    height: 40,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  contractCard: {
-    backgroundColor: '#FFFFFF',
-    marginHorizontal: 16,
-    marginBottom: 12,
-    borderRadius: 12,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.1,
+  searchInput: {
+    flex: 1,
+    height: '100%',
+    paddingHorizontal: 8,
+    fontSize: 14,
+    color: colors.text,
+  },
+  clearSearchButton: {
+    padding: 4,
+  },
+  addButton: {
+    backgroundColor: colors.primary,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 12,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
     shadowRadius: 4,
+    elevation: 3,
   },
-  contractHeader: {
+  listContent: {
     padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F3F4',
+    paddingBottom: 32,
+  },
+  card: {
+    backgroundColor: colors.white,
+    borderRadius: 12,
+    marginBottom: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...Platform.select({
+      android: { elevation: 4 },
+      ios: {
+        shadowColor: '#0F172A',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 12,
+      },
+      web: { boxShadow: '0 8px 16px rgba(15, 23, 42, 0.1), 0 2px 6px rgba(15, 23, 42, 0.06)' },
+    }),
+  },
+  cardHeader: {
+    marginBottom: 12,
   },
   headerContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
   },
-  contractTitle: {
-    fontSize: 18,
+  cardTitle: {
+    fontSize: 16,
     fontWeight: '600',
-    color: '#212529',
+    color: colors.text,
     flex: 1,
     marginRight: 12,
+    lineHeight: 22,
   },
   statusBadge: {
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 12,
+    borderRadius: 6,
   },
   statusText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    color: colors.white,
+    fontSize: 10,
+    fontWeight: '700',
     textTransform: 'uppercase',
   },
-  contractBody: {
-    padding: 16,
-  },
-  peopleSection: {
-    marginBottom: 16,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#495057',
-    marginLeft: 6,
-  },
-  personItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    backgroundColor: '#F8F9FA',
-    borderRadius: 8,
-    marginBottom: 6,
-  },
-  personInfo: {
-    flex: 1,
-  },
-  personName: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#212529',
-  },
-  personType: {
-    fontSize: 12,
-    color: '#6C757D',
-    marginTop: 2,
-  },
-  personTypeIndicator: {
-    backgroundColor: '#E9ECEF',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  personTypeText: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: '#495057',
-  },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  cardBody: {
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
     marginBottom: 12,
   },
-  infoLabel: {
-    fontSize: 14,
-    color: '#6C757D',
-    marginLeft: 8,
-    marginRight: 8,
-  },
-  infoValue: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#212529',
-    flex: 1,
-  },
-  dateContainer: {
+  datesContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: 8,
   },
-  dateItem: {
-    flex: 1,
+  dateBadge: {
+    flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
-    backgroundColor: '#F8F9FA',
-    borderRadius: 8,
-    marginHorizontal: 4,
+    backgroundColor: colors.background,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  dateLabel: {
+  dateText: {
     fontSize: 12,
-    color: '#6C757D',
-    marginTop: 4,
-    marginBottom: 2,
+    color: colors.textSecondary,
+    marginLeft: 6,
   },
-  dateValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#212529',
-  },
-  viewButton: {
+  cardFooter: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#2529a1',
-    margin: 16,
-    marginTop: 0,
-    paddingVertical: 12,
-    borderRadius: 8,
+    justifyContent: 'flex-end',
   },
-  viewButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
+  viewDetailsText: {
+    fontSize: 13,
     fontWeight: '600',
-    marginRight: 8,
+    color: colors.primary,
+    marginRight: 4,
   },
-  centerContent: {
-    flex: 1,
-    justifyContent: 'center',
+  loadingContainer: {
+    padding: 32,
     alignItems: 'center',
-    paddingHorizontal: 32,
   },
   loadingText: {
-    fontSize: 16,
-    color: '#6C757D',
     marginTop: 12,
+    color: colors.textSecondary,
   },
-  errorText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#212529',
-    marginTop: 16,
-    textAlign: 'center',
-  },
-  errorDetail: {
-    fontSize: 14,
-    color: '#6C757D',
-    marginTop: 8,
-    textAlign: 'center',
+  emptyContainer: {
+    padding: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   emptyTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#212529',
+    fontWeight: '700',
+    color: colors.text,
     marginTop: 16,
-    textAlign: 'center',
   },
   emptySubtitle: {
     fontSize: 14,
-    color: '#6C757D',
-    marginTop: 8,
+    color: colors.textSecondary,
     textAlign: 'center',
-  },
-  bottomPadding: {
-    height: 20,
+    marginTop: 4,
   },
 });
 
 export default ProposalsPage;
+
