@@ -25,10 +25,19 @@ import Formatter from '@controleonline/ui-common/src/utils/formatter';
 
 export default function HomePage({ navigation }) {
   const peopleStore = useStore('people');
+  const authStore = useStore('auth');
   const themeStore = useStore('theme');
   const peopleGetters = peopleStore.getters;
+  const authGetters = authStore.getters;
   const themeGetters = themeStore.getters;
-  const { currentCompany, currentUser } = peopleGetters;
+  const { currentCompany } = peopleGetters;
+  const {user: authUser} = authGetters;
+  const currentUser = {
+    ...authUser,
+    name: String(
+      authUser?.realname || authUser?.name || authUser?.username || '',
+    ).trim(),
+  };
   const {colors: themeColors} = themeGetters;
 
   const [stats, setStats] = useState([
@@ -71,6 +80,15 @@ export default function HomePage({ navigation }) {
   );
 
   const getAvatarUrl = () => {
+    if (typeof currentUser?.avatarUrl === 'string' && currentUser.avatarUrl) {
+      return currentUser.avatarUrl;
+    }
+
+    if (currentUser?.avatar?.url) {
+      const domain = currentUser?.avatar?.domain || '';
+      return `${domain}${currentUser.avatar.url}`;
+    }
+
     if (!currentUser?.email) return 'https://www.gravatar.com/avatar/?d=identicon';
     const emailHash = md5(currentUser.email.trim().toLowerCase());
     return `https://www.gravatar.com/avatar/${emailHash}?s=200&d=identicon`;
