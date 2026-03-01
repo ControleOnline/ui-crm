@@ -21,14 +21,14 @@ import { FlatList } from 'react-native';
 import { useStore } from '@store';
 import { colors } from '@controleonline/../../src/styles/colors';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import {useMessage} from '@controleonline/ui-common/src/react/components/MessageService';
+import useToastMessage from '../../hooks/useToastMessage';
 
 const FONT_AWESOME_GLYPH_MAP = Icon?.getRawGlyphMap
   ? Icon.getRawGlyphMap()
   : null;
 
 export default function CrmIndex() {
-  const {showSuccess, showError} = useMessage();
+  const {showSuccess, showError} = useToastMessage();
   const navigation = useNavigation();
   // ... rest of component
   const [refreshing, setRefreshing] = useState(false);
@@ -190,7 +190,10 @@ export default function CrmIndex() {
     };
 
     if (query) {
+      // Keep server-side filtering broad because backend keys vary by version.
       params['client.name'] = query;
+      params['client.alias'] = query;
+      params['peoples.people.name'] = query;
     }
 
     if (filterParam) {
@@ -226,7 +229,7 @@ export default function CrmIndex() {
         });
       }
 
-      statusActions.getItems({ context: 'relationship' });
+      statusActions.getItems({ context: 'proposal' });
       categoriesActions.getItems({
         context: [
           'relationship',
@@ -282,7 +285,7 @@ export default function CrmIndex() {
   // Debounce search input
 
 
-  // Debounce curto para busca em tempo real (300ms) !!IMPORTANTE PARA UMA BOA EXPERIÃŠNCIA DE USUÃRIO
+  // Debounce curto para busca em tempo real (300ms)
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
       setSearchQuery(searchText.trim());
@@ -290,6 +293,44 @@ export default function CrmIndex() {
 
     return () => clearTimeout(delayDebounceFn);
   }, [searchText]);
+
+  const normalizeSearchValue = useCallback(value => {
+    if (value == null) {
+      return '';
+    }
+
+    return String(value)
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+  }, []);
+
+  const visibleOpportunities = React.useMemo(() => {
+    const normalizedQuery = normalizeSearchValue(searchQuery);
+    if (!normalizedQuery) {
+      return allOpportunities;
+    }
+
+    return allOpportunities.filter(opportunity => {
+      const searchableFields = [
+        opportunity?.client?.name,
+        opportunity?.client?.alias,
+        opportunity?.category?.name,
+        opportunity?.criticality?.name,
+        opportunity?.reason?.name,
+        opportunity?.taskStatus?.status,
+        opportunity?.taskStatus?.realStatus,
+        opportunity?.announce,
+        opportunity?.id,
+        `#${opportunity?.id || ''}`,
+      ];
+
+      return searchableFields.some(field =>
+        normalizeSearchValue(field).includes(normalizedQuery),
+      );
+    });
+  }, [allOpportunities, normalizeSearchValue, searchQuery]);
 
   const getCurrentDateComponents = () => {
     const today = new Date();
@@ -393,7 +434,7 @@ export default function CrmIndex() {
     const months = [
       'Janeiro',
       'Fevereiro',
-      'MarÃ§o',
+      'Março',
       'Abril',
       'Maio',
       'Junho',
@@ -551,7 +592,7 @@ export default function CrmIndex() {
       showSuccess('Oportunidade atualizada com sucesso!');
     } catch (error) {
       console.error('Erro ao salvar:', error);
-      showError('NÃ£o foi possÃ­vel salvar as alteraÃ§Ãµes');
+      showError('Não foi possível salvar as alterações');
     }
   };
 
@@ -574,7 +615,7 @@ export default function CrmIndex() {
       const dueDateYear = (newOpportunity?.dueDateYear || '').trim();
 
       const missingFields = [];
-      if (!clientId) missingFields.push('beneficiÃ¡rio');
+      if (!clientId) missingFields.push('beneficiário');
       if (!taskStatusId) missingFields.push('status');
       if (!categoryId) missingFields.push('categoria');
       if (!criticalityId) missingFields.push('criticidade');
@@ -585,13 +626,13 @@ export default function CrmIndex() {
 
       if (missingFields.length > 0) {
         showError(
-          `Preencha os campos obrigatÃ³rios: ${missingFields.join(', ')}.`,
+          `Preencha os campos obrigatórios: ${missingFields.join(', ')}.`,
         );
         return;
       }
 
       if (!/^\d{4}$/.test(dueDateYear)) {
-        showError('Ano da data de vencimento invÃ¡lido.');
+        showError('Ano da data de vencimento inválido.');
         return;
       }
 
@@ -610,7 +651,7 @@ export default function CrmIndex() {
         String(dueDateObj.getFullYear()) === dueDateYear;
 
       if (!isValidDueDate) {
-        showError('Data de retorno invÃ¡lida.');
+        showError('Data de retorno inválida.');
         return;
       }
 
@@ -648,7 +689,7 @@ export default function CrmIndex() {
       setCurrentPage(1);
     } catch (error) {
       console.error('Erro ao criar:', error);
-      showError('NÃ£o foi possÃ­vel criar a oportunidade');
+      showError('Não foi possível criar a oportunidade');
     }
   };
 
@@ -742,7 +783,7 @@ export default function CrmIndex() {
               Oportunidade #{opportunity.id}
             </Text>
             <Text style={styles.clientName}>
-              {opportunity.client?.name || 'Cliente nÃ£o informado'}
+              {opportunity.client?.name || 'Cliente não informado'}
             </Text>
           </View>
           <TouchableOpacity
@@ -835,7 +876,7 @@ export default function CrmIndex() {
     if (normalizedTitle.includes('categoria')) {
       return {
         icon: 'tags',
-        title: 'NÃ£o hÃ¡ categorias para exibir',
+        title: 'Não há categorias para exibir',
         subtitle: 'Verifique se existem categorias cadastradas para esta empresa.',
       };
     }
@@ -843,35 +884,35 @@ export default function CrmIndex() {
     if (normalizedTitle.includes('status')) {
       return {
         icon: 'flag',
-        title: 'NÃ£o hÃ¡ status para exibir',
-        subtitle: 'Verifique a configuraÃ§Ã£o de status disponÃ­vel no contexto atual.',
+        title: 'Não há status para exibir',
+        subtitle: 'Verifique a configuração de status disponível no contexto atual.',
       };
     }
 
     if (normalizedTitle.includes('criticidade')) {
       return {
         icon: 'exclamation-circle',
-        title: 'NÃ£o hÃ¡ criticidades para exibir',
-        subtitle: 'Verifique se hÃ¡ opÃ§Ãµes cadastradas para esta empresa.',
+        title: 'Não há criticidades para exibir',
+        subtitle: 'Verifique se há opções cadastradas para esta empresa.',
       };
     }
 
     if (normalizedTitle.includes('motivo')) {
       return {
         icon: 'question-circle',
-        title: 'NÃ£o hÃ¡ motivos para exibir',
-        subtitle: 'Verifique se hÃ¡ motivos cadastrados no contexto atual.',
+        title: 'Não há motivos para exibir',
+        subtitle: 'Verifique se há motivos cadastrados no contexto atual.',
       };
     }
 
     if (
       normalizedTitle.includes('dia') ||
-      normalizedTitle.includes('mÃªs') ||
+      normalizedTitle.includes('mês') ||
       normalizedTitle.includes('mes')
     ) {
       return {
         icon: 'calendar',
-        title: 'Nenhuma opÃ§Ã£o disponÃ­vel',
+        title: 'Nenhuma opção disponível',
         subtitle: 'Tente novamente em alguns instantes.',
       };
     }
@@ -879,7 +920,7 @@ export default function CrmIndex() {
     return {
       icon: 'inbox',
       title: 'Nada para exibir',
-      subtitle: 'NÃ£o hÃ¡ opÃ§Ãµes disponÃ­veis no momento.',
+      subtitle: 'Não há opções disponíveis no momento.',
     };
   };
 
@@ -1046,7 +1087,7 @@ export default function CrmIndex() {
       onRequestClose={() => setBeneficiaryPickerVisible(false)}>
       <View style={styles.selectModalContent}>
         <View style={styles.selectModalHeader}>
-          <Text style={styles.selectModalTitle}>Selecionar BeneficiÃ¡rio</Text>
+          <Text style={styles.selectModalTitle}>Selecionar Beneficiário</Text>
           <TouchableOpacity
             onPress={() => setBeneficiaryPickerVisible(false)}
             style={styles.closeButton}>
@@ -1106,7 +1147,7 @@ export default function CrmIndex() {
                       <Text style={styles.personDocument}>
                         {typeof person.document === 'string'
                           ? person.document
-                          : 'Documento disponÃ­vel'}
+                          : 'Documento disponível'}
                       </Text>
                     )}
                   </View>
@@ -1122,7 +1163,7 @@ export default function CrmIndex() {
             <View style={styles.emptyState}>
               <Icon name="user" size={48} color="#bdc3c7" />
               <Text style={styles.emptyText}>
-                Nenhum beneficiÃ¡rio encontrado
+                Nenhum beneficiário encontrado
               </Text>
             </View>
           )}
@@ -1149,7 +1190,7 @@ export default function CrmIndex() {
 
         <ScrollView style={styles.modalBody}>
           <View style={styles.editSection}>
-            <Text style={styles.editLabel}>BeneficiÃ¡rio</Text>
+            <Text style={styles.editLabel}>Beneficiário</Text>
             <TouchableOpacity
               style={styles.selectButton}
               onPress={() => setBeneficiaryPickerVisible(true)}>
@@ -1162,7 +1203,7 @@ export default function CrmIndex() {
                 />
                 <Text style={styles.selectButtonText}>
                   {editingOpportunity?.client?.name ||
-                    'Selecione um beneficiÃ¡rio'}
+                    'Selecione um beneficiário'}
                 </Text>
               </View>
               <Icon name="chevron-down" size={16} color="#7f8c8d" />
@@ -1271,7 +1312,7 @@ export default function CrmIndex() {
                     ? getMonthsArray().find(
                       m => m.id === editingOpportunity.dueDateMonth,
                     )?.name
-                    : 'MÃªs'}
+                    : 'Mês'}
                 </Text>
                 <Icon name="chevron-down" size={16} color="#7f8c8d" />
               </TouchableOpacity>
@@ -1326,7 +1367,7 @@ export default function CrmIndex() {
 
         <ScrollView style={styles.modalBody}>
           <View style={styles.editSection}>
-            <Text style={styles.editLabel}>BeneficiÃ¡rio</Text>
+            <Text style={styles.editLabel}>Beneficiário</Text>
             <TouchableOpacity
               style={styles.selectButton}
               onPress={() => setBeneficiaryPickerVisible(true)}>
@@ -1339,7 +1380,7 @@ export default function CrmIndex() {
                 />
                 <Text style={styles.selectButtonText}>
                   {newOpportunity?.client?.name ||
-                    'Selecione um beneficiÃ¡rio'}
+                    'Selecione um beneficiário'}
                 </Text>
               </View>
               <Icon name="chevron-down" size={16} color="#7f8c8d" />
@@ -1448,7 +1489,7 @@ export default function CrmIndex() {
                     ? getMonthsArray().find(
                       m => m.id === newOpportunity.dueDateMonth,
                     )?.name
-                    : 'MÃªs'}
+                    : 'Mês'}
                 </Text>
                 <Icon name="chevron-down" size={16} color="#7f8c8d" />
               </TouchableOpacity>
@@ -1586,7 +1627,7 @@ export default function CrmIndex() {
       </View>
 
       <FlatList
-        data={allOpportunities}
+        data={visibleOpportunities}
         keyExtractor={item => String(item.id)}
         renderItem={({ item, index }) => renderOpportunityCard(item, index)}
         refreshControl={
@@ -1753,7 +1794,7 @@ export default function CrmIndex() {
 
       {
         renderSelectModal(
-          'Selecionar MÃªs',
+          'Selecionar Mês',
           getMonthsArray(),
           {
             id: editModalVisible
@@ -1798,7 +1839,7 @@ export default function CrmIndex() {
 
       {
         renderSelectModal(
-          'Selecionar MÃªs',
+          'Selecionar Mês',
           getMonthsArray(),
           {
             id: editModalVisible

@@ -14,7 +14,7 @@ import IconMaterial from 'react-native-vector-icons/MaterialIcons';
 import {useNavigation, useRoute} from '@react-navigation/native';
 import {useStore} from '@store';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
-import {useMessage} from '@controleonline/ui-common/src/react/components/MessageService';
+import useToastMessage from '../../hooks/useToastMessage';
 
 export default function CrmConversation() {
   const [message, setMessage] = useState('');
@@ -23,7 +23,7 @@ export default function CrmConversation() {
   const navigation = useNavigation();
   const route = useRoute();
   const insets = useSafeAreaInsets();
-  const {showError} = useMessage();
+  const {showError} = useToastMessage();
 
   const opportunity = route.params?.opportunity || null;
   const taskInteractionsStore = useStore('task_interations');

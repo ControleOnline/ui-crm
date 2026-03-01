@@ -13,10 +13,10 @@ import {
 import { useStore } from '@store';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import AnimatedModal from '@controleonline/ui-crm/src/react/components/AnimatedModal';
-import {useMessage} from '@controleonline/ui-common/src/react/components/MessageService';
+import useToastMessage from '../../hooks/useToastMessage';
 
 const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
-  const {showError} = useMessage();
+  const {showError} = useToastMessage();
   const contractStore = useStore('contract');
   const contractActions = contractStore.actions;
   const peopleStore = useStore('people');
@@ -25,7 +25,7 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
   const statusStore = useStore('status');
   const statusGetters = statusStore.getters;
   const statusActions = statusStore.actions;
-  const modelsStore = useStore('model');
+  const modelsStore = useStore('models');
   const modelsActions = modelsStore.actions;
 
   const { items: people, currentCompany } = peopleGetters;
@@ -57,7 +57,7 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
         company: '/people/' + currentCompany.id,
         link_type: 'client',
       });
-      await statusActions.getItems({ context: 'relationship' });
+      await statusActions.getItems({ context: 'proposal' });
       await loadContractModels();
     } catch (error) {
       console.error(error);

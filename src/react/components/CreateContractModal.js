@@ -12,7 +12,7 @@ import {
   View,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import {useMessage} from '@controleonline/ui-common/src/react/components/MessageService';
+import useToastMessage from '../hooks/useToastMessage';
 
 const Dropdown = ({ label, value, options, onChange }) => (
   <View style={{ marginBottom: 20 }}>
@@ -38,7 +38,7 @@ const Dropdown = ({ label, value, options, onChange }) => (
 );
 
 const CreateContractModal = ({ visible, onClose, onSuccess }) => {
-  const {showError, showSuccess} = useMessage();
+  const {showError, showSuccess} = useToastMessage();
   const contractStore = useStore('contract');
   const contractActions = contractStore.actions;
   const peopleStore = useStore('people');

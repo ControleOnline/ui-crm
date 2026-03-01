@@ -3,6 +3,7 @@ import React, { useMemo } from 'react';
 import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavigationState } from '@react-navigation/native';
 
 import { colors } from '@controleonline/../../src/styles/colors';
 import { resolveThemePalette } from '@controleonline/../../src/styles/branding';
@@ -14,22 +15,27 @@ const TAB_ITEMS = [
   { key: 'ProfilePage', icon: 'user', label: 'Perfil' },
 ];
 
-const CRM_BOTTOM_ROUTES = new Set([
-  'HomePage',
-  'ComissionsPage',
-  'CrmIndex',
-  'ContractsIndex',
-  'ProposalsIndex',
-  'ClientsIndex',
-  'ProfilePage',
-  'ContractDetails',
-]);
-
 const BottomToolbar = ({ navigation, currentRouteName }) => {
+  const navigationState = useNavigationState(state => state);
+  const routeNameFromState =
+    navigationState?.routes?.[navigationState.index]?.name;
+  const effectiveRouteName = currentRouteName || routeNameFromState || 'HomePage';
 
-  const activeTab = TAB_ITEMS.some(item => item.key === currentRouteName)
-    ? currentRouteName
-    : 'HomePage';
+  const routeToTab = {
+    HomePage: 'HomePage',
+    CrmIndex: 'CrmIndex',
+    ContractsIndex: 'CrmIndex',
+    ProposalsIndex: 'CrmIndex',
+    ComissionsPage: 'CrmIndex',
+    CrmConversation: 'CrmIndex',
+    ContractDetails: 'CrmIndex',
+    ClientsIndex: 'ClientsIndex',
+    ClientDetails: 'ClientsIndex',
+    ProfilePage: 'ProfilePage',
+    SettingsPage: 'ProfilePage',
+  };
+
+  const activeTab = routeToTab[effectiveRouteName] || 'HomePage';
 
   const peopleStore = useStore('people');
   const themeStore = useStore('theme');

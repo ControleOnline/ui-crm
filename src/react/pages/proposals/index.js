@@ -28,6 +28,10 @@ const ProposalsPage = () => {
   const contractGetters = contractStore.getters;
   const contractActions = contractStore.actions;
   const { items: contracts, totalItems, isLoading, error } = contractGetters;
+  const statusStore = useStore('status');
+  const statusGetters = statusStore.getters;
+  const statusActions = statusStore.actions;
+  const { items: statusItems = [] } = statusGetters;
   const navigation = useNavigation();
   const [createModalVisible, setCreateModalVisible] = useState(false);
   const [search, setSearch] = useState('');
@@ -39,7 +43,7 @@ const ProposalsPage = () => {
   const [selectedStatusFilterKey, setSelectedStatusFilterKey] = useState('');
 
   const fetchContracts = useCallback(
-    (query, page) => {
+    (query, page, statusFilterParam) => {
       if (!currentCompany?.id) {
         return;
       }
@@ -55,9 +59,24 @@ const ProposalsPage = () => {
         params['peoples.people.name'] = String(query ?? searchQuery).trim();
       }
 
+      const selectedFilter = statusFilterParam ?? selectedStatusFilterKey;
+      if (selectedFilter) {
+        if (selectedFilter.startsWith('/statuses/')) {
+          params.status = selectedFilter;
+        } else if (selectedFilter.startsWith('realStatus:')) {
+          params['status.realStatus'] = selectedFilter.replace('realStatus:', '');
+        }
+      }
+
       contractActions.getItems(params);
     },
-    [currentCompany?.id, currentPage, itemsPerPage, searchQuery],
+    [
+      currentCompany?.id,
+      currentPage,
+      itemsPerPage,
+      searchQuery,
+      selectedStatusFilterKey,
+    ],
   );
 
   useLayoutEffect(() => {
@@ -78,12 +97,13 @@ const ProposalsPage = () => {
   useFocusEffect(
     useCallback(() => {
       fetchContracts(searchQuery, currentPage);
-    }, [fetchContracts, searchQuery, currentPage]),
+      statusActions.getItems({context: 'proposal'});
+    }, [fetchContracts, searchQuery, currentPage, statusActions]),
   );
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [itemsPerPage]);
+  }, [itemsPerPage, selectedStatusFilterKey]);
 
   useEffect(() => {
     if (isLoading) return;
@@ -174,43 +194,111 @@ const ProposalsPage = () => {
     return map[normalized] || status || '-';
   };
 
-  const statusFilterOptions = [];
-  const seenStatusKeys = new Set();
-  allContracts.forEach(contract => {
-    const rawStatus = contract?.status?.status;
-    const statusKey = normalizeStatusKey(rawStatus);
-    if (!statusKey || seenStatusKeys.has(statusKey)) {
-      return;
-    }
+  const getStatusFilterKey = useCallback(
+    item => {
+      if (!item) {
+        return '';
+      }
 
-    seenStatusKeys.add(statusKey);
-    statusFilterOptions.push({
-      key: statusKey,
-      label: getStatusLabel(rawStatus),
-      color: getStatusColor(rawStatus),
-    });
-  });
+      if (item['@id']) {
+        return item['@id'];
+      }
+
+      if (item.id != null) {
+        return `/statuses/${item.id}`;
+      }
+
+      const normalized = normalizeStatusKey(item.realStatus || item.status);
+      return normalized ? `realStatus:${normalized}` : '';
+    },
+    [normalizeStatusKey],
+  );
+
+  const statusFilterOptions = React.useMemo(() => {
+    const seen = new Set();
+
+    return (Array.isArray(statusItems) ? statusItems : [])
+      .map(item => {
+        const key = getStatusFilterKey(item);
+        if (!key || seen.has(key)) {
+          return null;
+        }
+        seen.add(key);
+
+        const rawStatus = item?.realStatus || item?.status;
+        return {
+          key,
+          label: getStatusLabel(rawStatus),
+          color: item?.color || getStatusColor(rawStatus),
+          normalizedStatus: normalizeStatusKey(rawStatus),
+        };
+      })
+      .filter(Boolean);
+  }, [
+    getStatusColor,
+    getStatusFilterKey,
+    getStatusLabel,
+    normalizeStatusKey,
+    statusItems,
+  ]);
+
+  const contractMatchesStatusFilter = useCallback(
+    (contract, filterKey) => {
+      if (!filterKey) {
+        return true;
+      }
+
+      const statusObj = contract?.status || {};
+      const statusIri = statusObj?.['@id']
+        ? statusObj['@id']
+        : statusObj?.id != null
+        ? `/statuses/${statusObj.id}`
+        : '';
+
+      const normalizedStatus = normalizeStatusKey(
+        statusObj?.realStatus || statusObj?.status,
+      );
+      const normalizedFilter = normalizeStatusKey(
+        String(filterKey || '').replace('realStatus:', ''),
+      );
+
+      if (filterKey.startsWith('/statuses/')) {
+        if (statusIri === filterKey) {
+          return true;
+        }
+
+        const selectedOption = statusFilterOptions.find(
+          item => item.key === filterKey,
+        );
+        if (selectedOption?.normalizedStatus) {
+          return normalizedStatus === selectedOption.normalizedStatus;
+        }
+
+        return false;
+      }
+
+      return normalizedStatus === normalizedFilter;
+    },
+    [normalizeStatusKey, statusFilterOptions],
+  );
 
   useEffect(() => {
     if (!selectedStatusFilterKey) {
       return;
     }
 
-    const stillExists = allContracts.some(
-      contract =>
-        normalizeStatusKey(contract?.status?.status) === selectedStatusFilterKey,
+    const stillExists = statusFilterOptions.some(
+      item => item.key === selectedStatusFilterKey,
     );
 
     if (!stillExists) {
       setSelectedStatusFilterKey('');
     }
-  }, [allContracts, selectedStatusFilterKey]);
+  }, [selectedStatusFilterKey, statusFilterOptions]);
 
   const filteredContracts = selectedStatusFilterKey
-    ? allContracts.filter(
-        contract =>
-          normalizeStatusKey(contract?.status?.status) ===
-          selectedStatusFilterKey,
+    ? allContracts.filter(contract =>
+        contractMatchesStatusFilter(contract, selectedStatusFilterKey),
       )
     : allContracts;
 
