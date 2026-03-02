@@ -3,14 +3,32 @@ import {
   Keyboard,
   KeyboardAvoidingView,
   Modal,
+  Text,
   View,
   Animated,
   Dimensions,
   Platform,
   StyleSheet,
 } from 'react-native';
+import {GestureHandlerRootView} from 'react-native-gesture-handler';
+import {toast, Toasts} from '@backpackapp-io/react-native-toast';
+import {
+  TOAST_EXTRA_INSETS,
+  TOAST_MODAL_COUNT_KEY,
+  TOAST_PROVIDER_KEYS,
+} from '@controleonline/ui-common/src/react/components/toastConfig';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+
+const incrementModalToastDepth = () => {
+  const currentDepth = Number(global?.[TOAST_MODAL_COUNT_KEY] || 0);
+  global[TOAST_MODAL_COUNT_KEY] = currentDepth + 1;
+};
+
+const decrementModalToastDepth = () => {
+  const currentDepth = Number(global?.[TOAST_MODAL_COUNT_KEY] || 0);
+  global[TOAST_MODAL_COUNT_KEY] = Math.max(0, currentDepth - 1);
+};
 
 /**
  * Modal com overlay aparecendo na hora e apenas o conteúdo subindo de baixo.
@@ -88,11 +106,30 @@ export default function AnimatedModal({ visible, onRequestClose, children, style
     }
   }, [visible]);
 
+  useEffect(() => {
+    if (!showing) {
+      return undefined;
+    }
+
+    incrementModalToastDepth();
+    return () => {
+      decrementModalToastDepth();
+    };
+  }, [showing]);
+
   const overlayStyle = [
     styles.overlay,
     style,
     Platform.OS === 'android' ? { paddingBottom: keyboardHeight } : null,
   ];
+  const normalizedChildren = React.Children.toArray(children).map(child => {
+    if (typeof child === 'string' || typeof child === 'number') {
+      const text = String(child).trim();
+      if (!text || text === '.') return null;
+      return <Text>{text}</Text>;
+    }
+    return child;
+  });
 
   return (
     <Modal
@@ -101,19 +138,29 @@ export default function AnimatedModal({ visible, onRequestClose, children, style
       transparent
       statusBarTranslucent
       onRequestClose={onRequestClose}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={overlayStyle}>
-        <Animated.View style={[StyleSheet.absoluteFillObject, styles.overlayBg, { opacity: overlayOpacity }]} />
-        <Animated.View style={[styles.content, { transform: [{ translateY: slideY }] }]}>
-          {children}
-        </Animated.View>
-      </KeyboardAvoidingView>
+      <GestureHandlerRootView style={styles.gestureRoot}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={overlayStyle}>
+          <Animated.View style={[StyleSheet.absoluteFillObject, styles.overlayBg, { opacity: overlayOpacity }]} />
+          <Animated.View style={[styles.content, { transform: [{ translateY: slideY }] }]}>
+            {normalizedChildren}
+          </Animated.View>
+          <Toasts
+            providerKey={TOAST_PROVIDER_KEYS.MODAL}
+            extraInsets={TOAST_EXTRA_INSETS}
+            onToastPress={currentToast => toast.dismiss(currentToast.id)}
+          />
+        </KeyboardAvoidingView>
+      </GestureHandlerRootView>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
+  gestureRoot: {
+    flex: 1,
+  },
   overlay: {
     flex: 1,
     justifyContent: 'flex-end',

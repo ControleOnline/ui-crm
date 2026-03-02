@@ -1,4 +1,4 @@
-﻿import React, {useEffect, useRef, useState} from 'react';
+import React, {useEffect, useMemo, useRef, useState} from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -15,6 +15,7 @@ import {useNavigation, useRoute} from '@react-navigation/native';
 import {useStore} from '@store';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import useToastMessage from '../../hooks/useToastMessage';
+import {colors} from '@controleonline/../../src/styles/colors';
 
 export default function CrmConversation() {
   const [message, setMessage] = useState('');
@@ -26,16 +27,73 @@ export default function CrmConversation() {
   const {showError} = useToastMessage();
 
   const opportunity = route.params?.opportunity || null;
-  const taskInteractionsStore = useStore('task_interations');
+  const taskInteractionsStore = useStore('tasksInterations');
   const getters = taskInteractionsStore?.getters || {};
   const actions = taskInteractionsStore?.actions || {};
   const items = getters?.items || [];
+  const peopleStore = useStore('people');
+  const peopleGetters = peopleStore?.getters || {};
+  const people = peopleGetters?.items || [];
 
   const taskResource =
     opportunity?.['@id'] || (opportunity?.id ? `/tasks/${opportunity.id}` : null);
 
   const canSend = !!message.trim() && !!taskResource;
+  const primaryColor = colors.primary || '#26C865';
 
+  const normalizePeopleReference = value => {
+    if (!value) {
+      return '';
+    }
+
+    const rawValue = typeof value === 'object' ? value['@id'] ?? value.id : value;
+    if (rawValue == null) {
+      return '';
+    }
+
+    const normalized = String(rawValue).trim();
+    if (!normalized) {
+      return '';
+    }
+
+    if (normalized.startsWith('/people/') || normalized.startsWith('/peoples/')) {
+      return normalized;
+    }
+
+    if (normalized.startsWith('/')) {
+      return normalized;
+    }
+
+    if (/^\d+$/.test(normalized)) {
+      return `/people/${normalized}`;
+    }
+
+    return normalized;
+  };
+
+  const clientName = useMemo(() => {
+    const directName =
+      opportunity?.client?.name ||
+      opportunity?.client?.realname ||
+      opportunity?.client?.alias ||
+      opportunity?.clientName ||
+      opportunity?.people?.name;
+
+    if (directName) {
+      return directName;
+    }
+
+    const clientRef = normalizePeopleReference(opportunity?.client);
+    if (!clientRef || !Array.isArray(people)) {
+      return 'Cliente';
+    }
+
+    const linkedPerson = people.find(
+      person => normalizePeopleReference(person) === clientRef,
+    );
+
+    return linkedPerson?.name || linkedPerson?.realname || 'Cliente';
+  }, [opportunity, people]);
   const formatTime = timestamp =>
     timestamp.toLocaleTimeString('pt-BR', {
       hour: '2-digit',
@@ -192,7 +250,14 @@ export default function CrmConversation() {
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <View style={[styles.header, {paddingTop: Math.max(insets.top, 10)}]}>
+      <View
+        style={[
+          styles.header,
+          {
+            paddingTop: Math.max(insets.top, 10),
+            backgroundColor: primaryColor,
+          },
+        ]}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}>
@@ -205,7 +270,7 @@ export default function CrmConversation() {
           </View>
           <View style={styles.headerText}>
             <Text style={styles.headerName}>
-              {opportunity?.client?.name || 'Cliente'}
+              {clientName}
             </Text>
           </View>
         </View>
@@ -471,3 +536,5 @@ const styles = StyleSheet.create({
     backgroundColor: '#E7EBEF',
   },
 });
+
+

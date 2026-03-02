@@ -45,6 +45,20 @@ export default function CompanySelector({ mode = 'default', children }) {
     );
     const styles = useMemo(() => createStyles(brandColors), [brandColors]);
     const currentCompanyLogoUrl = buildAssetUrl(currentCompany?.logo);
+    const triggerChildren = useMemo(
+        () =>
+            React.Children.toArray(children).filter(child => {
+                if (child == null || typeof child === 'boolean') return false;
+                if (typeof child === 'string') {
+                    const trimmed = child.trim();
+                    return trimmed.length > 0 && trimmed !== '.';
+                }
+                if (typeof child === 'number') return false;
+                return true;
+            }),
+        [children],
+    );
+    const hasCustomTrigger = triggerChildren.length > 0;
 
     useEffect(() => {
         if (!companies || companies.length === 0) {
@@ -97,7 +111,11 @@ export default function CompanySelector({ mode = 'default', children }) {
                 onPress={() => handleSelectCompany(item)}>
                 <View style={styles.companyIcon}>
                     {logoUrl ? (
-                        <Image source={{ uri: logoUrl }} style={styles.companyLogo} />
+                        <Image
+                            source={{ uri: logoUrl }}
+                            style={styles.companyLogo}
+                            resizeMode="cover"
+                        />
                     ) : (
                         <Icon name="briefcase" size={20} color={brandColors.primary} />
                     )}
@@ -127,16 +145,20 @@ export default function CompanySelector({ mode = 'default', children }) {
 
     return (
         <>
-            {children ? (
+            {hasCustomTrigger ? (
                 <TouchableOpacity onPress={openModal} activeOpacity={0.7}>
-                    {children}
+                    {triggerChildren}
                 </TouchableOpacity>
             ) : mode === 'icon' ? (
                 <TouchableOpacity
                     onPress={openModal}
                     style={{ marginRight: 15 }}>
                     {currentCompanyLogoUrl ? (
-                        <Image source={{ uri: currentCompanyLogoUrl }} style={styles.headerCompanyLogo} />
+                        <Image
+                            source={{ uri: currentCompanyLogoUrl }}
+                            style={styles.headerCompanyLogo}
+                            resizeMode="cover"
+                        />
                     ) : (
                         <Icon name="briefcase" size={24} color={brandColors.text} />
                     )}
@@ -148,7 +170,11 @@ export default function CompanySelector({ mode = 'default', children }) {
                     activeOpacity={0.7}>
                     <View style={styles.iconContainer}>
                         {currentCompanyLogoUrl ? (
-                            <Image source={{ uri: currentCompanyLogoUrl }} style={styles.selectorCompanyLogo} />
+                            <Image
+                                source={{ uri: currentCompanyLogoUrl }}
+                                style={styles.selectorCompanyLogo}
+                                resizeMode="cover"
+                            />
                         ) : (
                             <Icon name="briefcase" size={16} color={brandColors.primary} />
                         )}
@@ -332,19 +358,16 @@ const createStyles = brandColors =>
         width: 32,
         height: 32,
         borderRadius: 8,
-        resizeMode: 'cover',
     },
     selectorCompanyLogo: {
         width: 20,
         height: 20,
         borderRadius: 6,
-        resizeMode: 'cover',
     },
     headerCompanyLogo: {
         width: 24,
         height: 24,
         borderRadius: 6,
-        resizeMode: 'cover',
     },
     companyName: {
         fontSize: 15,

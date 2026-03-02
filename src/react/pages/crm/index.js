@@ -229,7 +229,7 @@ export default function CrmIndex() {
         });
       }
 
-      statusActions.getItems({ context: 'proposal' });
+      statusActions.getItems({ context: 'relationship' });
       categoriesActions.getItems({
         context: [
           'relationship',
@@ -423,6 +423,66 @@ export default function CrmIndex() {
     return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
   };
 
+  const normalizePeopleReference = useCallback(value => {
+    if (!value) {
+      return '';
+    }
+
+    const rawValue =
+      typeof value === 'object' ? value['@id'] ?? value.id : value;
+
+    if (rawValue == null) {
+      return '';
+    }
+
+    const normalized = String(rawValue).trim();
+    if (!normalized) {
+      return '';
+    }
+
+    if (normalized.startsWith('/people/') || normalized.startsWith('/peoples/')) {
+      return normalized;
+    }
+
+    if (normalized.startsWith('/')) {
+      return normalized;
+    }
+
+    if (/^\d+$/.test(normalized)) {
+      return `/people/${normalized}`;
+    }
+
+    return normalized;
+  }, []);
+
+  const getPersonByReference = useCallback(
+    value => {
+      const reference = normalizePeopleReference(value);
+      if (!reference || !Array.isArray(people)) {
+        return null;
+      }
+
+      return (
+        people.find(item => normalizePeopleReference(item) === reference) || null
+      );
+    },
+    [normalizePeopleReference, people],
+  );
+
+  const getBeneficiaryName = useCallback(
+    value => {
+      if (value && typeof value === 'object') {
+        const directName = value.name || value.realname || value.alias;
+        if (directName) {
+          return directName;
+        }
+      }
+
+      return getPersonByReference(value)?.name || '';
+    },
+    [getPersonByReference],
+  );
+
   const getDaysArray = () => {
     return Array.from({ length: 31 }, (_, i) => ({
       id: String(i + 1).padStart(2, '0'),
@@ -566,8 +626,7 @@ export default function CrmIndex() {
 
       const dataToSave = {
         id: editingOpportunity.id,
-        client:
-          editingOpportunity.client?.['@id'] || editingOpportunity.client?.id,
+        client: normalizePeopleReference(editingOpportunity?.client),
         taskStatus:
           editingOpportunity.taskStatus?.['@id'] ||
           editingOpportunity.taskStatus?.id,
@@ -598,8 +657,7 @@ export default function CrmIndex() {
 
   const handleSaveNewOpportunity = async () => {
     try {
-      const clientId =
-        newOpportunity?.client?.['@id'] || newOpportunity?.client?.id;
+      const clientId = normalizePeopleReference(newOpportunity?.client);
       const taskStatusId =
         newOpportunity?.taskStatus?.['@id'] || newOpportunity?.taskStatus?.id;
       const categoryId =
@@ -774,6 +832,29 @@ export default function CrmIndex() {
     </View>
   );
 
+  const showInitialSkeleton = isLoading && allOpportunities.length === 0;
+
+  const renderTopSkeleton = () => (
+    <View style={styles.subHeader}>
+      <View style={styles.searchRow}>
+        <View style={[styles.skeletonLine, styles.searchSkeletonInput]} />
+        <View style={[styles.skeletonLine, styles.searchSkeletonButton]} />
+      </View>
+
+      <View style={styles.statusFilterSection}>
+        <View style={[styles.skeletonLine, styles.statusLabelSkeleton]} />
+        <View style={styles.statusSkeletonRow}>
+          {[1, 2, 3, 4].map(key => (
+            <View
+              key={key}
+              style={[styles.skeletonLine, styles.statusChipSkeleton]}
+            />
+          ))}
+        </View>
+      </View>
+    </View>
+  );
+
   const renderOpportunityCard = (opportunity, index) => (
     <View key={opportunity.id} style={styles.cardWrapper}>
       <View style={styles.card}>
@@ -783,7 +864,7 @@ export default function CrmIndex() {
               Oportunidade #{opportunity.id}
             </Text>
             <Text style={styles.clientName}>
-              {opportunity.client?.name || 'Cliente não informado'}
+              {getBeneficiaryName(opportunity?.client) || 'Cliente não informado'}
             </Text>
           </View>
           <TouchableOpacity
@@ -1097,20 +1178,46 @@ export default function CrmIndex() {
 
         <ScrollView style={styles.selectModalBody}>
           {people && people.length > 0 ? (
-            people.map(person => (
+            people
+              .filter((person, index, source) => {
+                const currentRef = normalizePeopleReference(person);
+                if (!currentRef) {
+                  return true;
+                }
+
+                return (
+                  source.findIndex(
+                    candidate =>
+                      normalizePeopleReference(candidate) === currentRef,
+                  ) === index
+                );
+              })
+              .map((person, index) => {
+                const selectedClientRef = normalizePeopleReference(
+                  editModalVisible
+                    ? editingOpportunity?.client
+                    : newOpportunity?.client,
+                );
+                const personRef = normalizePeopleReference(person);
+                const personKey =
+                  personRef ||
+                  `person-${person.id || 'sem-id'}-${person.document || 'sem-doc'}-${person.name || 'sem-nome'}-${index}`;
+                const isSelected =
+                  Boolean(selectedClientRef) &&
+                  Boolean(personRef) &&
+                  selectedClientRef === personRef;
+
+                return (
               <TouchableOpacity
-                key={person.name}
+                key={personKey}
                 style={[
                   styles.selectOption,
-                  (editModalVisible
-                    ? editingOpportunity?.client?.id
-                    : newOpportunity?.client?.id) === person['@id'] &&
-                  styles.selectOptionActive,
+                  isSelected && styles.selectOptionActive,
                 ]}
                 onPress={() => {
                   const clientData = {
-                    '@id': person['@id'] || person.id,
-                    id: person['@id'] || person.id,
+                    '@id': personRef || person['@id'] || '',
+                    id: person.id ?? personRef,
                     name: person.name,
                     document: person.document,
                   };
@@ -1136,10 +1243,7 @@ export default function CrmIndex() {
                     <Text
                       style={[
                         styles.personName,
-                        (editModalVisible
-                          ? editingOpportunity?.client?.id
-                          : newOpportunity?.client?.id) === person['@id'] &&
-                        styles.selectOptionTextActive,
+                        isSelected && styles.selectOptionTextActive,
                       ]}>
                       {person.name}
                     </Text>
@@ -1152,13 +1256,12 @@ export default function CrmIndex() {
                     )}
                   </View>
                 </View>
-                {(editModalVisible
-                  ? editingOpportunity?.client?.id
-                  : newOpportunity?.client?.id) === person.id && (
+                {isSelected && (
                     <Icon name="check-circle" size={20} color="#27ae60" />
                   )}
               </TouchableOpacity>
-            ))
+                );
+              })
           ) : (
             <View style={styles.emptyState}>
               <Icon name="user" size={48} color="#bdc3c7" />
@@ -1202,7 +1305,7 @@ export default function CrmIndex() {
                   style={styles.selectButtonIcon}
                 />
                 <Text style={styles.selectButtonText}>
-                  {editingOpportunity?.client?.name ||
+                  {getBeneficiaryName(editingOpportunity?.client) ||
                     'Selecione um beneficiário'}
                 </Text>
               </View>
@@ -1379,7 +1482,7 @@ export default function CrmIndex() {
                   style={styles.selectButtonIcon}
                 />
                 <Text style={styles.selectButtonText}>
-                  {newOpportunity?.client?.name ||
+                  {getBeneficiaryName(newOpportunity?.client) ||
                     'Selecione um beneficiário'}
                 </Text>
               </View>
@@ -1531,100 +1634,101 @@ export default function CrmIndex() {
   return (
     <View style={styles.container}>
 
-
-
-
-      <View style={styles.subHeader}>
-        <View style={styles.searchRow}>
-          <View style={styles.searchInputContainer}>
-            <Icon name="search" size={16} color="#94A3B8" />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Buscar cliente..."
-              placeholderTextColor="#94A3B8"
-              value={searchText}
-              onChangeText={setSearchText}
-              underlineColorAndroid="transparent"
-            />
-            {searchText.length > 0 && (
-              <TouchableOpacity
-                onPress={() => setSearchText('')}
-                style={styles.clearSearchButton}>
-                <Icon name="times-circle" size={16} color="#94A3B8" />
-              </TouchableOpacity>
-            )}
-          </View>
-          <TouchableOpacity
-            style={styles.addButton}
-            onPress={() => {
-              const todayComponents = getCurrentDateComponents();
-              setNewOpportunity({
-                phones: [],
-                dueDateDay: todayComponents.day,
-                dueDateMonth: todayComponents.month,
-                dueDateYear: todayComponents.year,
-              });
-              setAddModalVisible(true);
-            }}>
-            <IconAdd name="add" size={24} color="#FFFFFF" />
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.statusFilterSection}>
-          <Text style={styles.statusFilterLabel}>Status</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.statusFilterRow}>
-            <TouchableOpacity
-              onPress={() => setSelectedStatusFilterKey('')}
-              style={[
-                styles.statusFilterChip,
-                !selectedStatusFilterKey && styles.statusFilterChipActive,
-              ]}>
-              <Text
-                style={[
-                  styles.statusFilterChipText,
-                  !selectedStatusFilterKey && styles.statusFilterChipTextActive,
-                ]}>
-                Todos
-              </Text>
-            </TouchableOpacity>
-
-            {status.map(item => {
-              const statusKey = getStatusFilterKey(item);
-              const isActive =
-                selectedStatusFilterKey &&
-                selectedStatusFilterKey === statusKey;
-              const chipColor = item?.color || colors.primary;
-
-              return (
+      {showInitialSkeleton ? (
+        renderTopSkeleton()
+      ) : (
+        <View style={styles.subHeader}>
+          <View style={styles.searchRow}>
+            <View style={styles.searchInputContainer}>
+              <Icon name="search" size={16} color="#94A3B8" />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Buscar cliente..."
+                placeholderTextColor="#94A3B8"
+                value={searchText}
+                onChangeText={setSearchText}
+                underlineColorAndroid="transparent"
+              />
+              {searchText.length > 0 && (
                 <TouchableOpacity
-                  key={statusKey || String(item.id || item.status)}
-                  onPress={() => setSelectedStatusFilterKey(statusKey)}
-                  style={[
-                    styles.statusFilterChip,
-                    isActive && styles.statusFilterChipActive,
-                    {
-                      borderColor: isActive ? chipColor : '#DCE3EC',
-                      backgroundColor: isActive
-                        ? getColorWithAlpha(chipColor, '24')
-                        : '#F8FAFC',
-                    },
-                  ]}>
-                  <Text
-                    style={[
-                      styles.statusFilterChipText,
-                      { color: isActive ? chipColor : '#64748B' },
-                    ]}>
-                    {getStatusFilterLabel(item)}
-                  </Text>
+                  onPress={() => setSearchText('')}
+                  style={styles.clearSearchButton}>
+                  <Icon name="times-circle" size={16} color="#94A3B8" />
                 </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
+              )}
+            </View>
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={() => {
+                const todayComponents = getCurrentDateComponents();
+                setNewOpportunity({
+                  phones: [],
+                  dueDateDay: todayComponents.day,
+                  dueDateMonth: todayComponents.month,
+                  dueDateYear: todayComponents.year,
+                });
+                setAddModalVisible(true);
+              }}>
+              <IconAdd name="add" size={24} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.statusFilterSection}>
+            <Text style={styles.statusFilterLabel}>Status</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.statusFilterRow}>
+              <TouchableOpacity
+                onPress={() => setSelectedStatusFilterKey('')}
+                style={[
+                  styles.statusFilterChip,
+                  !selectedStatusFilterKey && styles.statusFilterChipActive,
+                ]}>
+                <Text
+                  style={[
+                    styles.statusFilterChipText,
+                    !selectedStatusFilterKey && styles.statusFilterChipTextActive,
+                  ]}>
+                  Todos
+                </Text>
+              </TouchableOpacity>
+
+              {status.map(item => {
+                const statusKey = getStatusFilterKey(item);
+                const isActive =
+                  selectedStatusFilterKey &&
+                  selectedStatusFilterKey === statusKey;
+                const chipColor = item?.color || colors.primary;
+
+                return (
+                  <TouchableOpacity
+                    key={statusKey || String(item.id || item.status)}
+                    onPress={() => setSelectedStatusFilterKey(statusKey)}
+                    style={[
+                      styles.statusFilterChip,
+                      isActive && styles.statusFilterChipActive,
+                      {
+                        borderColor: isActive ? chipColor : '#DCE3EC',
+                        backgroundColor: isActive
+                          ? getColorWithAlpha(chipColor, '24')
+                          : '#F8FAFC',
+                      },
+                    ]}>
+                    <Text
+                      style={[
+                        styles.statusFilterChipText,
+                        { color: isActive ? chipColor : '#64748B' },
+                      ]}>
+                      {getStatusFilterLabel(item)}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
         </View>
-      </View>
+      )}
 
       <FlatList
         data={visibleOpportunities}
@@ -1884,6 +1988,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
+  searchSkeletonInput: {
+    flex: 1,
+    height: 40,
+    borderRadius: 8,
+    marginRight: 12,
+  },
+  searchSkeletonButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+  },
   searchInputContainer: {
     flex: 1,
     flexDirection: 'row',
@@ -1907,6 +2022,23 @@ const styles = StyleSheet.create({
   },
   statusFilterSection: {
     marginTop: 10,
+  },
+  statusLabelSkeleton: {
+    width: 52,
+    height: 12,
+    marginBottom: 8,
+    borderRadius: 6,
+  },
+  statusSkeletonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingRight: 8,
+  },
+  statusChipSkeleton: {
+    width: 84,
+    height: 30,
+    borderRadius: 999,
+    marginRight: 8,
   },
   statusFilterLabel: {
     fontSize: 12,

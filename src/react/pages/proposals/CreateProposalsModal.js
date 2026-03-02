@@ -82,7 +82,7 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
 
   const handleSubmit = async () => {
     if (!selectedModel) {
-      showError('Por favor, preencha todos os campos obrigatÃ³rios.');
+      showError('Por favor, preencha todos os campos obrigatórios.');
       return;
     }
     setIsLoading(true);
@@ -169,7 +169,7 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
       <View style={styles.pickerModalOverlay}>
         <View style={styles.pickerModalContent}>
           <View style={styles.pickerModalHeader}>
-            <Text style={styles.pickerModalTitle}>Selecionar BeneficiÃ¡rio</Text>
+            <Text style={styles.pickerModalTitle}>Selecionar Beneficiário</Text>
             <TouchableOpacity onPress={() => setBeneficiaryPickerVisible(false)}>
               <Icon name="close" size={24} color="#666666" />
             </TouchableOpacity>
@@ -236,13 +236,13 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
   );
 
   const renderMonthPicker = () => {
-    const months = ['Janeiro', 'Fevereiro', 'MarÃ§o', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+    const months = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
     return (
       <Modal transparent visible={monthPickerVisible} animationType="slide" onRequestClose={() => setMonthPickerVisible(false)}>
         <View style={styles.pickerModalOverlay}>
           <View style={styles.pickerModalContent}>
             <View style={styles.pickerModalHeader}>
-              <Text style={styles.pickerModalTitle}>Selecionar MÃªs</Text>
+              <Text style={styles.pickerModalTitle}>Selecionar Mês</Text>
               <TouchableOpacity onPress={() => setMonthPickerVisible(false)}>
                 <Icon name="close" size={24} color="#666" />
               </TouchableOpacity>
@@ -297,7 +297,7 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Data de InÃ­cio</Text>
+            <Text style={styles.inputLabel}>Data de Início</Text>
             <View style={styles.dateContainer}>
               <TouchableOpacity style={styles.selectInputDate} onPress={() => setDayPickerVisible(true)}>
                 <Text style={[styles.selectInputText, !startDay && { color: '#999' }]}>{startDay || 'Dia'}</Text>
@@ -305,7 +305,7 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
               </TouchableOpacity>
               <TouchableOpacity style={styles.selectInputDate} onPress={() => setMonthPickerVisible(true)}>
                 <Text style={[styles.selectInputText, !startMonth && { color: '#999' }]}>
-                  {startMonth ? ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'][parseInt(startMonth) - 1] : 'MÃªs'}
+                  {startMonth ? ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'][parseInt(startMonth) - 1] : 'Mês'}
                 </Text>
                 <Icon name="arrow-drop-down" size={20} color="#666" />
               </TouchableOpacity>

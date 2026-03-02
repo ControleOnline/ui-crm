@@ -12,7 +12,7 @@ const crmRoutes = [
       showBottomToolBar: true,
       headerShown: true,
       headerBackVisible: true,
-      title: 'Comissões',
+      title: 'Comiss\u00f5es',
     },
   },
   {
@@ -25,7 +25,6 @@ const crmRoutes = [
       title: 'Oportunidades',
     },
   },
-
   {
     name: 'ContractsIndex',
     component: ContractsPage,
@@ -50,7 +49,7 @@ const crmRoutes = [
     name: 'CrmConversation',
     component: CrmConversation,
     options: {
-      showBottomToolBar: true,
+      showBottomToolBar: false,
       headerShown: false,
       headerBackVisible: false,
       title: 'Propostas',
