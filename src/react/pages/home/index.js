@@ -232,7 +232,7 @@ export default function HomePage({ navigation }) {
         </View>
 
         {/* Stats Grid - atalhos navegáveis */}
-        <Text style={styles.sectionTitle}>Visão Geral</Text>
+        <Text style={styles.sectionTitle}>{global.t?.t('home', 'sectionTitle', 'overview')}</Text>
         <View style={styles.statsContainer}>
           {stats.map((stat, idx) => (
             <TouchableOpacity
@@ -256,8 +256,8 @@ export default function HomePage({ navigation }) {
           onPress={() => navigation.navigate('CrmIndex')}>
           <View style={styles.actionContent}>
             <View>
-              <Text style={styles.actionTitle}>Acessar Pipeline</Text>
-              <Text style={styles.actionSub}>Gerencie suas negociações</Text>
+              <Text style={styles.actionTitle}>{global.t?.t('home', 'actionBanner', 'accessPipeline')}</Text>
+              <Text style={styles.actionSub}>{global.t?.t('home', 'actionBanner', 'manageDeals')}</Text>
             </View>
             <View style={styles.actionButton}>
               <Icon name="arrow-right" size={20} color={brandColors.primary} />
@@ -274,8 +274,8 @@ export default function HomePage({ navigation }) {
             <View style={[styles.shortcutIcon, { backgroundColor: withOpacity(brandColors.primary, 0.12) }]}>
               <Icon name="users" size={24} color={brandColors.primary} />
             </View>
-            <Text style={styles.shortcutLabel}>Clientes</Text>
-            <Text style={styles.shortcutSub}>Ver lista de clientes</Text>
+            <Text style={styles.shortcutLabel}>{global.t?.t('home', 'actionBanner', 'clients')}</Text>
+            <Text style={styles.shortcutSub}>{global.t?.t('home', 'actionBanner', 'viewClients')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.shortcutCard}
@@ -284,19 +284,19 @@ export default function HomePage({ navigation }) {
             <View style={[styles.shortcutIcon, { backgroundColor: '#D1FAE5' }]}>
               <Icon name="trending-up" size={24} color="#10B981" />
             </View>
-            <Text style={styles.shortcutLabel}>Comissões</Text>
-            <Text style={styles.shortcutSub}>Relatório financeiro</Text>
+            <Text style={styles.shortcutLabel}>{global.t?.t('home', 'actionBanner', 'commissions')}</Text>
+            <Text style={styles.shortcutSub}>{global.t?.t('home', 'actionBanner', 'financialReport')}</Text>
           </TouchableOpacity>
         </View>
 
         {/* Recent Activity */}
-        <Text style={styles.sectionTitle}>Atividade Recente</Text>
+        <Text style={styles.sectionTitle}>{global.t?.t('home', 'sectionTitle', 'recentActivity')}</Text>
         <View style={styles.activityList}>
           {loadingActivity ? (
             <ActivityIndicator size="small" color={brandColors.primary} style={{ padding: 20 }} />
           ) : recentActivity.length === 0 ? (
             <View style={{ padding: 20, alignItems: 'center' }}>
-              <Text style={{ color: '#94A3B8' }}>Nenhuma atividade recente</Text>
+              <Text style={{ color: '#94A3B8' }}>{global.t?.t('home', 'sectionTitle', 'noRecentActivity')}</Text>
             </View>
           ) : (
             recentActivity.map((item, idx) => (
