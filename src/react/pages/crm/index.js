@@ -197,9 +197,6 @@ export default function CrmIndex() {
     };
 
     if (query) {
-      // Keep server-side filtering broad because backend keys vary by version.
-      params['client.name'] = query;
-      params['client.alias'] = query;
       params['peoples.people.name'] = query;
     }
 
@@ -330,6 +327,60 @@ export default function CrmIndex() {
       .trim();
   }, []);
 
+  const normalizePeopleReferenceForSearch = useCallback(value => {
+    if (!value) {
+      return '';
+    }
+
+    const rawValue = typeof value === 'object' ? value?.['@id'] ?? value?.id : value;
+    const normalized = String(rawValue || '').trim();
+    if (!normalized) {
+      return '';
+    }
+
+    if (normalized.startsWith('/people/') || normalized.startsWith('/peoples/')) {
+      return normalized;
+    }
+
+    if (/^\d+$/.test(normalized)) {
+      return `/people/${normalized}`;
+    }
+
+    return normalized;
+  }, []);
+
+  const getOpportunityClientIdentity = useCallback(
+    opportunity => {
+      const client = opportunity?.client;
+      let name = '';
+      let alias = '';
+
+      if (client && typeof client === 'object') {
+        name = String(client?.name || client?.realname || '').trim();
+        alias = String(client?.alias || client?.nickname || '').trim();
+      }
+
+      const clientReference = normalizePeopleReferenceForSearch(client);
+      if (clientReference && Array.isArray(people)) {
+        const matched = people.find(item => {
+          return normalizePeopleReferenceForSearch(item) === clientReference;
+        });
+
+        if (matched) {
+          if (!name) {
+            name = String(matched?.name || matched?.realname || '').trim();
+          }
+          if (!alias) {
+            alias = String(matched?.alias || matched?.nickname || '').trim();
+          }
+        }
+      }
+
+      return { name, alias };
+    },
+    [normalizePeopleReferenceForSearch, people],
+  );
+
   const visibleOpportunities = React.useMemo(() => {
     const normalizedQuery = normalizeSearchValue(searchQuery);
     if (!normalizedQuery) {
@@ -337,24 +388,32 @@ export default function CrmIndex() {
     }
 
     return allOpportunities.filter(opportunity => {
+      const clientIdentity = getOpportunityClientIdentity(opportunity);
       const searchableFields = [
-        opportunity?.client?.name,
-        opportunity?.client?.alias,
-        opportunity?.category?.name,
-        opportunity?.criticality?.name,
-        opportunity?.reason?.name,
-        opportunity?.taskStatus?.status,
-        opportunity?.taskStatus?.realStatus,
-        opportunity?.announce,
-        opportunity?.id,
-        `#${opportunity?.id || ''}`,
+        clientIdentity.name,
+        clientIdentity.alias,
+        `${clientIdentity.name} ${clientIdentity.alias}`.trim(),
       ];
 
-      return searchableFields.some(field =>
+      const availableFields = searchableFields.filter(field =>
+        normalizeSearchValue(field).length > 0,
+      );
+
+      if (availableFields.length === 0) {
+        // Keep server-side matched rows visible even if client data is partial.
+        return true;
+      }
+
+      return availableFields.some(field =>
         normalizeSearchValue(field).includes(normalizedQuery),
       );
     });
-  }, [allOpportunities, normalizeSearchValue, searchQuery]);
+  }, [
+    allOpportunities,
+    getOpportunityClientIdentity,
+    normalizeSearchValue,
+    searchQuery,
+  ]);
 
   const showStatusFilterSkeleton =
     isStatusLoading || isStatusFilterBootstrapping;
