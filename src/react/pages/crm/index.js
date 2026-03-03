@@ -515,6 +515,37 @@ export default function CrmIndex() {
     navigation.navigate('CrmConversation', { opportunity });
   };
 
+  const handleEditBeneficiary = useCallback(
+    opportunity => {
+      const reference = normalizePeopleReference(opportunity?.client);
+      if (!reference) {
+        showError?.('Nao foi possivel identificar o beneficiario desta oportunidade.');
+        return;
+      }
+
+      const matchedPerson = getPersonByReference(opportunity?.client);
+      const selectedClient =
+        matchedPerson ||
+        (typeof opportunity?.client === 'object' && opportunity?.client
+          ? opportunity.client
+          : null) ||
+        {
+          id: extractId(reference),
+          '@id': reference,
+          name: getBeneficiaryName(opportunity?.client) || 'Cliente',
+        };
+
+      navigation.navigate('ClientDetails', { client: selectedClient });
+    },
+    [
+      getBeneficiaryName,
+      getPersonByReference,
+      navigation,
+      normalizePeopleReference,
+      showError,
+    ],
+  );
+
   const sanitizePhoneValue = value =>
     String(value || '')
       .replace(/\D/g, '')
@@ -863,9 +894,17 @@ export default function CrmIndex() {
             <Text style={styles.opportunityTitle}>
               Oportunidade #{opportunity.id}
             </Text>
-            <Text style={styles.clientName}>
-              {getBeneficiaryName(opportunity?.client) || 'Cliente não informado'}
-            </Text>
+            <View style={styles.clientNameRow}>
+              <Text style={styles.clientName}>
+                {getBeneficiaryName(opportunity?.client) || 'Cliente não informado'}
+              </Text>
+              <TouchableOpacity
+                style={styles.editClientButton}
+                onPress={() => handleEditBeneficiary(opportunity)}
+                activeOpacity={0.8}>
+                <Icon name="edit" size={12} color={colors.primary} />
+              </TouchableOpacity>
+            </View>
           </View>
           <TouchableOpacity
             style={[
@@ -2183,6 +2222,21 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#64748B',
     fontWeight: '400',
+    flex: 1,
+  },
+  clientNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  editClientButton: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#E7F3FF',
+    marginLeft: 8,
   },
   stageTag: {
     paddingHorizontal: 10,

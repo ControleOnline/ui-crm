@@ -30,7 +30,7 @@ export default function HomePage({ navigation }) {
   const peopleGetters = peopleStore.getters;
   const authGetters = authStore.getters;
   const themeGetters = themeStore.getters;
-  const { currentCompany } = peopleGetters;
+  const { currentCompany, companies } = peopleGetters;
   const {user: authUser} = authGetters;
   const currentUser = {
     ...authUser,
@@ -48,8 +48,10 @@ export default function HomePage({ navigation }) {
 
   const [recentActivity, setRecentActivity] = useState([]);
   const [loadingActivity, setLoadingActivity] = useState(false);
+  const [activitySortDirection, setActivitySortDirection] = useState('desc');
 
-  const firstName = currentUser?.name?.split(' ')[0] || 'Usuário';
+  const firstName = currentUser?.name?.split(' ')[0] || 'Usuario';
+  const canSwitchCompany = Array.isArray(companies) && companies.length > 1;
 
   const brandColors = useMemo(
     () =>
@@ -139,25 +141,29 @@ export default function HomePage({ navigation }) {
 
         // Add Opportunities
         (opportunities.member || []).forEach(item => {
+          const sortDate = item.dueDate ? new Date(item.dueDate).getTime() : 0;
           activities.push({
             id: item.id,
             originalId: item.id,
             title: `Nova oportunidade: ${item.client?.name || 'Cliente desconhecido'}`,
             time: item.dueDate ? Formatter.formatDateYmdTodmY(item.dueDate) : 'Sem data',
             type: 'lead',
-            rawDate: item.id, // Using ID as proxy for recency
+            sortDate,
+            rawDate: item.id,
             details: item
           });
         });
 
         // Add Proposals
         (proposals.member || []).forEach(item => {
+          const sortDate = item.startDate ? new Date(item.startDate).getTime() : 0;
           activities.push({
             id: item.id,
             originalId: item.id,
             title: `Proposta: ${item.contractModel?.model || 'Nova proposta'}`,
             time: item.startDate ? Formatter.formatDateYmdTodmY(item.startDate) : 'Sem data',
             type: 'proposal',
+            sortDate,
             rawDate: item.id,
             details: item
           });
@@ -165,20 +171,20 @@ export default function HomePage({ navigation }) {
 
         // Add Contracts
         (contracts.member || []).forEach(item => {
+          const sortDate = item.startDate ? new Date(item.startDate).getTime() : 0;
           activities.push({
             id: item.id,
             originalId: item.id,
             title: `Contrato: ${item.contractModel?.model || 'Novo contrato'}`,
             time: item.startDate ? Formatter.formatDateYmdTodmY(item.startDate) : 'Sem data',
             type: 'calendar', // Using calendar icon for contracts
+            sortDate,
             rawDate: item.id,
             details: item
           });
         });
 
-        // Sort by ID descending and take top 5
-        activities.sort((a, b) => b.rawDate - a.rawDate);
-        setRecentActivity(activities.slice(0, 5));
+        setRecentActivity(activities);
 
       } catch (error) {
         console.error('Error fetching home data:', error);
@@ -190,6 +196,26 @@ export default function HomePage({ navigation }) {
     fetchData();
   }, [currentCompany?.id]);
 
+  const sortedRecentActivity = useMemo(() => {
+    const items = [...recentActivity];
+    items.sort((left, right) => {
+      const leftDate = left.sortDate || 0;
+      const rightDate = right.sortDate || 0;
+      if (leftDate !== rightDate) {
+        return activitySortDirection === 'asc'
+          ? leftDate - rightDate
+          : rightDate - leftDate;
+      }
+
+      const leftFallback = Number(left.rawDate || 0);
+      const rightFallback = Number(right.rawDate || 0);
+      return activitySortDirection === 'asc'
+        ? leftFallback - rightFallback
+        : rightFallback - leftFallback;
+    });
+    return items.slice(0, 5);
+  }, [recentActivity, activitySortDirection]);
+
   return (
     <View style={[styles.container, {backgroundColor: brandColors.background}]}>
       <ScrollView
@@ -200,9 +226,21 @@ export default function HomePage({ navigation }) {
         <View style={styles.header}>
           <View>
             <Text animation="fadeIn" style={styles.greeting}>
-              Olá, {firstName}
+              Ola, {firstName}
             </Text>
-            <CompanySelector>
+            {canSwitchCompany ? (
+              <CompanySelector>
+                <View style={styles.companyRow}>
+                  {companyLogoUrl ? (
+                    <Image source={{ uri: companyLogoUrl }} style={styles.companyLogo} />
+                  ) : null}
+                  <Text animation="fadeIn" delay={100} style={[styles.companyName, {color: brandColors.textSecondary}]}>
+                    {currentCompany?.alias || currentCompany?.name || 'Bem-vindo ao CRM'}
+                  </Text>
+                  <Icon name="chevron-down" size={14} color={brandColors.textSecondary} style={{ marginLeft: 4, marginTop: 4 }} />
+                </View>
+              </CompanySelector>
+            ) : (
               <View style={styles.companyRow}>
                 {companyLogoUrl ? (
                   <Image source={{ uri: companyLogoUrl }} style={styles.companyLogo} />
@@ -210,18 +248,11 @@ export default function HomePage({ navigation }) {
                 <Text animation="fadeIn" delay={100} style={[styles.companyName, {color: brandColors.textSecondary}]}>
                   {currentCompany?.alias || currentCompany?.name || 'Bem-vindo ao CRM'}
                 </Text>
-                <Icon name="chevron-down" size={14} color={brandColors.textSecondary} style={{ marginLeft: 4, marginTop: 4 }} />
               </View>
-            </CompanySelector>
+            )}
           </View>
           <TouchableOpacity
-            style={[
-              styles.avatarWrap,
-              {
-                backgroundColor: withOpacity(brandColors.primary, 0.12),
-                borderColor: withOpacity(brandColors.primary, 0.25),
-              },
-            ]}
+            style={styles.avatarWrap}
             onPress={() => navigation.navigate('ProfilePage')}
             activeOpacity={0.8}>
             <Image
@@ -290,19 +321,41 @@ export default function HomePage({ navigation }) {
         </View>
 
         {/* Recent Activity */}
-        <Text style={styles.sectionTitle}>{global.t?.t('home', 'sectionTitle', 'recentActivity')}</Text>
+        <View style={styles.sectionTitleRow}>
+          <Text style={[styles.sectionTitle, styles.sectionTitleRowText]}>
+            {global.t?.t('home', 'sectionTitle', 'recentActivity')}
+          </Text>
+          <TouchableOpacity
+            style={styles.sortButton}
+            onPress={() =>
+              setActivitySortDirection(prev => (prev === 'desc' ? 'asc' : 'desc'))
+            }
+            activeOpacity={0.8}>
+            <Icon
+              name={activitySortDirection === 'desc' ? 'arrow-down' : 'arrow-up'}
+              size={14}
+              color={brandColors.primary}
+            />
+            <Text style={[styles.sortButtonText, { color: brandColors.primary }]}>
+              {activitySortDirection === 'desc' ? 'Mais recente' : 'Mais antiga'}
+            </Text>
+          </TouchableOpacity>
+        </View>
         <View style={styles.activityList}>
           {loadingActivity ? (
             <ActivityIndicator size="small" color={brandColors.primary} style={{ padding: 20 }} />
-          ) : recentActivity.length === 0 ? (
+          ) : sortedRecentActivity.length === 0 ? (
             <View style={{ padding: 20, alignItems: 'center' }}>
               <Text style={{ color: '#94A3B8' }}>{global.t?.t('home', 'sectionTitle', 'noRecentActivity')}</Text>
             </View>
           ) : (
-            recentActivity.map((item, idx) => (
+            sortedRecentActivity.map((item, idx) => (
               <TouchableOpacity
                 key={idx}
-                style={[styles.activityItem, idx === recentActivity.length - 1 && { borderBottomWidth: 0 }]}
+                style={[
+                  styles.activityItem,
+                  idx === sortedRecentActivity.length - 1 && { borderBottomWidth: 0 },
+                ]}
                 onPress={() => {
                   if (item.type === 'lead') navigation.navigate('CrmIndex'); // Could navigate to details if we had the route
                   else if (item.type === 'proposal') navigation.navigate('ContractDetails', { contractId: item.originalId });
@@ -371,14 +424,21 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   avatarWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    backgroundColor: '#EEF2FF',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1.5,
-    borderColor: '#C7D2FE',
+  },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 0,
+    gap: 10,
+  },
+  sectionTitleRowText: {
+    marginBottom: 0,
   },
   sectionTitle: {
     fontSize: 18,
@@ -386,6 +446,19 @@ const styles = StyleSheet.create({
     color: '#1E293B',
     marginBottom: 16,
     letterSpacing: -0.3,
+  },
+  sortButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#EEF2FF',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  sortButtonText: {
+    marginLeft: 6,
+    fontSize: 11,
+    fontWeight: '700',
   },
   statsContainer: {
     flexDirection: 'row',
