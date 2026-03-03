@@ -1,4 +1,4 @@
-﻿import React, { useCallback, useState, useEffect, useLayoutEffect } from 'react';
+import React, { useCallback, useState, useEffect, useLayoutEffect } from 'react';
 import {
   Text,
   View,
@@ -20,8 +20,14 @@ import MaterialIcon from 'react-native-vector-icons/MaterialIcons';
 import CreateProposalsModal from './CreateProposalsModal';
 import CompanySelector from '../../components/CompanySelector';
 import Formatter from '@controleonline/ui-common/src/utils/formatter';
+import translateWithFallback from '../../utils/translateWithFallback';
 
 const ProposalsPage = () => {
+  const tr = useCallback(
+    (type, key, fallback) =>
+      translateWithFallback('proposals', type, key, fallback),
+    [],
+  );
   const peopleStore = useStore('people');
   const { currentCompany } = peopleStore.getters;
   const contractStore = useStore('contract');
@@ -81,10 +87,10 @@ const ProposalsPage = () => {
 
   useLayoutEffect(() => {
     navigation.setOptions({
-      headerTitle: 'Propostas',
+      headerTitle: tr('title', 'page', 'Propostas'),
       headerRight: () => <CompanySelector mode="icon" />,
     });
-  }, [navigation]);
+  }, [navigation, tr]);
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -169,29 +175,29 @@ const ProposalsPage = () => {
   const getStatusLabel = status => {
     const normalized = normalizeStatusKey(status);
     const map = {
-      ativo: 'Ativo',
-      active: 'Ativo',
-      inativo: 'Inativo',
-      inactive: 'Inativo',
-      pendente: 'Pendente',
-      pending: 'Pendente',
-      open: 'Aberto',
-      aberto: 'Aberto',
-      closed: 'Fechado',
-      fechado: 'Fechado',
-      cancelado: 'Cancelado',
-      cancelled: 'Cancelado',
-      canceled: 'Cancelado',
-      'waiting signature': 'Aguardando Assinatura',
-      'awaiting signature': 'Aguardando Assinatura',
-      'signature pending': 'Aguardando Assinatura',
-      assinado: 'Assinado',
-      signed: 'Assinado',
-      draft: 'Rascunho',
-      rascunho: 'Rascunho',
+      ativo: tr('status', 'active', 'Ativo'),
+      active: tr('status', 'active', 'Ativo'),
+      inativo: tr('status', 'inactive', 'Inativo'),
+      inactive: tr('status', 'inactive', 'Inativo'),
+      pendente: tr('status', 'pending', 'Pendente'),
+      pending: tr('status', 'pending', 'Pendente'),
+      open: tr('status', 'open', 'Aberto'),
+      aberto: tr('status', 'open', 'Aberto'),
+      closed: tr('status', 'closed', 'Fechado'),
+      fechado: tr('status', 'closed', 'Fechado'),
+      cancelado: tr('status', 'canceled', 'Cancelado'),
+      cancelled: tr('status', 'canceled', 'Cancelado'),
+      canceled: tr('status', 'canceled', 'Cancelado'),
+      'waiting signature': tr('status', 'waitingSignature', 'Aguardando Assinatura'),
+      'awaiting signature': tr('status', 'waitingSignature', 'Aguardando Assinatura'),
+      'signature pending': tr('status', 'waitingSignature', 'Aguardando Assinatura'),
+      assinado: tr('status', 'signed', 'Assinado'),
+      signed: tr('status', 'signed', 'Assinado'),
+      draft: tr('status', 'draft', 'Rascunho'),
+      rascunho: tr('status', 'draft', 'Rascunho'),
     };
 
-    return map[normalized] || status || '-';
+    return map[normalized] || status || tr('label', 'na', '-');
   };
 
   const getStatusFilterKey = useCallback(
@@ -310,7 +316,9 @@ const ProposalsPage = () => {
     >
       <View style={styles.cardHeader}>
         <View style={styles.headerContent}>
-          <Text style={styles.cardTitle}>{contract.contractModel?.model || 'Sem título'}</Text>
+          <Text style={styles.cardTitle}>
+            {contract.contractModel?.model || tr('label', 'untitled', 'Sem titulo')}
+          </Text>
           <View style={[styles.statusBadge, { backgroundColor: getStatusColor(contract.status?.status) }]}>
             <Text style={styles.statusText}>{getStatusLabel(contract.status?.status)}</Text>
           </View>
@@ -321,19 +329,23 @@ const ProposalsPage = () => {
         <View style={styles.datesContainer}>
           <View style={styles.dateBadge}>
             <MaterialIcon name="event" size={14} color="#64748B" />
-            <Text style={styles.dateText}>Início: {contract.startDate ? Formatter.formatDateYmdTodmY(contract.startDate) : '-'}</Text>
+            <Text style={styles.dateText}>
+              {tr('label', 'startDate', 'Inicio')}: {contract.startDate ? Formatter.formatDateYmdTodmY(contract.startDate) : tr('label', 'na', '-')}
+            </Text>
           </View>
           {contract.endDate && (
             <View style={styles.dateBadge}>
               <MaterialIcon name="event-available" size={14} color="#64748B" />
-              <Text style={styles.dateText}>Fim: {Formatter.formatDateYmdTodmY(contract.endDate)}</Text>
+              <Text style={styles.dateText}>
+                {tr('label', 'endDate', 'Fim')}: {Formatter.formatDateYmdTodmY(contract.endDate)}
+              </Text>
             </View>
           )}
         </View>
       </View>
 
       <View style={styles.cardFooter}>
-        <Text style={styles.viewDetailsText}>Ver detalhes</Text>
+        <Text style={styles.viewDetailsText}>{tr('action', 'viewDetails', 'Ver detalhes')}</Text>
         <Icon name="chevron-right" size={12} color={colors.primary} />
       </View>
     </TouchableOpacity>
@@ -347,7 +359,7 @@ const ProposalsPage = () => {
             <Icon name="search" size={16} color="#94A3B8" />
             <TextInput
               style={styles.searchInput}
-              placeholder="Buscar proposta..."
+              placeholder={tr('placeholder', 'search', 'Buscar proposta...')}
               placeholderTextColor="#94A3B8"
               value={search}
               onChangeText={setSearch}
@@ -370,7 +382,7 @@ const ProposalsPage = () => {
         </View>
 
         <View style={styles.statusFilterSection}>
-          <Text style={styles.statusFilterLabel}>Status</Text>
+          <Text style={styles.statusFilterLabel}>{tr('label', 'status', 'Status')}</Text>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -386,7 +398,7 @@ const ProposalsPage = () => {
                   styles.statusFilterChipText,
                   !selectedStatusFilterKey && styles.statusFilterChipTextActive,
                 ]}>
-                Todos
+                {tr('filter', 'all', 'Todos')}
               </Text>
             </TouchableOpacity>
 
@@ -431,7 +443,9 @@ const ProposalsPage = () => {
             return (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color={colors.primary} />
-                <Text style={styles.loadingText}>Carregando propostas...</Text>
+                <Text style={styles.loadingText}>
+                  {tr('state', 'loading', 'Carregando propostas...')}
+                </Text>
               </View>
             );
           }
@@ -439,7 +453,9 @@ const ProposalsPage = () => {
             return (
               <View style={styles.emptyContainer}>
                 <MaterialIcon name="error-outline" size={48} color="#EF4444" />
-                <Text style={styles.emptyTitle}>Erro ao carregar</Text>
+                <Text style={styles.emptyTitle}>
+                  {tr('state', 'errorTitle', 'Erro ao carregar')}
+                </Text>
                 <Text style={styles.emptySubtitle}>{error}</Text>
               </View>
             );
@@ -450,15 +466,21 @@ const ProposalsPage = () => {
                 <Icon name="file-text-o" size={48} color="#CBD5E1" />
                 <Text style={styles.emptyTitle}>
                   {selectedStatusFilterKey
-                    ? 'Nenhuma proposta com este status'
-                    : 'Nenhuma proposta encontrada'}
+                    ? tr('state', 'emptyByStatus', 'Nenhuma proposta com este status')
+                    : tr('state', 'empty', 'Nenhuma proposta encontrada')}
                 </Text>
                 {searchQuery ? (
-                  <Text style={styles.emptySubtitle}>Tente buscar por outro termo</Text>
+                  <Text style={styles.emptySubtitle}>
+                    {tr('state', 'searchTip', 'Tente buscar por outro termo')}
+                  </Text>
                 ) : selectedStatusFilterKey ? (
-                  <Text style={styles.emptySubtitle}>Selecione outro status</Text>
+                  <Text style={styles.emptySubtitle}>
+                    {tr('state', 'statusTip', 'Selecione outro status')}
+                  </Text>
                 ) : (
-                  <Text style={styles.emptySubtitle}>Use o botão + para criar uma nova proposta</Text>
+                  <Text style={styles.emptySubtitle}>
+                    {tr('state', 'createTip', 'Use o botao + para criar uma nova proposta')}
+                  </Text>
                 )}
               </View>
             );

@@ -7,15 +7,18 @@ import { useNavigationState } from '@react-navigation/native';
 
 import { colors } from '@controleonline/../../src/styles/colors';
 import { resolveThemePalette } from '@controleonline/../../src/styles/branding';
+import translateWithFallback from '../utils/translateWithFallback';
 
 const TAB_ITEMS = [
-  { key: 'HomePage', icon: 'home', label: 'Início' },
-  { key: 'CrmIndex', icon: 'target', label: 'CRM' },
-  { key: 'ClientsIndex', icon: 'users', label: 'Clientes' },
-  { key: 'ProfilePage', icon: 'user', label: 'Perfil' },
+  { key: 'HomePage', icon: 'home', labelKey: 'home', fallback: 'Inicio' },
+  { key: 'CrmIndex', icon: 'target', labelKey: 'crm', fallback: 'CRM' },
+  { key: 'ClientsIndex', icon: 'users', labelKey: 'clients', fallback: 'Clientes' },
+  { key: 'ProfilePage', icon: 'user', labelKey: 'profile', fallback: 'Perfil' },
 ];
 
 const BottomToolbar = ({ navigation, currentRouteName }) => {
+  const tr = (type, key, fallback) =>
+    translateWithFallback('bottomToolbar', type, key, fallback);
   const navigationState = useNavigationState(state => state);
   const routeNameFromState =
     navigationState?.routes?.[navigationState.index]?.name;
@@ -80,7 +83,7 @@ const BottomToolbar = ({ navigation, currentRouteName }) => {
                     />
                   </View>
                   <Text style={[styles.label, isActive && styles.labelActive]}>
-                    {item.label}
+                    {tr('label', item.labelKey, item.fallback)}
                   </Text>
                 </TouchableOpacity>
               );
@@ -160,3 +163,4 @@ const createStyles = brandColors =>
   });
 
 export default BottomToolbar;
+

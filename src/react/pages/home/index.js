@@ -22,8 +22,11 @@ import Icon from 'react-native-vector-icons/Feather';
 import { useStore } from '@store';
 import { api } from '@controleonline/ui-common/src/api';
 import Formatter from '@controleonline/ui-common/src/utils/formatter';
+import translateWithFallback from '../../utils/translateWithFallback';
 
 export default function HomePage({ navigation }) {
+  const tr = (type, key, fallback) =>
+    translateWithFallback('home', type, key, fallback);
   const peopleStore = useStore('people');
   const authStore = useStore('auth');
   const themeStore = useStore('theme');
@@ -41,16 +44,16 @@ export default function HomePage({ navigation }) {
   const {colors: themeColors} = themeGetters;
 
   const [stats, setStats] = useState([
-    { label: 'Oportunidades', value: '...', icon: 'trello', color: '#F59E0B', route: 'CrmIndex' },
-    { label: 'Propostas', value: '...', icon: 'file-text', color: '#3B82F6', route: 'ProposalsIndex' },
-    { label: 'Contratos', value: '...', icon: 'briefcase', color: '#10B981', route: 'ContractsIndex' },
+    { label: tr('stats', 'opportunities', 'Oportunidades'), value: '...', icon: 'trello', color: '#F59E0B', route: 'CrmIndex' },
+    { label: tr('stats', 'proposals', 'Propostas'), value: '...', icon: 'file-text', color: '#3B82F6', route: 'ProposalsIndex' },
+    { label: tr('stats', 'contracts', 'Contratos'), value: '...', icon: 'briefcase', color: '#10B981', route: 'ContractsIndex' },
   ]);
 
   const [recentActivity, setRecentActivity] = useState([]);
   const [loadingActivity, setLoadingActivity] = useState(false);
   const [activitySortDirection, setActivitySortDirection] = useState('desc');
 
-  const firstName = currentUser?.name?.split(' ')[0] || 'Usuario';
+  const firstName = currentUser?.name?.split(' ')[0] || tr('header', 'userFallback', 'Usuario');
   const canSwitchCompany = Array.isArray(companies) && companies.length > 1;
 
   const brandColors = useMemo(
@@ -131,9 +134,9 @@ export default function HomePage({ navigation }) {
 
         // Update Stats
         setStats([
-          { label: 'Oportunidades', value: String(opportunities.totalItems || 0), icon: 'trello', color: '#F59E0B', route: 'CrmIndex' },
-          { label: 'Propostas', value: String(proposals.totalItems || 0), icon: 'file-text', color: '#3B82F6', route: 'ProposalsIndex' },
-          { label: 'Contratos', value: String(contracts.totalItems || 0), icon: 'briefcase', color: '#10B981', route: 'ContractsIndex' },
+          { label: tr('stats', 'opportunities', 'Oportunidades'), value: String(opportunities.totalItems || 0), icon: 'trello', color: '#F59E0B', route: 'CrmIndex' },
+          { label: tr('stats', 'proposals', 'Propostas'), value: String(proposals.totalItems || 0), icon: 'file-text', color: '#3B82F6', route: 'ProposalsIndex' },
+          { label: tr('stats', 'contracts', 'Contratos'), value: String(contracts.totalItems || 0), icon: 'briefcase', color: '#10B981', route: 'ContractsIndex' },
         ]);
 
         // Process Recent Activity
@@ -145,8 +148,8 @@ export default function HomePage({ navigation }) {
           activities.push({
             id: item.id,
             originalId: item.id,
-            title: `Nova oportunidade: ${item.client?.name || 'Cliente desconhecido'}`,
-            time: item.dueDate ? Formatter.formatDateYmdTodmY(item.dueDate) : 'Sem data',
+            title: `${tr('activity', 'newOpportunityPrefix', 'Nova oportunidade:')} ${item.client?.name || tr('activity', 'unknownClient', 'Cliente desconhecido')}`,
+            time: item.dueDate ? Formatter.formatDateYmdTodmY(item.dueDate) : tr('activity', 'withoutDate', 'Sem data'),
             type: 'lead',
             sortDate,
             rawDate: item.id,
@@ -160,8 +163,8 @@ export default function HomePage({ navigation }) {
           activities.push({
             id: item.id,
             originalId: item.id,
-            title: `Proposta: ${item.contractModel?.model || 'Nova proposta'}`,
-            time: item.startDate ? Formatter.formatDateYmdTodmY(item.startDate) : 'Sem data',
+            title: `${tr('activity', 'proposalPrefix', 'Proposta:')} ${item.contractModel?.model || tr('activity', 'newProposal', 'Nova proposta')}`,
+            time: item.startDate ? Formatter.formatDateYmdTodmY(item.startDate) : tr('activity', 'withoutDate', 'Sem data'),
             type: 'proposal',
             sortDate,
             rawDate: item.id,
@@ -175,8 +178,8 @@ export default function HomePage({ navigation }) {
           activities.push({
             id: item.id,
             originalId: item.id,
-            title: `Contrato: ${item.contractModel?.model || 'Novo contrato'}`,
-            time: item.startDate ? Formatter.formatDateYmdTodmY(item.startDate) : 'Sem data',
+            title: `${tr('activity', 'contractPrefix', 'Contrato:')} ${item.contractModel?.model || tr('activity', 'newContract', 'Novo contrato')}`,
+            time: item.startDate ? Formatter.formatDateYmdTodmY(item.startDate) : tr('activity', 'withoutDate', 'Sem data'),
             type: 'calendar', // Using calendar icon for contracts
             sortDate,
             rawDate: item.id,
@@ -226,7 +229,7 @@ export default function HomePage({ navigation }) {
         <View style={styles.header}>
           <View>
             <Text animation="fadeIn" style={styles.greeting}>
-              Ola, {firstName}
+              {tr('header', 'hello', 'Ola')}, {firstName}
             </Text>
             {canSwitchCompany ? (
               <CompanySelector>
@@ -235,7 +238,7 @@ export default function HomePage({ navigation }) {
                     <Image source={{ uri: companyLogoUrl }} style={styles.companyLogo} />
                   ) : null}
                   <Text animation="fadeIn" delay={100} style={[styles.companyName, {color: brandColors.textSecondary}]}>
-                    {currentCompany?.alias || currentCompany?.name || 'Bem-vindo ao CRM'}
+                    {currentCompany?.alias || currentCompany?.name || tr('header', 'welcomeCrm', 'Bem-vindo ao CRM')}
                   </Text>
                   <Icon name="chevron-down" size={14} color={brandColors.textSecondary} style={{ marginLeft: 4, marginTop: 4 }} />
                 </View>
@@ -246,7 +249,7 @@ export default function HomePage({ navigation }) {
                   <Image source={{ uri: companyLogoUrl }} style={styles.companyLogo} />
                 ) : null}
                 <Text animation="fadeIn" delay={100} style={[styles.companyName, {color: brandColors.textSecondary}]}>
-                  {currentCompany?.alias || currentCompany?.name || 'Bem-vindo ao CRM'}
+                  {currentCompany?.alias || currentCompany?.name || tr('header', 'welcomeCrm', 'Bem-vindo ao CRM')}
                 </Text>
               </View>
             )}
@@ -263,7 +266,7 @@ export default function HomePage({ navigation }) {
         </View>
 
         {/* Stats Grid - atalhos navegáveis */}
-        <Text style={styles.sectionTitle}>{global.t?.t('home', 'sectionTitle', 'overview')}</Text>
+        <Text style={styles.sectionTitle}>{tr('sectionTitle', 'overview', 'Visão Geral')}</Text>
         <View style={styles.statsContainer}>
           {stats.map((stat, idx) => (
             <TouchableOpacity
@@ -287,8 +290,8 @@ export default function HomePage({ navigation }) {
           onPress={() => navigation.navigate('CrmIndex')}>
           <View style={styles.actionContent}>
             <View>
-              <Text style={styles.actionTitle}>{global.t?.t('home', 'actionBanner', 'accessPipeline')}</Text>
-              <Text style={styles.actionSub}>{global.t?.t('home', 'actionBanner', 'manageDeals')}</Text>
+              <Text style={styles.actionTitle}>{tr('actionBanner', 'accessPipeline', 'Acessar Pipeline')}</Text>
+              <Text style={styles.actionSub}>{tr('actionBanner', 'manageDeals', 'Gerencie suas negociações')}</Text>
             </View>
             <View style={styles.actionButton}>
               <Icon name="arrow-right" size={20} color={brandColors.primary} />
@@ -305,8 +308,8 @@ export default function HomePage({ navigation }) {
             <View style={[styles.shortcutIcon, { backgroundColor: withOpacity(brandColors.primary, 0.12) }]}>
               <Icon name="users" size={24} color={brandColors.primary} />
             </View>
-            <Text style={styles.shortcutLabel}>{global.t?.t('home', 'actionBanner', 'clients')}</Text>
-            <Text style={styles.shortcutSub}>{global.t?.t('home', 'actionBanner', 'viewClients')}</Text>
+            <Text style={styles.shortcutLabel}>{tr('actionBanner', 'clients', 'Clientes')}</Text>
+            <Text style={styles.shortcutSub}>{tr('actionBanner', 'viewClients', 'Ver lista de clientes')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.shortcutCard}
@@ -315,15 +318,15 @@ export default function HomePage({ navigation }) {
             <View style={[styles.shortcutIcon, { backgroundColor: '#D1FAE5' }]}>
               <Icon name="trending-up" size={24} color="#10B981" />
             </View>
-            <Text style={styles.shortcutLabel}>{global.t?.t('home', 'actionBanner', 'commissions')}</Text>
-            <Text style={styles.shortcutSub}>{global.t?.t('home', 'actionBanner', 'financialReport')}</Text>
+            <Text style={styles.shortcutLabel}>{tr('actionBanner', 'commissions', 'Comissões')}</Text>
+            <Text style={styles.shortcutSub}>{tr('actionBanner', 'financialReport', 'Relatório financeiro')}</Text>
           </TouchableOpacity>
         </View>
 
         {/* Recent Activity */}
         <View style={styles.sectionTitleRow}>
           <Text style={[styles.sectionTitle, styles.sectionTitleRowText]}>
-            {global.t?.t('home', 'sectionTitle', 'recentActivity')}
+            {tr('sectionTitle', 'recentActivity', 'Atividade Recente')}
           </Text>
           <TouchableOpacity
             style={styles.sortButton}
@@ -337,7 +340,9 @@ export default function HomePage({ navigation }) {
               color={brandColors.primary}
             />
             <Text style={[styles.sortButtonText, { color: brandColors.primary }]}>
-              {activitySortDirection === 'desc' ? 'Mais recente' : 'Mais antiga'}
+              {activitySortDirection === 'desc'
+                ? tr('activity', 'mostRecent', 'Mais recente')
+                : tr('activity', 'oldest', 'Mais antiga')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -346,7 +351,7 @@ export default function HomePage({ navigation }) {
             <ActivityIndicator size="small" color={brandColors.primary} style={{ padding: 20 }} />
           ) : sortedRecentActivity.length === 0 ? (
             <View style={{ padding: 20, alignItems: 'center' }}>
-              <Text style={{ color: '#94A3B8' }}>{global.t?.t('home', 'sectionTitle', 'noRecentActivity')}</Text>
+              <Text style={{ color: '#94A3B8' }}>{tr('sectionTitle', 'noRecentActivity', 'Sem atividades recentes')}</Text>
             </View>
           ) : (
             sortedRecentActivity.map((item, idx) => (

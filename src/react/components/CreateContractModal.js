@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import useToastMessage from '../hooks/useToastMessage';
+import translateWithFallback from '../utils/translateWithFallback';
 
 const Dropdown = ({ label, value, options, onChange }) => (
   <View style={{ marginBottom: 20 }}>
@@ -38,6 +39,8 @@ const Dropdown = ({ label, value, options, onChange }) => (
 );
 
 const CreateContractModal = ({ visible, onClose, onSuccess }) => {
+  const tr = (type, key, fallback) =>
+    translateWithFallback('createContractModal', type, key, fallback);
   const {showError, showSuccess} = useToastMessage();
   const contractStore = useStore('contract');
   const contractActions = contractStore.actions;
@@ -83,24 +86,24 @@ const CreateContractModal = ({ visible, onClose, onSuccess }) => {
       const ids = new Set();
       response?.forEach(c => { if(c.contractModel && !ids.has(c.contractModel['@id'])) { ids.add(c.contractModel['@id']); uniqueModels.push(c.contractModel); }});
       setContractModels(uniqueModels);
-    } catch { setContractModels([{ '@id': '/contract-models/1', model: 'Contrato de Serviços' }, { '@id': '/contract-models/2', model: 'Contrato de Locação' }, { '@id': '/contract-models/3', model: 'Contrato de Compra e Venda' }]); }
+    } catch { setContractModels([{ '@id': '/contract-models/1', model: 'Contrato de Servicos' }, { '@id': '/contract-models/2', model: 'Contrato de Locacao' }, { '@id': '/contract-models/3', model: 'Contrato de Compra e Venda' }]); }
     finally { setLoadingModels(false); }
   };
 
   const handleSubmit = async () => {
     if (!selectedModel || !selectedBeneficiary || !selectedStatus) {
-      showError('Preencha todos os campos obrigatórios.');
+      showError(tr('error', 'requiredFields', 'Preencha todos os campos obrigatorios.'));
       return;
     }
     setIsLoading(true);
     try {
       const contractData = { contractModel: selectedModel, status: selectedStatus, beneficiary: selectedBeneficiary, docKey: docKey || undefined, startDate: startDate || new Date().toISOString(), endDate: endDate || undefined, creationDate: new Date().toISOString(), alterDate: new Date().toISOString(), peoples: [] };
       await contractActions.save(contractData);
-      showSuccess('Contrato criado com sucesso!');
+      showSuccess(tr('success', 'created', 'Contrato criado com sucesso!'));
       resetForm();
       onSuccess && onSuccess();
       onClose();
-    } catch (e) { console.error(e); showError('Erro ao criar contrato.'); }
+    } catch (e) { console.error(e); showError(tr('error', 'createFailed', 'Erro ao criar contrato.')); }
     finally { setIsLoading(false); }
   };
 
@@ -113,27 +116,27 @@ const CreateContractModal = ({ visible, onClose, onSuccess }) => {
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Criar Novo Contrato</Text>
+            <Text style={styles.modalTitle}>{tr('title', 'createContract', 'Criar Novo Contrato')}</Text>
             <TouchableOpacity onPress={handleClose}><Icon name="close" size={24} color="#666" /></TouchableOpacity>
           </View>
           <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
-            <Dropdown label="Modelo do Contrato *" value={selectedModel} onChange={setSelectedModel} options={contractModels.map(m => ({ label: m.model, value: m['@id'], icon: 'description' }))} />
-            <Dropdown label="Beneficiário *" value={selectedBeneficiary} onChange={setSelectedBeneficiary} options={people?.map(p => ({ label: p.name, value: p['@id'], icon: 'person' })) || []} />
-            <Dropdown label="Status *" value={selectedStatus} onChange={setSelectedStatus} options={status?.map(s => ({ label: s.realStatus || s.status, value: s['@id'] })) || []} />
+            <Dropdown label={`${tr('label', 'contractModel', 'Modelo do Contrato')} *`} value={selectedModel} onChange={setSelectedModel} options={contractModels.map(m => ({ label: m.model, value: m['@id'], icon: 'description' }))} />
+            <Dropdown label={`${tr('label', 'beneficiary', 'Beneficiario')} *`} value={selectedBeneficiary} onChange={setSelectedBeneficiary} options={people?.map(p => ({ label: p.name, value: p['@id'], icon: 'person' })) || []} />
+            <Dropdown label={`${tr('label', 'status', 'Status')} *`} value={selectedStatus} onChange={setSelectedStatus} options={status?.map(s => ({ label: s.realStatus || s.status, value: s['@id'] })) || []} />
 
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Data de Início</Text>
-              <TextInput style={styles.textInput} onFocus={() => setOpen(true)} value={startDate} onChangeText={setStartDate} placeholder="YYYY-MM-DD" placeholderTextColor="#999" />
+              <Text style={styles.inputLabel}>{tr('label', 'startDate', 'Data de Inicio')}</Text>
+              <TextInput style={styles.textInput} onFocus={() => setOpen(true)} value={startDate} onChangeText={setStartDate} placeholder={tr('placeholder', 'date', 'YYYY-MM-DD')} placeholderTextColor="#999" />
               {open && <DateTimePicker testID="dateTimePicker" value={date} mode="date" is24Hour={true} onChange={onChange} />}
             </View>
           </ScrollView>
 
           <View style={styles.modalFooter}>
-            <TouchableOpacity style={styles.cancelButton} onPress={handleClose}><Text style={styles.cancelButtonText}>Cancelar</Text></TouchableOpacity>
+            <TouchableOpacity style={styles.cancelButton} onPress={handleClose}><Text style={styles.cancelButtonText}>{tr('action', 'cancel', 'Cancelar')}</Text></TouchableOpacity>
             <TouchableOpacity style={[styles.createButton, (!selectedModel || !selectedBeneficiary || !selectedStatus) && styles.createButtonDisabled]} onPress={handleSubmit} disabled={isLoading || !selectedModel || !selectedBeneficiary || !selectedStatus}>
               {isLoading ? <ActivityIndicator size="small" color="#FFF" /> : <>
                 <Icon name="add" size={20} color="#FFF" style={{ marginRight: 8 }} />
-                <Text style={styles.createButtonText}>Criar Contrato</Text>
+                <Text style={styles.createButtonText}>{tr('action', 'createContract', 'Criar Contrato')}</Text>
               </>}
             </TouchableOpacity>
           </View>
@@ -165,3 +168,4 @@ const styles = StyleSheet.create({
 });
 
 export default CreateContractModal;
+

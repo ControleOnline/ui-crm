@@ -20,10 +20,13 @@ import {
     resolveThemePalette,
     withOpacity,
 } from '@controleonline/../../src/styles/branding';
+import translateWithFallback from '../utils/translateWithFallback';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export default function CompanySelector({ mode = 'default', children }) {
+    const tr = (type, key, fallback) =>
+        translateWithFallback('companySelector', type, key, fallback);
     const [modalVisible, setModalVisible] = useState(false);
     const [overlayOpacity] = useState(() => new Animated.Value(0));
     const [slideY] = useState(() => new Animated.Value(SCREEN_HEIGHT));
@@ -180,9 +183,9 @@ export default function CompanySelector({ mode = 'default', children }) {
                         )}
                     </View>
                     <View style={styles.textContainer}>
-                        <Text style={styles.label}>EMPRESA</Text>
+                        <Text style={styles.label}>{tr('label', 'company', 'EMPRESA')}</Text>
                         <Text style={styles.currentName} numberOfLines={1}>
-                            {currentCompany?.alias || currentCompany?.name || 'Selecione uma empresa'}
+                            {currentCompany?.alias || currentCompany?.name || tr('placeholder', 'selectCompany', 'Selecione uma empresa')}
                         </Text>
                     </View>
                     <Icon name="chevron-down" size={16} color={brandColors.textSecondary} />
@@ -198,7 +201,9 @@ export default function CompanySelector({ mode = 'default', children }) {
                     <Animated.View style={[StyleSheet.absoluteFillObject, styles.overlayBg, { opacity: overlayOpacity }]} />
                     <Animated.View style={[styles.modalContent, { transform: [{ translateY: slideY }] }]}>
                         <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>Selecionar Empresa</Text>
+                            <Text style={styles.modalTitle}>
+                                {tr('title', 'selectCompany', 'Selecionar Empresa')}
+                            </Text>
                             <TouchableOpacity
                                 style={styles.closeButton}
                                 onPress={closeModal}>

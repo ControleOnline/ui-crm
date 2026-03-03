@@ -22,6 +22,7 @@ import { useStore } from '@store';
 import { colors } from '@controleonline/../../src/styles/colors';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import useToastMessage from '../../hooks/useToastMessage';
+import translateWithFallback from '../../utils/translateWithFallback';
 
 const FONT_AWESOME_GLYPH_MAP = Icon?.getRawGlyphMap
   ? Icon.getRawGlyphMap()
@@ -30,6 +31,10 @@ const FONT_AWESOME_GLYPH_MAP = Icon?.getRawGlyphMap
 export default function CrmIndex() {
   const {showSuccess, showError} = useToastMessage();
   const navigation = useNavigation();
+  const tr = useCallback(
+    (type, key, fallback) => translateWithFallback('crm', type, key, fallback),
+    [],
+  );
   // ... rest of component
   const [refreshing, setRefreshing] = useState(false);
   const [editingOpportunity, setEditingOpportunity] = useState(null);
@@ -48,6 +53,8 @@ export default function CrmIndex() {
   const [searchText, setSearchText] = useState('');
   const [searchQuery, setSearchQuery] = useState(''); // Debounced value
   const [selectedStatusFilterKey, setSelectedStatusFilterKey] = useState('');
+  const [isStatusFilterBootstrapping, setIsStatusFilterBootstrapping] =
+    useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [allOpportunities, setAllOpportunities] = useState([]);
@@ -75,12 +82,12 @@ export default function CrmIndex() {
   const statusStore = useStore('status');
   const statusGetters = statusStore.getters;
   const statusActions = statusStore.actions;
-  const { items: status } = statusGetters;
+  const { items: status, isLoading: isStatusLoading } = statusGetters;
   const categoriesStore = useStore('categories');
   const categoriesGetters = categoriesStore.getters;
   const categoriesActions = categoriesStore.actions;
   const { items: categories } = categoriesGetters;
-  const { currentCompany, items: people } = getters;
+  const { currentCompany, items: people, isLoading: isPeopleLoading } = getters;
 
   const getStatusFilterKey = useCallback(item => {
     if (!item) {
@@ -107,17 +114,17 @@ export default function CrmIndex() {
       .toLowerCase();
 
     const labels = {
-      open: 'Em Aberto',
-      pending: 'Pendente',
-      closed: 'Fechado',
-      cancelled: 'Cancelado',
-      cancelado: 'Cancelado',
-      ativo: 'Ativo',
-      inativo: 'Inativo',
+      open: tr('status', 'open', 'Em Aberto'),
+      pending: tr('status', 'pending', 'Pendente'),
+      closed: tr('status', 'closed', 'Fechado'),
+      cancelled: tr('status', 'cancelled', 'Cancelado'),
+      cancelado: tr('status', 'cancelledPt', 'Cancelado'),
+      ativo: tr('status', 'active', 'Ativo'),
+      inativo: tr('status', 'inactive', 'Inativo'),
     };
 
-    return labels[normalized] || item?.status || 'Sem status';
-  }, []);
+    return labels[normalized] || item?.status || tr('status', 'noStatus', 'Sem status');
+  }, [tr]);
 
   const getOptionIdentity = useCallback(item => {
     if (!item) {
@@ -220,6 +227,8 @@ export default function CrmIndex() {
 
   useFocusEffect(
     useCallback(() => {
+      let isMounted = true;
+
       const params = buildOpportunityParams();
       if (params) {
         opportunitiesActions.getItems(params);
@@ -229,7 +238,18 @@ export default function CrmIndex() {
         });
       }
 
-      statusActions.getItems({ context: 'relationship' });
+      const loadStatusFilters = async () => {
+        setIsStatusFilterBootstrapping(true);
+        try {
+          await statusActions.getItems({ context: 'relationship' });
+        } finally {
+          if (isMounted) {
+            setIsStatusFilterBootstrapping(false);
+          }
+        }
+      };
+      loadStatusFilters().catch(() => null);
+
       categoriesActions.getItems({
         context: [
           'relationship',
@@ -238,15 +258,19 @@ export default function CrmIndex() {
           'products',
         ],
       });
+
+      return () => {
+        isMounted = false;
+      };
     }, [buildOpportunityParams, currentCompany?.id]),
   );
 
   useLayoutEffect(() => {
     navigation.setOptions({
-      headerTitle: 'Oportunidades',
+      headerTitle: tr('header', 'opportunities', 'Oportunidades'),
       headerRight: () => <CompanySelector mode="icon" />,
     });
-  }, [navigation]);
+  }, [navigation, tr]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -332,6 +356,9 @@ export default function CrmIndex() {
     });
   }, [allOpportunities, normalizeSearchValue, searchQuery]);
 
+  const showStatusFilterSkeleton =
+    isStatusLoading || isStatusFilterBootstrapping;
+
   const getCurrentDateComponents = () => {
     const today = new Date();
     return {
@@ -374,12 +401,12 @@ export default function CrmIndex() {
 
   const getStageLabel = status => {
     const labels = {
-      open: 'Em Aberto',
-      closed: 'Fechado',
-      pending: 'Pendente',
-      cancelled: 'Cancelado',
+      open: tr('status', 'open', 'Em Aberto'),
+      closed: tr('status', 'closed', 'Fechado'),
+      pending: tr('status', 'pending', 'Pendente'),
+      cancelled: tr('status', 'cancelled', 'Cancelado'),
     };
-    return labels[status] || status;
+    return labels[status] || status || tr('status', 'noStatus', 'Sem status');
   };
 
   const getColorWithAlpha = (colorValue, alpha = '20') => {
@@ -492,18 +519,18 @@ export default function CrmIndex() {
 
   const getMonthsArray = () => {
     const months = [
-      'Janeiro',
-      'Fevereiro',
-      'Março',
-      'Abril',
-      'Maio',
-      'Junho',
-      'Julho',
-      'Agosto',
-      'Setembro',
-      'Outubro',
-      'Novembro',
-      'Dezembro',
+      tr('month', 'january', 'Janeiro'),
+      tr('month', 'february', 'Fevereiro'),
+      tr('month', 'march', 'Março'),
+      tr('month', 'april', 'Abril'),
+      tr('month', 'may', 'Maio'),
+      tr('month', 'june', 'Junho'),
+      tr('month', 'july', 'Julho'),
+      tr('month', 'august', 'Agosto'),
+      tr('month', 'september', 'Setembro'),
+      tr('month', 'october', 'Outubro'),
+      tr('month', 'november', 'Novembro'),
+      tr('month', 'december', 'Dezembro'),
     ];
     return months.map((month, index) => ({
       id: String(index + 1).padStart(2, '0'),
@@ -519,7 +546,13 @@ export default function CrmIndex() {
     opportunity => {
       const reference = normalizePeopleReference(opportunity?.client);
       if (!reference) {
-        showError?.('Nao foi possivel identificar o beneficiario desta oportunidade.');
+        showError?.(
+          tr(
+            'toast',
+            'beneficiaryNotIdentified',
+            'Nao foi possivel identificar o beneficiario desta oportunidade.',
+          ),
+        );
         return;
       }
 
@@ -532,7 +565,7 @@ export default function CrmIndex() {
         {
           id: extractId(reference),
           '@id': reference,
-          name: getBeneficiaryName(opportunity?.client) || 'Cliente',
+          name: getBeneficiaryName(opportunity?.client) || tr('label', 'client', 'Cliente'),
         };
 
       navigation.navigate('ClientDetails', { client: selectedClient });
@@ -550,6 +583,19 @@ export default function CrmIndex() {
     String(value || '')
       .replace(/\D/g, '')
       .slice(0, 11);
+
+  const hasDuplicatePhones = phones => {
+    const uniquePhones = new Set();
+
+    for (const phone of phones) {
+      if (uniquePhones.has(phone)) {
+        return true;
+      }
+      uniquePhones.add(phone);
+    }
+
+    return false;
+  };
 
   const formatPhoneValue = value => {
     const digits = sanitizePhoneValue(value);
@@ -652,6 +698,12 @@ export default function CrmIndex() {
       const validPhones = (editingOpportunity.phones || [])
         .map(phone => sanitizePhoneValue(phone))
         .filter(Boolean);
+
+      if (hasDuplicatePhones(validPhones)) {
+        showError(tr('toast', 'duplicatePhone', 'Nao e permitido salvar telefones duplicados.'));
+        return;
+      }
+
       const phoneData =
         validPhones.length > 0 ? JSON.stringify(validPhones) : '';
 
@@ -679,10 +731,10 @@ export default function CrmIndex() {
       setEditModalVisible(false);
       setEditingOpportunity(null);
 
-      showSuccess('Oportunidade atualizada com sucesso!');
+      showSuccess(tr('toast', 'opportunityUpdated', 'Oportunidade atualizada com sucesso!'));
     } catch (error) {
       console.error('Erro ao salvar:', error);
-      showError('Não foi possível salvar as alterações');
+      showError(tr('toast', 'saveChangesError', 'Nao foi possivel salvar as alteracoes'));
     }
   };
 
@@ -704,24 +756,25 @@ export default function CrmIndex() {
       const dueDateYear = (newOpportunity?.dueDateYear || '').trim();
 
       const missingFields = [];
-      if (!clientId) missingFields.push('beneficiário');
-      if (!taskStatusId) missingFields.push('status');
-      if (!categoryId) missingFields.push('categoria');
-      if (!criticalityId) missingFields.push('criticidade');
-      if (!reasonId) missingFields.push('motivo');
+      if (!clientId) missingFields.push(tr('required', 'beneficiary', 'beneficiario'));
+      if (!taskStatusId) missingFields.push(tr('required', 'status', 'status'));
+      if (!categoryId) missingFields.push(tr('required', 'category', 'categoria'));
+      if (!criticalityId) missingFields.push(tr('required', 'criticality', 'criticidade'));
+      if (!reasonId) missingFields.push(tr('required', 'reason', 'motivo'));
       if (!dueDateDay || !dueDateMonth || !dueDateYear) {
-        missingFields.push('data de retorno');
+        missingFields.push(tr('required', 'returnDate', 'data de retorno'));
       }
 
       if (missingFields.length > 0) {
         showError(
-          `Preencha os campos obrigatórios: ${missingFields.join(', ')}.`,
+          tr('toast', 'requiredFieldsPrefix', 'Preencha os campos obrigatorios:') +
+            ` ${missingFields.join(', ')}.`,
         );
         return;
       }
 
       if (!/^\d{4}$/.test(dueDateYear)) {
-        showError('Ano da data de vencimento inválido.');
+        showError(tr('toast', 'invalidDueYear', 'Ano da data de vencimento invalido.'));
         return;
       }
 
@@ -740,7 +793,7 @@ export default function CrmIndex() {
         String(dueDateObj.getFullYear()) === dueDateYear;
 
       if (!isValidDueDate) {
-        showError('Data de retorno inválida.');
+        showError(tr('toast', 'invalidReturnDate', 'Data de retorno invalida.'));
         return;
       }
 
@@ -748,6 +801,12 @@ export default function CrmIndex() {
       const validPhones = (newOpportunity?.phones || [])
         .map(phone => sanitizePhoneValue(phone))
         .filter(Boolean);
+
+      if (hasDuplicatePhones(validPhones)) {
+        showError(tr('toast', 'duplicatePhone', 'Nao e permitido salvar telefones duplicados.'));
+        return;
+      }
+
       const phoneData =
         validPhones.length > 0 ? JSON.stringify(validPhones) : '';
 
@@ -769,7 +828,7 @@ export default function CrmIndex() {
       setAddModalVisible(false);
       setNewOpportunity(null);
 
-      showSuccess('Oportunidade criada com sucesso!');
+      showSuccess(tr('toast', 'opportunityCreated', 'Oportunidade criada com sucesso!'));
 
       const params = buildOpportunityParams({ page: 1 });
       if (params) {
@@ -778,7 +837,7 @@ export default function CrmIndex() {
       setCurrentPage(1);
     } catch (error) {
       console.error('Erro ao criar:', error);
-      showError('Não foi possível criar a oportunidade');
+      showError(tr('toast', 'createOpportunityError', 'Nao foi possivel criar a oportunidade'));
     }
   };
 
@@ -892,37 +951,63 @@ export default function CrmIndex() {
         <View style={styles.cardHeader}>
           <View style={styles.titleContainer}>
             <Text style={styles.opportunityTitle}>
-              Oportunidade #{opportunity.id}
+              {tr('card', 'opportunityNumber', 'Oportunidade #')}
+              {opportunity.id}
             </Text>
             <View style={styles.clientNameRow}>
-              <Text style={styles.clientName}>
-                {getBeneficiaryName(opportunity?.client) || 'Cliente não informado'}
-              </Text>
-              <TouchableOpacity
-                style={styles.editClientButton}
-                onPress={() => handleEditBeneficiary(opportunity)}
-                activeOpacity={0.8}>
-                <Icon name="edit" size={12} color={colors.primary} />
-              </TouchableOpacity>
+              {(() => {
+                const beneficiaryName = getBeneficiaryName(opportunity?.client);
+                const showClientSkeleton =
+                  !beneficiaryName && (isPeopleLoading || people == null);
+
+                if (showClientSkeleton) {
+                  return (
+                    <View
+                      style={[styles.skeletonLine, styles.clientNameSkeleton]}
+                    />
+                  );
+                }
+
+                return (
+                  <>
+                    <Text style={styles.clientName}>
+                      {beneficiaryName ||
+                        tr('card', 'clientNotInformed', 'Cliente nao informado')}
+                    </Text>
+                    <TouchableOpacity
+                      style={styles.editClientButton}
+                      onPress={() => handleEditBeneficiary(opportunity)}
+                      activeOpacity={0.8}>
+                      <Icon name="edit" size={12} color={colors.primary} />
+                    </TouchableOpacity>
+                  </>
+                );
+              })()}
             </View>
           </View>
-          <TouchableOpacity
-            style={[
-              styles.stageTag,
-              {
-                backgroundColor:
-                  getStageColor(opportunity.taskStatus?.realStatus) + '20',
-              },
-            ]}
-            onPress={() => toggleStatus(opportunity)}>
-            <Text
+          {!opportunity?.taskStatus?.realStatus && isStatusLoading ? (
+            <View style={[styles.stageTag, styles.stageTagSkeleton]}>
+              <View style={[styles.skeletonLine, styles.stageTextSkeleton]} />
+            </View>
+          ) : (
+            <TouchableOpacity
               style={[
-                styles.stageText,
-                { color: getStageColor(opportunity.taskStatus?.realStatus) },
-              ]}>
-              {getStageLabel(opportunity.taskStatus?.realStatus)}
-            </Text>
-          </TouchableOpacity>
+                styles.stageTag,
+                {
+                  backgroundColor:
+                    getStageColor(opportunity.taskStatus?.realStatus) + '20',
+                },
+              ]}
+              onPress={() => toggleStatus(opportunity)}>
+              <Text
+                style={[
+                  styles.stageText,
+                  { color: getStageColor(opportunity.taskStatus?.realStatus) },
+                ]}>
+                {getStageLabel(opportunity.taskStatus?.realStatus)}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         <View style={styles.cardBody}>
@@ -930,7 +1015,7 @@ export default function CrmIndex() {
             <View style={styles.infoContainer}>
               <Icon name="tag" size={14} color="#9b59b6" />
               <Text style={styles.infoText}>
-                {opportunity.category?.name || 'Sem categoria'}
+                {opportunity.category?.name || tr('card', 'withoutCategory', 'Sem categoria')}
               </Text>
             </View>
             <View style={styles.infoContainer}>
@@ -961,8 +1046,8 @@ export default function CrmIndex() {
           <View style={styles.announceContainer}>
             <Icon name="bullhorn" size={12} color="#9b59b6" />
             <Text style={styles.announceText}>
-              Telefones:{' '}
-              {parsePhoneNumbers(opportunity.announce).join(', ') || 'N/A'}
+              {tr('card', 'phones', 'Telefones')}:{' '}
+              {parsePhoneNumbers(opportunity.announce).join(', ') || tr('card', 'notAvailable', 'N/A')}
             </Text>
           </View>
         )}
@@ -973,7 +1058,7 @@ export default function CrmIndex() {
             onPress={() => handleOpportunityPress(opportunity)}>
             <IconWhatsApp name="whatsapp" size={16} color="#25D366" />
             <Text style={[styles.actionButtonText, { color: '#25D366' }]}>
-              Conversar
+              {tr('action', 'chat', 'Conversar')}
             </Text>
           </TouchableOpacity>
 
@@ -982,7 +1067,7 @@ export default function CrmIndex() {
             onPress={() => handleEditOpportunity(opportunity)}>
             <Icon name="edit" size={16} color="#f39c12" />
             <Text style={[styles.actionButtonText, { color: '#f39c12' }]}>
-              Editar
+              {tr('action', 'edit', 'Editar')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -996,32 +1081,48 @@ export default function CrmIndex() {
     if (normalizedTitle.includes('categoria')) {
       return {
         icon: 'tags',
-        title: 'Não há categorias para exibir',
-        subtitle: 'Verifique se existem categorias cadastradas para esta empresa.',
+        title: tr('modal', 'noCategories', 'Nao ha categorias para exibir'),
+        subtitle: tr(
+          'modal',
+          'noCategoriesHint',
+          'Verifique se existem categorias cadastradas para esta empresa.',
+        ),
       };
     }
 
     if (normalizedTitle.includes('status')) {
       return {
         icon: 'flag',
-        title: 'Não há status para exibir',
-        subtitle: 'Verifique a configuração de status disponível no contexto atual.',
+        title: tr('modal', 'noStatus', 'Nao ha status para exibir'),
+        subtitle: tr(
+          'modal',
+          'noStatusHint',
+          'Verifique a configuracao de status disponivel no contexto atual.',
+        ),
       };
     }
 
     if (normalizedTitle.includes('criticidade')) {
       return {
         icon: 'exclamation-circle',
-        title: 'Não há criticidades para exibir',
-        subtitle: 'Verifique se há opções cadastradas para esta empresa.',
+        title: tr('modal', 'noCriticalities', 'Nao ha criticidades para exibir'),
+        subtitle: tr(
+          'modal',
+          'noCriticalitiesHint',
+          'Verifique se ha opcoes cadastradas para esta empresa.',
+        ),
       };
     }
 
     if (normalizedTitle.includes('motivo')) {
       return {
         icon: 'question-circle',
-        title: 'Não há motivos para exibir',
-        subtitle: 'Verifique se há motivos cadastrados no contexto atual.',
+        title: tr('modal', 'noReasons', 'Nao ha motivos para exibir'),
+        subtitle: tr(
+          'modal',
+          'noReasonsHint',
+          'Verifique se ha motivos cadastrados no contexto atual.',
+        ),
       };
     }
 
@@ -1032,15 +1133,15 @@ export default function CrmIndex() {
     ) {
       return {
         icon: 'calendar',
-        title: 'Nenhuma opção disponível',
-        subtitle: 'Tente novamente em alguns instantes.',
+        title: tr('modal', 'noOptions', 'Nenhuma opcao disponivel'),
+        subtitle: tr('modal', 'tryAgainSoon', 'Tente novamente em alguns instantes.'),
       };
     }
 
     return {
       icon: 'inbox',
-      title: 'Nada para exibir',
-      subtitle: 'Não há opções disponíveis no momento.',
+      title: tr('modal', 'nothingToShow', 'Nada para exibir'),
+      subtitle: tr('modal', 'noOptionsNow', 'Nao ha opcoes disponiveis no momento.'),
     };
   };
 
@@ -1104,7 +1205,7 @@ export default function CrmIndex() {
                 const isSelected = selectedIdentity === optionIdentity;
                 const optionLabel = isStatusModal
                   ? getStatusFilterLabel(item)
-                  : item[renderKey] || item.name || item.status || 'Sem nome';
+                  : item[renderKey] || item.name || item.status || tr('label', 'withoutName', 'Sem nome');
 
                 return (
                 <TouchableOpacity
@@ -1167,7 +1268,7 @@ export default function CrmIndex() {
           style={styles.addPhoneButton}
           onPress={() => addPhoneInput(isEdit)}>
           <Icon name="plus" size={16} color="#27ae60" />
-          <Text style={styles.addPhoneText}>Adicionar telefone</Text>
+          <Text style={styles.addPhoneText}>{tr('action', 'addPhone', 'Adicionar telefone')}</Text>
         </TouchableOpacity>
       )}
 
@@ -1195,7 +1296,7 @@ export default function CrmIndex() {
           style={styles.addPhoneButton}
           onPress={() => addPhoneInput(isEdit)}>
           <Icon name="plus" size={16} color="#27ae60" />
-          <Text style={styles.addPhoneText}>Adicionar outro telefone</Text>
+          <Text style={styles.addPhoneText}>{tr('action', 'addAnotherPhone', 'Adicionar outro telefone')}</Text>
         </TouchableOpacity>
       )}
     </View>
@@ -1207,7 +1308,9 @@ export default function CrmIndex() {
       onRequestClose={() => setBeneficiaryPickerVisible(false)}>
       <View style={styles.selectModalContent}>
         <View style={styles.selectModalHeader}>
-          <Text style={styles.selectModalTitle}>Selecionar Beneficiário</Text>
+          <Text style={styles.selectModalTitle}>
+            {tr('modal', 'selectBeneficiary', 'Selecionar Beneficiario')}
+          </Text>
           <TouchableOpacity
             onPress={() => setBeneficiaryPickerVisible(false)}
             style={styles.closeButton}>
@@ -1305,7 +1408,7 @@ export default function CrmIndex() {
             <View style={styles.emptyState}>
               <Icon name="user" size={48} color="#bdc3c7" />
               <Text style={styles.emptyText}>
-                Nenhum beneficiário encontrado
+                {tr('empty', 'noBeneficiaryFound', 'Nenhum beneficiario encontrado')}
               </Text>
             </View>
           )}
@@ -1321,7 +1424,8 @@ export default function CrmIndex() {
       <View style={styles.modalContent}>
         <View style={styles.modalHeader}>
           <Text style={styles.modalTitle}>
-            Editar Oportunidade #{editingOpportunity?.id}
+            {tr('modal', 'editOpportunity', 'Editar Oportunidade #')}
+            {editingOpportunity?.id}
           </Text>
           <TouchableOpacity
             onPress={() => setEditModalVisible(false)}
@@ -1332,7 +1436,7 @@ export default function CrmIndex() {
 
         <ScrollView style={styles.modalBody}>
           <View style={styles.editSection}>
-            <Text style={styles.editLabel}>Beneficiário</Text>
+            <Text style={styles.editLabel}>{tr('form', 'beneficiary', 'Beneficiario')}</Text>
             <TouchableOpacity
               style={styles.selectButton}
               onPress={() => setBeneficiaryPickerVisible(true)}>
@@ -1345,7 +1449,7 @@ export default function CrmIndex() {
                 />
                 <Text style={styles.selectButtonText}>
                   {getBeneficiaryName(editingOpportunity?.client) ||
-                    'Selecione um beneficiário'}
+                    tr('form', 'selectBeneficiary', 'Selecione um beneficiario')}
                 </Text>
               </View>
               <Icon name="chevron-down" size={16} color="#7f8c8d" />
@@ -1353,7 +1457,7 @@ export default function CrmIndex() {
           </View>
 
           <View style={styles.editSection}>
-            <Text style={styles.editLabel}>Status</Text>
+            <Text style={styles.editLabel}>{tr('form', 'status', 'Status')}</Text>
             <TouchableOpacity
               style={styles.selectButton}
               onPress={() => setStatusPickerVisible(true)}>
@@ -1368,7 +1472,7 @@ export default function CrmIndex() {
                 )}
                 <Text style={styles.selectButtonText}>
                   {getStatusFilterLabel(editingOpportunity?.taskStatus) ||
-                    'Selecione um status'}
+                    tr('form', 'selectStatus', 'Selecione um status')}
                 </Text>
               </View>
               <Icon name="chevron-down" size={16} color="#7f8c8d" />
@@ -1376,14 +1480,14 @@ export default function CrmIndex() {
           </View>
 
           <View style={styles.editSection}>
-            <Text style={styles.editLabel}>Categoria</Text>
+            <Text style={styles.editLabel}>{tr('form', 'category', 'Categoria')}</Text>
             <TouchableOpacity
               style={styles.selectButton}
               onPress={() => setCategoryPickerVisible(true)}>
               <View style={styles.selectButtonContent}>
                 <Text style={styles.selectButtonText}>
                   {editingOpportunity?.category?.name ||
-                    'Selecione uma categoria'}
+                    tr('form', 'selectCategory', 'Selecione uma categoria')}
                 </Text>
               </View>
               <Icon name="chevron-down" size={16} color="#7f8c8d" />
@@ -1391,14 +1495,14 @@ export default function CrmIndex() {
           </View>
 
           <View style={styles.editSection}>
-            <Text style={styles.editLabel}>Criticidade</Text>
+            <Text style={styles.editLabel}>{tr('form', 'criticality', 'Criticidade')}</Text>
             <TouchableOpacity
               style={styles.selectButton}
               onPress={() => setCriticalityPickerVisible(true)}>
               <View style={styles.selectButtonContent}>
                 <Text style={styles.selectButtonText}>
                   {editingOpportunity?.criticality?.name ||
-                    'Selecione uma criticidade'}
+                    tr('form', 'selectCriticality', 'Selecione uma criticidade')}
                 </Text>
               </View>
               <Icon name="chevron-down" size={16} color="#7f8c8d" />
@@ -1406,7 +1510,7 @@ export default function CrmIndex() {
           </View>
 
           <View style={styles.editSection}>
-            <Text style={styles.editLabel}>Motivo</Text>
+            <Text style={styles.editLabel}>{tr('form', 'reason', 'Motivo')}</Text>
             <TouchableOpacity
               style={styles.selectButton}
               onPress={() => setReasonPickerVisible(true)}>
@@ -1422,7 +1526,7 @@ export default function CrmIndex() {
                   />
                 )}
                 <Text style={styles.selectButtonText}>
-                  {editingOpportunity?.reason?.name || 'Selecione um motivo'}
+                  {editingOpportunity?.reason?.name || tr('form', 'selectReason', 'Selecione um motivo')}
                 </Text>
               </View>
               <Icon name="chevron-down" size={16} color="#7f8c8d" />
@@ -1430,18 +1534,18 @@ export default function CrmIndex() {
           </View>
 
           <View style={styles.editSection}>
-            <Text style={styles.editLabel}>Telefones</Text>
+            <Text style={styles.editLabel}>{tr('form', 'phones', 'Telefones')}</Text>
             {renderPhoneInputs(editingOpportunity?.phones || [], true)}
           </View>
 
           <View style={styles.editSection}>
-            <Text style={styles.editLabel}>Data de Retorno</Text>
+            <Text style={styles.editLabel}>{tr('form', 'returnDate', 'Data de Retorno')}</Text>
             <View style={styles.datePickerContainer}>
               <TouchableOpacity
                 style={[styles.dateSelectButton, { flex: 1 }]}
                 onPress={() => setDueDateDayPickerVisible(true)}>
                 <Text style={styles.dateSelectText}>
-                  {editingOpportunity?.dueDateDay || 'Dia'}
+                  {editingOpportunity?.dueDateDay || tr('form', 'day', 'Dia')}
                 </Text>
                 <Icon name="chevron-down" size={16} color="#7f8c8d" />
               </TouchableOpacity>
@@ -1454,7 +1558,7 @@ export default function CrmIndex() {
                     ? getMonthsArray().find(
                       m => m.id === editingOpportunity.dueDateMonth,
                     )?.name
-                    : 'Mês'}
+                    : tr('form', 'month', 'Mês')}
                 </Text>
                 <Icon name="chevron-down" size={16} color="#7f8c8d" />
               </TouchableOpacity>
@@ -1468,7 +1572,7 @@ export default function CrmIndex() {
                     dueDateYear: text,
                   }));
                 }}
-                placeholder="Ano"
+                placeholder={tr('form', 'year', 'Ano')}
                 placeholderTextColor="#6c757d"
                 keyboardType="numeric"
                 maxLength={4}
@@ -1481,12 +1585,12 @@ export default function CrmIndex() {
           <TouchableOpacity
             style={[styles.modalButton, styles.cancelButton]}
             onPress={() => setEditModalVisible(false)}>
-            <Text style={styles.cancelButtonText}>Cancelar</Text>
+            <Text style={styles.cancelButtonText}>{tr('action', 'cancel', 'Cancelar')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.modalButton, styles.saveButton]}
             onPress={handleSaveEdit}>
-            <Text style={styles.saveButtonText}>Salvar</Text>
+            <Text style={styles.saveButtonText}>{tr('action', 'save', 'Salvar')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -1499,7 +1603,7 @@ export default function CrmIndex() {
       onRequestClose={() => setAddModalVisible(false)}>
       <View style={styles.modalContent}>
         <View style={styles.modalHeader}>
-          <Text style={styles.modalTitle}>Nova Oportunidade</Text>
+          <Text style={styles.modalTitle}>{tr('modal', 'newOpportunity', 'Nova Oportunidade')}</Text>
           <TouchableOpacity
             onPress={() => setAddModalVisible(false)}
             style={styles.closeButton}>
@@ -1509,7 +1613,7 @@ export default function CrmIndex() {
 
         <ScrollView style={styles.modalBody}>
           <View style={styles.editSection}>
-            <Text style={styles.editLabel}>Beneficiário</Text>
+            <Text style={styles.editLabel}>{tr('form', 'beneficiary', 'Beneficiario')}</Text>
             <TouchableOpacity
               style={styles.selectButton}
               onPress={() => setBeneficiaryPickerVisible(true)}>
@@ -1522,7 +1626,7 @@ export default function CrmIndex() {
                 />
                 <Text style={styles.selectButtonText}>
                   {getBeneficiaryName(newOpportunity?.client) ||
-                    'Selecione um beneficiário'}
+                    tr('form', 'selectBeneficiary', 'Selecione um beneficiario')}
                 </Text>
               </View>
               <Icon name="chevron-down" size={16} color="#7f8c8d" />
@@ -1530,7 +1634,7 @@ export default function CrmIndex() {
           </View>
 
           <View style={styles.editSection}>
-            <Text style={styles.editLabel}>Status</Text>
+            <Text style={styles.editLabel}>{tr('form', 'status', 'Status')}</Text>
             <TouchableOpacity
               style={styles.selectButton}
               onPress={() => setStatusPickerVisible(true)}>
@@ -1545,7 +1649,7 @@ export default function CrmIndex() {
                 )}
                 <Text style={styles.selectButtonText}>
                   {getStatusFilterLabel(newOpportunity?.taskStatus) ||
-                    'Selecione um status'}
+                    tr('form', 'selectStatus', 'Selecione um status')}
                 </Text>
               </View>
               <Icon name="chevron-down" size={16} color="#7f8c8d" />
@@ -1553,14 +1657,14 @@ export default function CrmIndex() {
           </View>
 
           <View style={styles.editSection}>
-            <Text style={styles.editLabel}>Categoria</Text>
+            <Text style={styles.editLabel}>{tr('form', 'category', 'Categoria')}</Text>
             <TouchableOpacity
               style={styles.selectButton}
               onPress={() => setCategoryPickerVisible(true)}>
               <View style={styles.selectButtonContent}>
                 <Text style={styles.selectButtonText}>
                   {newOpportunity?.category?.name ||
-                    'Selecione uma categoria'}
+                    tr('form', 'selectCategory', 'Selecione uma categoria')}
                 </Text>
               </View>
               <Icon name="chevron-down" size={16} color="#7f8c8d" />
@@ -1568,14 +1672,14 @@ export default function CrmIndex() {
           </View>
 
           <View style={styles.editSection}>
-            <Text style={styles.editLabel}>Criticidade</Text>
+            <Text style={styles.editLabel}>{tr('form', 'criticality', 'Criticidade')}</Text>
             <TouchableOpacity
               style={styles.selectButton}
               onPress={() => setCriticalityPickerVisible(true)}>
               <View style={styles.selectButtonContent}>
                 <Text style={styles.selectButtonText}>
                   {newOpportunity?.criticality?.name ||
-                    'Selecione uma criticidade'}
+                    tr('form', 'selectCriticality', 'Selecione uma criticidade')}
                 </Text>
               </View>
               <Icon name="chevron-down" size={16} color="#7f8c8d" />
@@ -1583,7 +1687,7 @@ export default function CrmIndex() {
           </View>
 
           <View style={styles.editSection}>
-            <Text style={styles.editLabel}>Motivo</Text>
+            <Text style={styles.editLabel}>{tr('form', 'reason', 'Motivo')}</Text>
             <TouchableOpacity
               style={styles.selectButton}
               onPress={() => setReasonPickerVisible(true)}>
@@ -1599,7 +1703,7 @@ export default function CrmIndex() {
                   />
                 )}
                 <Text style={styles.selectButtonText}>
-                  {newOpportunity?.reason?.name || 'Selecione um motivo'}
+                  {newOpportunity?.reason?.name || tr('form', 'selectReason', 'Selecione um motivo')}
                 </Text>
               </View>
               <Icon name="chevron-down" size={16} color="#7f8c8d" />
@@ -1607,18 +1711,18 @@ export default function CrmIndex() {
           </View>
 
           <View style={styles.editSection}>
-            <Text style={styles.editLabel}>Telefones</Text>
+            <Text style={styles.editLabel}>{tr('form', 'phones', 'Telefones')}</Text>
             {renderPhoneInputs(newOpportunity?.phones || [], false)}
           </View>
 
           <View style={styles.editSection}>
-            <Text style={styles.editLabel}>Data de Retorno</Text>
+            <Text style={styles.editLabel}>{tr('form', 'returnDate', 'Data de Retorno')}</Text>
             <View style={styles.datePickerContainer}>
               <TouchableOpacity
                 style={[styles.dateSelectButton, { flex: 1 }]}
                 onPress={() => setDueDateDayPickerVisible(true)}>
                 <Text style={styles.dateSelectText}>
-                  {newOpportunity?.dueDateDay || 'Dia'}
+                  {newOpportunity?.dueDateDay || tr('form', 'day', 'Dia')}
                 </Text>
                 <Icon name="chevron-down" size={16} color="#7f8c8d" />
               </TouchableOpacity>
@@ -1631,7 +1735,7 @@ export default function CrmIndex() {
                     ? getMonthsArray().find(
                       m => m.id === newOpportunity.dueDateMonth,
                     )?.name
-                    : 'Mês'}
+                    : tr('form', 'month', 'Mês')}
                 </Text>
                 <Icon name="chevron-down" size={16} color="#7f8c8d" />
               </TouchableOpacity>
@@ -1645,7 +1749,7 @@ export default function CrmIndex() {
                     dueDateYear: text,
                   }));
                 }}
-                placeholder="Ano"
+                placeholder={tr('form', 'year', 'Ano')}
                 placeholderTextColor="#6c757d"
                 keyboardType="numeric"
                 maxLength={4}
@@ -1658,12 +1762,12 @@ export default function CrmIndex() {
           <TouchableOpacity
             style={[styles.modalButton, styles.cancelButton]}
             onPress={() => setAddModalVisible(false)}>
-            <Text style={styles.cancelButtonText}>Cancelar</Text>
+            <Text style={styles.cancelButtonText}>{tr('action', 'cancel', 'Cancelar')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.modalButton, styles.saveButton]}
             onPress={handleSaveNewOpportunity}>
-            <Text style={styles.saveButtonText}>Criar</Text>
+            <Text style={styles.saveButtonText}>{tr('action', 'create', 'Criar')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -1682,7 +1786,7 @@ export default function CrmIndex() {
               <Icon name="search" size={16} color="#94A3B8" />
               <TextInput
                 style={styles.searchInput}
-                placeholder="Buscar cliente..."
+                placeholder={tr('search', 'placeholder', 'Buscar cliente...')}
                 placeholderTextColor="#94A3B8"
                 value={searchText}
                 onChangeText={setSearchText}
@@ -1713,57 +1817,68 @@ export default function CrmIndex() {
           </View>
 
           <View style={styles.statusFilterSection}>
-            <Text style={styles.statusFilterLabel}>Status</Text>
+            <Text style={styles.statusFilterLabel}>{tr('filter', 'status', 'Status')}</Text>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.statusFilterRow}>
-              <TouchableOpacity
-                onPress={() => setSelectedStatusFilterKey('')}
-                style={[
-                  styles.statusFilterChip,
-                  !selectedStatusFilterKey && styles.statusFilterChipActive,
-                ]}>
-                <Text
-                  style={[
-                    styles.statusFilterChipText,
-                    !selectedStatusFilterKey && styles.statusFilterChipTextActive,
-                  ]}>
-                  Todos
-                </Text>
-              </TouchableOpacity>
-
-              {status.map(item => {
-                const statusKey = getStatusFilterKey(item);
-                const isActive =
-                  selectedStatusFilterKey &&
-                  selectedStatusFilterKey === statusKey;
-                const chipColor = item?.color || colors.primary;
-
-                return (
+              {showStatusFilterSkeleton ? (
+                [1, 2, 3, 4].map(key => (
+                  <View
+                    key={`status-skeleton-${key}`}
+                    style={[styles.skeletonLine, styles.statusChipSkeleton]}
+                  />
+                ))
+              ) : (
+                <>
                   <TouchableOpacity
-                    key={statusKey || String(item.id || item.status)}
-                    onPress={() => setSelectedStatusFilterKey(statusKey)}
+                    onPress={() => setSelectedStatusFilterKey('')}
                     style={[
                       styles.statusFilterChip,
-                      isActive && styles.statusFilterChipActive,
-                      {
-                        borderColor: isActive ? chipColor : '#DCE3EC',
-                        backgroundColor: isActive
-                          ? getColorWithAlpha(chipColor, '24')
-                          : '#F8FAFC',
-                      },
+                      !selectedStatusFilterKey && styles.statusFilterChipActive,
                     ]}>
                     <Text
                       style={[
                         styles.statusFilterChipText,
-                        { color: isActive ? chipColor : '#64748B' },
+                        !selectedStatusFilterKey && styles.statusFilterChipTextActive,
                       ]}>
-                      {getStatusFilterLabel(item)}
+                      {tr('filter', 'all', 'Todos')}
                     </Text>
                   </TouchableOpacity>
-                );
-              })}
+
+                  {status.map(item => {
+                    const statusKey = getStatusFilterKey(item);
+                    const isActive =
+                      selectedStatusFilterKey &&
+                      selectedStatusFilterKey === statusKey;
+                    const chipColor = item?.color || colors.primary;
+
+                    return (
+                      <TouchableOpacity
+                        key={statusKey || String(item.id || item.status)}
+                        onPress={() => setSelectedStatusFilterKey(statusKey)}
+                        style={[
+                          styles.statusFilterChip,
+                          isActive && styles.statusFilterChipActive,
+                          {
+                            borderColor: isActive ? chipColor : '#DCE3EC',
+                            backgroundColor: isActive
+                              ? getColorWithAlpha(chipColor, '24')
+                              : '#F8FAFC',
+                          },
+                        ]}>
+                        <Text
+                          style={[
+                            styles.statusFilterChipText,
+                            { color: isActive ? chipColor : '#64748B' },
+                          ]}>
+                          {getStatusFilterLabel(item)}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </>
+              )}
             </ScrollView>
           </View>
         </View>
@@ -1792,20 +1907,20 @@ export default function CrmIndex() {
               {error ? (
                 <>
                   <Icon name="exclamation-triangle" size={48} color="#e74c3c" />
-                  <Text style={styles.loadingText}>Erro ao carregar dados</Text>
+                  <Text style={styles.loadingText}>{tr('state', 'loadError', 'Erro ao carregar dados')}</Text>
                 </>
               ) : (
                 <>
                   <Icon name="line-chart" size={64} color="#bdc3c7" />
                   <Text style={styles.emptyTitle}>
                     {searchQuery
-                      ? 'Nenhuma oportunidade encontrada'
-                      : 'Nenhuma oportunidade'}
+                      ? tr('state', 'noOpportunityFound', 'Nenhuma oportunidade encontrada')
+                      : tr('state', 'noOpportunity', 'Nenhuma oportunidade')}
                   </Text>
                   <Text style={styles.emptySubtitle}>
                     {searchQuery
-                      ? 'Tente buscar com outros termos'
-                      : 'Adicione sua primeira oportunidade'}
+                      ? tr('state', 'tryOtherTerms', 'Tente buscar com outros termos')
+                      : tr('state', 'addFirstOpportunity', 'Adicione sua primeira oportunidade')}
                   </Text>
                 </>
               )}
@@ -1834,7 +1949,7 @@ export default function CrmIndex() {
 
       {
         renderSelectModal(
-          'Selecionar Status',
+          tr('modal', 'selectStatus', 'Selecionar Status'),
           status,
           editModalVisible
             ? editingOpportunity?.taskStatus
@@ -1854,7 +1969,7 @@ export default function CrmIndex() {
 
       {
         renderSelectModal(
-          'Selecionar Categoria',
+          tr('modal', 'selectCategory', 'Selecionar Categoria'),
           productCategories,
           editModalVisible
             ? editingOpportunity?.category
@@ -1874,7 +1989,7 @@ export default function CrmIndex() {
 
       {
         renderSelectModal(
-          'Selecionar Criticidade',
+          tr('modal', 'selectCriticality', 'Selecionar Criticidade'),
           criticalityCategories,
           editModalVisible
             ? editingOpportunity?.criticality
@@ -1894,7 +2009,7 @@ export default function CrmIndex() {
 
       {
         renderSelectModal(
-          'Selecionar Motivo',
+          tr('modal', 'selectReason', 'Selecionar Motivo'),
           reasonCategories,
           editModalVisible ? editingOpportunity?.reason : newOpportunity?.reason,
           item => {
@@ -1915,7 +2030,7 @@ export default function CrmIndex() {
       {/* Date Pickers for Due Date */}
       {
         renderSelectModal(
-          'Selecionar Dia',
+          tr('modal', 'selectDay', 'Selecionar Dia'),
           getDaysArray(),
           {
             id: editModalVisible
@@ -1937,7 +2052,7 @@ export default function CrmIndex() {
 
       {
         renderSelectModal(
-          'Selecionar Mês',
+          tr('modal', 'selectMonth', 'Selecionar Mês'),
           getMonthsArray(),
           {
             id: editModalVisible
@@ -1960,7 +2075,7 @@ export default function CrmIndex() {
       {/* Date Pickers for Alter Date */}
       {
         renderSelectModal(
-          'Selecionar Dia',
+          tr('modal', 'selectDay', 'Selecionar Dia'),
           getDaysArray(),
           {
             id: editModalVisible
@@ -1982,7 +2097,7 @@ export default function CrmIndex() {
 
       {
         renderSelectModal(
-          'Selecionar Mês',
+          tr('modal', 'selectMonth', 'Selecionar Mês'),
           getMonthsArray(),
           {
             id: editModalVisible
@@ -2224,6 +2339,13 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     flex: 1,
   },
+  clientNameSkeleton: {
+    width: '68%',
+    height: 12,
+    borderRadius: 6,
+    marginTop: 1,
+    marginBottom: 1,
+  },
   clientNameRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -2247,6 +2369,16 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     letterSpacing: 0.2,
+  },
+  stageTagSkeleton: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    minWidth: 72,
+  },
+  stageTextSkeleton: {
+    width: 52,
+    height: 11,
+    borderRadius: 6,
   },
   cardBody: {
     marginBottom: 12,

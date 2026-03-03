@@ -15,8 +15,14 @@ import { useFocusEffect } from '@react-navigation/native';
 
 import { useStore } from '@store';
 import { useMessage } from '@controleonline/ui-common/src/react/components/MessageService';
+import translateWithFallback from '../../utils/translateWithFallback';
 
 const Invoices = () => {
+  const tr = useCallback(
+    (type, key, fallback) =>
+      translateWithFallback('comissions', type, key, fallback),
+    [],
+  );
   const { showDialog } = useMessage();
 
   const invoiceStore = useStore('invoice');
@@ -43,21 +49,21 @@ const Invoices = () => {
 
   const monthOptions = useMemo(
     () => [
-      { id: '0', label: 'Todos' },
-      { id: '1', label: 'Jan' },
-      { id: '2', label: 'Fev' },
-      { id: '3', label: 'Mar' },
-      { id: '4', label: 'Abr' },
-      { id: '5', label: 'Mai' },
-      { id: '6', label: 'Jun' },
-      { id: '7', label: 'Jul' },
-      { id: '8', label: 'Ago' },
-      { id: '9', label: 'Set' },
-      { id: '10', label: 'Out' },
-      { id: '11', label: 'Nov' },
-      { id: '12', label: 'Dez' },
+      { id: '0', label: tr('month', 'all', 'Todos') },
+      { id: '1', label: tr('month', 'jan', 'Jan') },
+      { id: '2', label: tr('month', 'feb', 'Fev') },
+      { id: '3', label: tr('month', 'mar', 'Mar') },
+      { id: '4', label: tr('month', 'apr', 'Abr') },
+      { id: '5', label: tr('month', 'may', 'Mai') },
+      { id: '6', label: tr('month', 'jun', 'Jun') },
+      { id: '7', label: tr('month', 'jul', 'Jul') },
+      { id: '8', label: tr('month', 'aug', 'Ago') },
+      { id: '9', label: tr('month', 'sep', 'Set') },
+      { id: '10', label: tr('month', 'oct', 'Out') },
+      { id: '11', label: tr('month', 'nov', 'Nov') },
+      { id: '12', label: tr('month', 'dec', 'Dez') },
     ],
-    [],
+    [tr],
   );
 
   const getDateRange = useCallback((yearString, monthString) => {
@@ -160,13 +166,13 @@ const Invoices = () => {
 
   const handleInvoicePress = invoice => {
     showDialog({
-      title: 'Detalhes da fatura',
+      title: tr('title', 'invoiceDetails', 'Detalhes da fatura'),
       message:
-        `ID: ${invoice?.id || '-'}\n` +
-        `Valor: ${formatCurrency(invoice?.price)}\n` +
-        `Status: ${invoice?.status?.status || '-'}\n` +
-        `Vencimento: ${formatDate(invoice?.dueDate)}`,
-      confirmLabel: 'OK',
+        `${tr('label', 'id', 'ID')}: ${invoice?.id || '-'}\n` +
+        `${tr('label', 'value', 'Valor')}: ${formatCurrency(invoice?.price)}\n` +
+        `${tr('label', 'status', 'Status')}: ${invoice?.status?.status || '-'}\n` +
+        `${tr('label', 'dueDate', 'Vencimento')}: ${formatDate(invoice?.dueDate)}`,
+      confirmLabel: tr('action', 'ok', 'OK'),
     });
   };
 
@@ -178,7 +184,7 @@ const Invoices = () => {
   pageChildren.push(
     <View key="filters" style={styles.filtersContainer}>
       <View style={styles.yearRow}>
-        <Text style={styles.filterLabel}>Ano</Text>
+        <Text style={styles.filterLabel}>{tr('label', 'year', 'Ano')}</Text>
         <View style={styles.yearControl}>
           <TouchableOpacity
             style={styles.yearStepButton}
@@ -202,7 +208,7 @@ const Invoices = () => {
             }}
             keyboardType="numeric"
             style={styles.yearInput}
-            placeholder="AAAA"
+            placeholder={tr('placeholder', 'year', 'AAAA')}
             placeholderTextColor="#94A3B8"
           />
           <TouchableOpacity
@@ -253,10 +259,14 @@ const Invoices = () => {
   if (error) {
     pageChildren.push(
       <View key="error" style={styles.centerState}>
-        <Text style={styles.errorTitle}>Erro</Text>
-        <Text style={styles.errorSubtitle}>Erro ao carregar faturas</Text>
+        <Text style={styles.errorTitle}>{tr('state', 'errorTitle', 'Erro')}</Text>
+        <Text style={styles.errorSubtitle}>
+          {tr('state', 'errorSubtitle', 'Erro ao carregar faturas')}
+        </Text>
         <TouchableOpacity style={styles.retryButton} onPress={loadInvoices}>
-          <Text style={styles.retryButtonText}>Tentar novamente</Text>
+          <Text style={styles.retryButtonText}>
+            {tr('action', 'retry', 'Tentar novamente')}
+          </Text>
         </TouchableOpacity>
       </View>,
     );
@@ -265,7 +275,9 @@ const Invoices = () => {
   if (showEmptyState) {
     pageChildren.push(
       <View key="empty" style={styles.centerState}>
-        <Text style={styles.emptyText}>Nenhuma fatura encontrada</Text>
+        <Text style={styles.emptyText}>
+          {tr('state', 'empty', 'Nenhuma fatura encontrada')}
+        </Text>
       </View>,
     );
   }
@@ -282,20 +294,20 @@ const Invoices = () => {
           {invoices.map((invoice, index) => {
             const cardMetaChildren = [
               <Text key="category" style={styles.metaLine}>
-                Categoria: {invoice?.category?.name || 'Sem categoria'}
+                {tr('label', 'category', 'Categoria')}: {invoice?.category?.name || tr('label', 'noCategory', 'Sem categoria')}
               </Text>,
               <Text key="payment" style={styles.metaLine}>
-                Pagamento: {invoice?.paymentType?.paymentType || 'N/A'}
+                {tr('label', 'payment', 'Pagamento')}: {invoice?.paymentType?.paymentType || tr('label', 'na', 'N/A')}
               </Text>,
               <Text key="due" style={styles.metaLine}>
-                Vencimento: {formatDate(invoice?.dueDate)}
+                {tr('label', 'dueDate', 'Vencimento')}: {formatDate(invoice?.dueDate)}
               </Text>,
             ];
 
             if (invoice?.sourceWallet) {
               cardMetaChildren.push(
                 <Text key="source" style={styles.metaLine}>
-                  De: {invoice.sourceWallet.wallet}
+                  {tr('label', 'from', 'De')}: {invoice.sourceWallet.wallet}
                 </Text>,
               );
             }
@@ -303,7 +315,7 @@ const Invoices = () => {
             if (invoice?.destinationWallet) {
               cardMetaChildren.push(
                 <Text key="destination" style={styles.metaLine}>
-                  Para: {invoice.destinationWallet.wallet}
+                  {tr('label', 'to', 'Para')}: {invoice.destinationWallet.wallet}
                 </Text>,
               );
             }
@@ -315,14 +327,14 @@ const Invoices = () => {
                 onPress={() => handleInvoicePress(invoice)}>
                 <View style={styles.cardHeader}>
                   <Text style={styles.cardTitle}>
-                    Fatura #{invoice?.id || '-'}
+                    {tr('label', 'invoice', 'Fatura')} #{invoice?.id || '-'}
                   </Text>
                   <Text
                     style={[
                       styles.statusPill,
                       { backgroundColor: getStatusColor(invoice?.status) },
                     ]}>
-                    {(invoice?.status?.status || 'N/A').toUpperCase()}
+                    {(invoice?.status?.status || tr('label', 'na', 'N/A')).toUpperCase()}
                   </Text>
                 </View>
                 <Text style={styles.amount}>{formatCurrency(invoice?.price)}</Text>
