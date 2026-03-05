@@ -26,7 +26,7 @@ const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export default function CompanySelector({ mode = 'default', children }) {
     const tr = (type, key, fallback) =>
-        translateWithFallback('companySelector', type, key, fallback);
+        translateWithFallback('people', type, key, fallback);
     const [modalVisible, setModalVisible] = useState(false);
     const [overlayOpacity] = useState(() => new Animated.Value(0));
     const [slideY] = useState(() => new Animated.Value(SCREEN_HEIGHT));

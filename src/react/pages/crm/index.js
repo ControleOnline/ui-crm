@@ -32,7 +32,7 @@ export default function CrmIndex() {
   const {showSuccess, showError} = useToastMessage();
   const navigation = useNavigation();
   const tr = useCallback(
-    (type, key, fallback) => translateWithFallback('crm', type, key, fallback),
+    (type, key, fallback) => translateWithFallback('tasks', type, key, fallback),
     [],
   );
   // ... rest of component

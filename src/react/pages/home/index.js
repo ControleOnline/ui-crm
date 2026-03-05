@@ -26,7 +26,7 @@ import translateWithFallback from '../../utils/translateWithFallback';
 
 export default function HomePage({ navigation }) {
   const tr = (type, key, fallback) =>
-    translateWithFallback('home', type, key, fallback);
+    translateWithFallback('people', type, key, fallback);
   const peopleStore = useStore('people');
   const authStore = useStore('auth');
   const themeStore = useStore('theme');
