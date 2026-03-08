@@ -40,6 +40,7 @@ const crmRoutes = [
     name: 'CrmIndex',
     component: CrmIndex,
     options: {
+      showCompanyFilter: true,
       showBottomToolBar: true,
       headerShown: true,
       headerBackVisible: true,
