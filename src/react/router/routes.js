@@ -16,7 +16,7 @@ const crmRoutes = [
       title: 'Comiss\u00f5es',
     },
   },
-    {
+  {
     name: 'ProposalDetails',
     component: ProposalDetails,
     options: {
@@ -44,6 +44,7 @@ const crmRoutes = [
       showBottomToolBar: true,
       headerShown: true,
       headerBackVisible: true,
+      companyFilterMode: 'icon',
       title: 'Oportunidades',
     },
   },

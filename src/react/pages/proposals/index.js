@@ -18,7 +18,6 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 import IconAdd from 'react-native-vector-icons/MaterialIcons';
 import MaterialIcon from 'react-native-vector-icons/MaterialIcons';
 import CreateProposalsModal from './CreateProposalsModal';
-import CompanySelector from '../../components/CompanySelector';
 import Formatter from '@controleonline/ui-common/src/utils/formatter';
 import translateWithFallback from '../../utils/translateWithFallback';
 
@@ -277,7 +276,6 @@ const ProposalsPage = () => {
   useLayoutEffect(() => {
     navigation.setOptions({
       headerTitle: tr('title', 'page', 'Propostas'),
-      headerRight: () => <CompanySelector mode="icon" />,
     });
   }, [navigation, tr]);
 

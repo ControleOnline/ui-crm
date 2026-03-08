@@ -9,7 +9,6 @@ import {
   Image,
 } from 'react-native';
 import { Text } from 'react-native-animatable';
-import CompanySelector from '../../components/CompanySelector';
 import { colors } from '@controleonline/../../src/styles/colors';
 import {
   buildAssetUrl,
@@ -450,46 +449,7 @@ export default function HomePage({ navigation }) {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scroll}>
 
-        {/* Header */}
-        <View style={styles.header}>
-          <View>
-            <Text animation="fadeIn" style={styles.greeting}>
-              {tr('header', 'hello', 'Ola')}, {firstName}
-            </Text>
-            {canSwitchCompany ? (
-              <CompanySelector>
-                <View style={styles.companyRow}>
-                  {companyLogoUrl ? (
-                    <Image source={{ uri: companyLogoUrl }} style={styles.companyLogo} />
-                  ) : null}
-                  <Text animation="fadeIn" delay={100} style={[styles.companyName, {color: brandColors.textSecondary}]}>
-                    {currentCompany?.alias || currentCompany?.name || tr('header', 'welcomeCrm', 'Bem-vindo ao CRM')}
-                  </Text>
-                  <Icon name="chevron-down" size={14} color={brandColors.textSecondary} style={{ marginLeft: 4, marginTop: 4 }} />
-                </View>
-              </CompanySelector>
-            ) : (
-              <View style={styles.companyRow}>
-                {companyLogoUrl ? (
-                  <Image source={{ uri: companyLogoUrl }} style={styles.companyLogo} />
-                ) : null}
-                <Text animation="fadeIn" delay={100} style={[styles.companyName, {color: brandColors.textSecondary}]}>
-                  {currentCompany?.alias || currentCompany?.name || tr('header', 'welcomeCrm', 'Bem-vindo ao CRM')}
-                </Text>
-              </View>
-            )}
-          </View>
-          <TouchableOpacity
-            style={styles.avatarWrap}
-            onPress={() => navigation.navigate('ProfilePage')}
-            activeOpacity={0.8}>
-            <Image
-              source={{ uri: getAvatarUrl() }}
-              style={{ width: 40, height: 40, borderRadius: 20 }}
-            />
-          </TouchableOpacity>
-        </View>
-
+       
         {/* Stats Grid - atalhos navegáveis */}
         <Text style={styles.sectionTitle}>{tr('sectionTitle', 'overview', 'Visão Geral')}</Text>
         <View style={styles.statsContainer}>

@@ -14,7 +14,6 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 import IconAdd from 'react-native-vector-icons/MaterialIcons';
 import IconWhatsApp from 'react-native-vector-icons/FontAwesome';
 
-import CompanySelector from '../../components/CompanySelector';
 import AnimatedModal from '../../components/AnimatedModal';
 import { FlatList } from 'react-native';
 
@@ -265,7 +264,6 @@ export default function CrmIndex() {
   useLayoutEffect(() => {
     navigation.setOptions({
       headerTitle: tr('header', 'opportunities', 'Oportunidades'),
-      headerRight: () => <CompanySelector mode="icon" />,
     });
   }, [navigation, tr]);
 
