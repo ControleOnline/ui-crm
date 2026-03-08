@@ -28,6 +28,7 @@ export default function HomePage({ navigation }) {
   const tr = (type, key, fallback) =>
     translateWithFallback('people', type, key, fallback);
   const peopleStore = useStore('people');
+  const peopleActions = peopleStore.actions;
   const authStore = useStore('auth');
   const themeStore = useStore('theme');
   const peopleGetters = peopleStore.getters;
@@ -52,6 +53,8 @@ export default function HomePage({ navigation }) {
   const [recentActivity, setRecentActivity] = useState([]);
   const [loadingActivity, setLoadingActivity] = useState(false);
   const [activitySortDirection, setActivitySortDirection] = useState('desc');
+  const normalizeDigits = value => String(value || '').replace(/\D/g, '');
+  const normalizeText = value => String(value || '').trim();
 
   const firstName = currentUser?.name?.split(' ')[0] || tr('header', 'userFallback', 'Usuario');
   const canSwitchCompany = Array.isArray(companies) && companies.length > 1;
@@ -99,6 +102,145 @@ export default function HomePage({ navigation }) {
     return `https://www.gravatar.com/avatar/${emailHash}?s=200&d=identicon`;
   };
 
+  const extractPeopleId = person => {
+    if (!person) {
+      return '';
+    }
+
+    if (typeof person === 'string' || typeof person === 'number') {
+      return normalizeDigits(person);
+    }
+
+    return normalizeDigits(person?.['@id'] || person?.id || person?.people);
+  };
+
+  const resolvePeopleName = person => {
+    if (!person || typeof person !== 'object') {
+      return '';
+    }
+
+    return normalizeText(
+      person?.name || person?.alias || person?.nickname || person?.realname,
+    );
+  };
+
+  const getResolvedPeopleName = (person, peopleNameById = {}) => {
+    const directName = resolvePeopleName(person);
+    if (directName) {
+      return directName;
+    }
+
+    const personId = extractPeopleId(person);
+    return personId ? peopleNameById[personId] || '' : '';
+  };
+
+  const getContractPartyCandidates = contract => {
+    const participants = Array.isArray(contract?.peoples) ? contract.peoples : [];
+    const participantsOrdered = [...participants].sort((left, right) => {
+      const leftType = String(left?.peopleType || '').trim().toLowerCase();
+      const rightType = String(right?.peopleType || '').trim().toLowerCase();
+
+      const weight = type => {
+        if (type === 'beneficiary') return 0;
+        if (type === 'contractor') return 1;
+        if (type === 'witness') return 2;
+        return 3;
+      };
+
+      return weight(leftType) - weight(rightType);
+    });
+
+    return [
+      ...participantsOrdered.map(entry => entry?.people),
+      contract?.client,
+      contract?.customer,
+      contract?.contractor,
+      contract?.people,
+      contract?.beneficiary,
+    ].filter(Boolean);
+  };
+
+  const getOpportunityPartyCandidates = item => {
+    const participants = Array.isArray(item?.peoples) ? item.peoples : [];
+    return [
+      ...participants.map(entry => entry?.people || entry),
+      item?.client,
+      item?.beneficiary,
+      item?.people,
+      item?.person,
+      item?.provider,
+    ].filter(Boolean);
+  };
+
+  const isCurrentCompanyPerson = person => {
+    const reference = String(
+      typeof person === 'object' ? person?.['@id'] || person?.id : person || '',
+    ).trim();
+    const companyId = normalizeDigits(currentCompany?.id);
+    if (!reference || !companyId) {
+      return false;
+    }
+
+    const referenceDigits = extractPeopleId(reference);
+    return (
+      reference === `/people/${companyId}` ||
+      reference === `/peoples/${companyId}` ||
+      referenceDigits === companyId
+    );
+  };
+
+  const isIgnoredContractPartyId = (contract, personId) => {
+    if (!personId) {
+      return true;
+    }
+
+    const companyId = normalizeDigits(currentCompany?.id);
+    const modelPeopleId = normalizeDigits(contract?.contractModel?.people);
+    const signerId = normalizeDigits(contract?.contractModel?.signer);
+
+    return [companyId, modelPeopleId, signerId].some(
+      referenceId => referenceId && referenceId === personId,
+    );
+  };
+
+  const getContractClientName = (contract, peopleNameById = {}) => {
+    const candidates = getContractPartyCandidates(contract);
+    for (const candidate of candidates) {
+      const personId = extractPeopleId(candidate);
+      if (personId && isIgnoredContractPartyId(contract, personId)) {
+        continue;
+      }
+
+      if (personId && isCurrentCompanyPerson(candidate)) {
+        continue;
+      }
+
+      const name = getResolvedPeopleName(candidate, peopleNameById);
+      if (name) {
+        return name;
+      }
+    }
+
+    return '';
+  };
+
+  const getOpportunityClientName = (item, peopleNameById = {}) => {
+    const candidates = getOpportunityPartyCandidates(item);
+    for (const candidate of candidates) {
+      const personId = extractPeopleId(candidate);
+      if (personId && isCurrentCompanyPerson(candidate)) {
+        continue;
+      }
+
+      const name = getResolvedPeopleName(candidate, peopleNameById);
+      if (name) {
+        return name;
+      }
+    }
+
+    return '';
+  };
+
   useEffect(() => {
     if (!currentCompany?.id) return;
 
@@ -132,6 +274,77 @@ export default function HomePage({ navigation }) {
           api.fetch('/contracts', { params: contractsParams })
         ]);
 
+        const opportunitiesList = Array.isArray(opportunities.member)
+          ? opportunities.member
+          : [];
+        const proposalsList = Array.isArray(proposals.member)
+          ? proposals.member
+          : [];
+        const contractsList = Array.isArray(contracts.member)
+          ? contracts.member
+          : [];
+
+        const peopleNameById = {};
+        const missingPeopleIds = new Set();
+
+        const collectMissingPerson = (person, shouldIgnore = () => false) => {
+          const personId = extractPeopleId(person);
+          if (!personId || shouldIgnore(person, personId)) {
+            return;
+          }
+
+          const name = getResolvedPeopleName(person, peopleNameById);
+          if (!name) {
+            missingPeopleIds.add(personId);
+          }
+        };
+
+        proposalsList.forEach(contract => {
+          getContractPartyCandidates(contract).forEach(candidate => {
+            collectMissingPerson(candidate, (_, personId) =>
+              isIgnoredContractPartyId(contract, personId),
+            );
+          });
+        });
+
+        contractsList.forEach(contract => {
+          getContractPartyCandidates(contract).forEach(candidate => {
+            collectMissingPerson(candidate, (_, personId) =>
+              isIgnoredContractPartyId(contract, personId),
+            );
+          });
+        });
+
+        opportunitiesList.forEach(item => {
+          getOpportunityPartyCandidates(item).forEach(candidate => {
+            collectMissingPerson(candidate, person =>
+              isCurrentCompanyPerson(person),
+            );
+          });
+        });
+
+        if (peopleActions?.get && missingPeopleIds.size > 0) {
+          const fetchedPeople = await Promise.all(
+            [...missingPeopleIds].map(async personId => {
+              try {
+                const person = await peopleActions.get(personId);
+                return {
+                  personId,
+                  name: resolvePeopleName(person),
+                };
+              } catch (fetchError) {
+                return { personId, name: '' };
+              }
+            }),
+          );
+
+          fetchedPeople.forEach(({ personId, name }) => {
+            if (name) {
+              peopleNameById[personId] = name;
+            }
+          });
+        }
+
         // Update Stats
         setStats([
           { label: tr('stats', 'opportunities', 'Oportunidades'), value: String(opportunities.totalItems || 0), icon: 'trello', color: '#F59E0B', route: 'CrmIndex' },
@@ -143,13 +356,17 @@ export default function HomePage({ navigation }) {
         const activities = [];
 
         // Add Opportunities
-        (opportunities.member || []).forEach(item => {
+        opportunitiesList.forEach(item => {
           const sortDate = item.dueDate ? new Date(item.dueDate).getTime() : 0;
+          const clientName =
+            getOpportunityClientName(item, peopleNameById) ||
+            tr('activity', 'unknownClient', 'Cliente desconhecido');
           activities.push({
             id: item.id,
             originalId: item.id,
-            title: `${tr('activity', 'newOpportunityPrefix', 'Nova oportunidade:')} ${item.client?.name || tr('activity', 'unknownClient', 'Cliente desconhecido')}`,
+            title: `${tr('activity', 'newOpportunityPrefix', 'Nova oportunidade:')} ${clientName}`,
             time: item.dueDate ? Formatter.formatDateYmdTodmY(item.dueDate) : tr('activity', 'withoutDate', 'Sem data'),
+            clientName,
             type: 'lead',
             sortDate,
             rawDate: item.id,
@@ -158,13 +375,17 @@ export default function HomePage({ navigation }) {
         });
 
         // Add Proposals
-        (proposals.member || []).forEach(item => {
+        proposalsList.forEach(item => {
           const sortDate = item.startDate ? new Date(item.startDate).getTime() : 0;
+          const clientName =
+            getContractClientName(item, peopleNameById) ||
+            tr('activity', 'unknownClient', 'Cliente desconhecido');
           activities.push({
             id: item.id,
             originalId: item.id,
             title: `${tr('activity', 'proposalPrefix', 'Proposta:')} ${item.contractModel?.model || tr('activity', 'newProposal', 'Nova proposta')}`,
             time: item.startDate ? Formatter.formatDateYmdTodmY(item.startDate) : tr('activity', 'withoutDate', 'Sem data'),
+            clientName,
             type: 'proposal',
             sortDate,
             rawDate: item.id,
@@ -173,13 +394,17 @@ export default function HomePage({ navigation }) {
         });
 
         // Add Contracts
-        (contracts.member || []).forEach(item => {
+        contractsList.forEach(item => {
           const sortDate = item.startDate ? new Date(item.startDate).getTime() : 0;
+          const clientName =
+            getContractClientName(item, peopleNameById) ||
+            tr('activity', 'unknownClient', 'Cliente desconhecido');
           activities.push({
             id: item.id,
             originalId: item.id,
             title: `${tr('activity', 'contractPrefix', 'Contrato:')} ${item.contractModel?.model || tr('activity', 'newContract', 'Novo contrato')}`,
             time: item.startDate ? Formatter.formatDateYmdTodmY(item.startDate) : tr('activity', 'withoutDate', 'Sem data'),
+            clientName,
             type: 'calendar', // Using calendar icon for contracts
             sortDate,
             rawDate: item.id,
@@ -376,6 +601,9 @@ export default function HomePage({ navigation }) {
                 </View>
                 <View style={styles.activityContent}>
                   <Text style={styles.activityTitle} numberOfLines={1}>{item.title}</Text>
+                  <Text style={styles.activityClient} numberOfLines={1}>
+                    {tr('activity', 'client', 'Cliente')}: {item.clientName || tr('activity', 'unknownClient', 'Cliente desconhecido')}
+                  </Text>
                   <Text style={styles.activityTime}>{item.time}</Text>
                 </View>
                 <Icon name="chevron-right" size={16} color="#CBD5E1" />
@@ -626,6 +854,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#334155',
+  },
+  activityClient: {
+    fontSize: 12,
+    color: '#64748B',
+    marginTop: 2,
   },
   activityTime: {
     fontSize: 12,

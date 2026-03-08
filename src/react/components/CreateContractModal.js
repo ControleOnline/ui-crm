@@ -91,13 +91,13 @@ const CreateContractModal = ({ visible, onClose, onSuccess }) => {
   };
 
   const handleSubmit = async () => {
-    if (!selectedModel || !selectedBeneficiary || !selectedStatus) {
+    if (!selectedModel || !selectedBeneficiary || !selectedStatus || !startDate) {
       showError(tr('error', 'requiredFields', 'Preencha todos os campos obrigatorios.'));
       return;
     }
     setIsLoading(true);
     try {
-      const contractData = { contractModel: selectedModel, status: selectedStatus, beneficiary: selectedBeneficiary, docKey: docKey || undefined, startDate: startDate || new Date().toISOString(), endDate: endDate || undefined, creationDate: new Date().toISOString(), alterDate: new Date().toISOString(), peoples: [] };
+      const contractData = { contractModel: selectedModel, status: selectedStatus, beneficiary: selectedBeneficiary, docKey: docKey || undefined, startDate, endDate: endDate || undefined, creationDate: new Date().toISOString(), alterDate: new Date().toISOString(), peoples: [] };
       await contractActions.save(contractData);
       showSuccess(tr('success', 'created', 'Contrato criado com sucesso!'));
       resetForm();
@@ -109,7 +109,16 @@ const CreateContractModal = ({ visible, onClose, onSuccess }) => {
 
   const resetForm = () => { setSelectedModel(''); setSelectedStatus(''); setSelectedBeneficiary(''); setDocKey(''); setStartDate(''); setEndDate(''); };
   const handleClose = () => { resetForm(); onClose(); };
-  const onChange = (event, selectedDate) => setDate(selectedDate);
+  const onChange = (event, selectedDate) => {
+    if (selectedDate) {
+      setDate(selectedDate);
+      const y = selectedDate.getFullYear();
+      const m = String(selectedDate.getMonth() + 1).padStart(2, '0');
+      const d = String(selectedDate.getDate()).padStart(2, '0');
+      setStartDate(`${y}-${m}-${d}`);
+    }
+    setOpen(false);
+  };
 
   return (
     <Modal animationType="slide" transparent={true} visible={visible} onRequestClose={handleClose}>
@@ -125,7 +134,7 @@ const CreateContractModal = ({ visible, onClose, onSuccess }) => {
             <Dropdown label={`${tr('label', 'status', 'Status')} *`} value={selectedStatus} onChange={setSelectedStatus} options={status?.map(s => ({ label: s.realStatus || s.status, value: s['@id'] })) || []} />
 
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>{tr('label', 'startDate', 'Data de Inicio')}</Text>
+              <Text style={styles.inputLabel}>{tr('label', 'startDate', 'Data de Inicio')} *</Text>
               <TextInput style={styles.textInput} onFocus={() => setOpen(true)} value={startDate} onChangeText={setStartDate} placeholder={tr('placeholder', 'date', 'YYYY-MM-DD')} placeholderTextColor="#999" />
               {open && <DateTimePicker testID="dateTimePicker" value={date} mode="date" is24Hour={true} onChange={onChange} />}
             </View>
@@ -133,7 +142,7 @@ const CreateContractModal = ({ visible, onClose, onSuccess }) => {
 
           <View style={styles.modalFooter}>
             <TouchableOpacity style={styles.cancelButton} onPress={handleClose}><Text style={styles.cancelButtonText}>{tr('action', 'cancel', 'Cancelar')}</Text></TouchableOpacity>
-            <TouchableOpacity style={[styles.createButton, (!selectedModel || !selectedBeneficiary || !selectedStatus) && styles.createButtonDisabled]} onPress={handleSubmit} disabled={isLoading || !selectedModel || !selectedBeneficiary || !selectedStatus}>
+            <TouchableOpacity style={[styles.createButton, (!selectedModel || !selectedBeneficiary || !selectedStatus || !startDate) && styles.createButtonDisabled]} onPress={handleSubmit} disabled={isLoading || !selectedModel || !selectedBeneficiary || !selectedStatus || !startDate}>
               {isLoading ? <ActivityIndicator size="small" color="#FFF" /> : <>
                 <Icon name="add" size={20} color="#FFF" style={{ marginRight: 8 }} />
                 <Text style={styles.createButtonText}>{tr('action', 'createContract', 'Criar Contrato')}</Text>

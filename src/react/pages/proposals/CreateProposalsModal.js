@@ -84,7 +84,8 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
   };
 
   const handleSubmit = async () => {
-    if (!selectedModel) {
+    const startDate = formatDate(startYear, startMonth, startDay);
+    if (!selectedModel || !startDate) {
       showError(tr('error', 'requiredFields', 'Por favor, preencha todos os campos obrigatorios.'));
       return;
     }
@@ -92,8 +93,8 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
     try {
       const contractData = {
         contractModel: selectedModel,
-        beneficiary: 'people/' + currentCompany.id,
-        startDate: formatDate(startYear, startMonth, startDay),
+        beneficiary: `/people/${currentCompany.id}`,
+        startDate,
       };
       await contractActions.save(contractData);
       onSuccess && onSuccess();
@@ -331,7 +332,9 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>{tr('label', 'startDate', 'Data de Inicio')}</Text>
+            <Text style={styles.inputLabel}>
+              {tr('label', 'startDate', 'Data de Inicio')} <Text style={styles.required}>*</Text>
+            </Text>
             <View style={styles.dateContainer}>
               <TouchableOpacity style={styles.selectInputDate} onPress={() => setDayPickerVisible(true)}>
                 <Text style={[styles.selectInputText, !startDay && { color: '#999' }]}>
@@ -383,12 +386,18 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
             <Text style={styles.cancelButtonText}>{tr('action', 'cancel', 'Cancelar')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.createButton, !selectedModel && styles.createButtonDisabled]}
+            style={[
+              styles.createButton,
+              (!selectedModel || !formatDate(startYear, startMonth, startDay)) &&
+                styles.createButtonDisabled,
+            ]}
             onPress={() => {
               Keyboard.dismiss();
               handleSubmit();
             }}
-            disabled={isLoading || !selectedModel}>
+            disabled={
+              isLoading || !selectedModel || !formatDate(startYear, startMonth, startDay)
+            }>
             {isLoading ? <ActivityIndicator size="small" color="#FFFFFF" /> : (
               <Text style={styles.createButtonText}>{tr('action', 'save', 'Salvar')}</Text>
             )}
