@@ -20,7 +20,7 @@ export default function getConfigs(context, myCompany, $components, $store) {
       signer: {
         filters: {
           company: "/people/" + myCompany.id,
-          link_type: "employee",
+          linkType: "employee",
           peopleType: "F",
         },
       },

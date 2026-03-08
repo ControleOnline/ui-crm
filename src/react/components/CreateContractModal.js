@@ -72,7 +72,7 @@ const CreateContractModal = ({ visible, onClose, onSuccess }) => {
 
   const loadInitialData = async () => {
     try {
-      await peopleActions.getItems({ company: '/people/' + currentCompany.id, link_type: 'client' });
+      await peopleActions.getItems({ company: '/people/' + currentCompany.id, linkType: 'client' });
       await statusActions.getItems({ context: 'relationship' });
       await loadContractModels();
     } catch (e) { console.error(e); }
