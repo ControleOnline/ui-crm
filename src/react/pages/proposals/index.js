@@ -500,7 +500,7 @@ const ProposalsPage = () => {
   const renderProposal = ({ item: contract }) => (
     <TouchableOpacity
       style={styles.card}
-      onPress={() => navigation.navigate('ContractDetails', { contractId: contract.id })}
+      onPress={() => navigation.navigate('ProposalDetails', { contractId: contract.id })}
       activeOpacity={0.9}
     >
       <View style={styles.cardHeader}>

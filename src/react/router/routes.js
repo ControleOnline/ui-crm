@@ -3,6 +3,7 @@ import CrmIndex from '@controleonline/ui-crm/src/react/pages/crm/index';
 import ProposalsPage from '../pages/proposals';
 import CrmConversation from '../pages/crm/conversation';
 import CRMSettings from '../pages/settings/CRMSettings';
+import ProposalDetails from '../pages/proposals/ProposalDetails';
 
 const crmRoutes = [
   {
@@ -13,6 +14,16 @@ const crmRoutes = [
       headerShown: true,
       headerBackVisible: true,
       title: 'Comiss\u00f5es',
+    },
+  },
+    {
+    name: 'ProposalDetails',
+    component: ProposalDetails,
+    options: {
+      showBottomToolBar: true,
+      headerShown: true,
+      headerBackVisible: true,
+      title: 'Proposta',
     },
   },
   {
