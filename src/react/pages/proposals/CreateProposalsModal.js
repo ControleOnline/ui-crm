@@ -70,7 +70,15 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
   const loadContractModels = async () => {
     setLoadingModels(true);
     try {
-      const response = await modelsActions.getItems({ context: 'proposal' });
+      if (!currentCompany?.id) {
+        setContractModels([]);
+        return;
+      }
+
+      const response = await modelsActions.getItems({
+        context: 'proposal',
+        people: currentCompany.id,
+      });
       setContractModels(response);
     } catch (error) {
     } finally {
