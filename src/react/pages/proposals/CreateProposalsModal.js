@@ -87,16 +87,46 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
   };
 
   const formatDate = (year, month, day) => {
-    if (!year || !month || !day) return null;
-    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    const normalizedYear = String(year || '').replace(/\D/g, '');
+    const normalizedMonth = String(month || '').replace(/\D/g, '');
+    const normalizedDay = String(day || '').replace(/\D/g, '');
+
+    if (
+      normalizedYear.length !== 4 ||
+      !normalizedMonth ||
+      !normalizedDay
+    ) {
+      return null;
+    }
+
+    const parsedYear = parseInt(normalizedYear, 10);
+    const parsedMonth = parseInt(normalizedMonth, 10);
+    const parsedDay = parseInt(normalizedDay, 10);
+    const candidate = new Date(parsedYear, parsedMonth - 1, parsedDay);
+    const isValidDate =
+      candidate.getFullYear() === parsedYear &&
+      candidate.getMonth() === parsedMonth - 1 &&
+      candidate.getDate() === parsedDay;
+
+    if (!isValidDate) {
+      return null;
+    }
+
+    return `${normalizedYear}-${normalizedMonth.padStart(2, '0')}-${normalizedDay.padStart(2, '0')}`;
   };
 
   const handleSubmit = async () => {
     const startDate = formatDate(startYear, startMonth, startDay);
-    if (!selectedModel || !startDate) {
+    if (!selectedModel) {
       showError(tr('error', 'requiredFields', 'Por favor, preencha todos os campos obrigatorios.'));
       return;
     }
+
+    if (!startDate) {
+      showError(tr('error', 'invalidStartDate', 'Informe uma data de inicio valida.'));
+      return;
+    }
+
     setIsLoading(true);
     try {
       const contractData = {
@@ -374,7 +404,9 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
               <TextInput
                 style={styles.yearInput}
                 value={startYear}
-                onChangeText={setStartYear}
+                onChangeText={text =>
+                  setStartYear(String(text || '').replace(/\D/g, '').slice(0, 4))
+                }
                 placeholder="2024"
                 placeholderTextColor="#999999"
                 keyboardType="numeric"
