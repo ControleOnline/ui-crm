@@ -140,7 +140,7 @@ export default function HomePage({ navigation }) {
       const rightType = String(right?.peopleType || '').trim().toLowerCase();
 
       const weight = type => {
-        if (type === 'beneficiary') return 0;
+        if (type === 'provider') return 0;
         if (type === 'contractor') return 1;
         if (type === 'witness') return 2;
         return 3;
@@ -155,7 +155,7 @@ export default function HomePage({ navigation }) {
       contract?.customer,
       contract?.contractor,
       contract?.people,
-      contract?.beneficiary,
+      contract?.provider,
     ].filter(Boolean);
   };
 
@@ -164,7 +164,7 @@ export default function HomePage({ navigation }) {
     return [
       ...participants.map(entry => entry?.people || entry),
       item?.client,
-      item?.beneficiary,
+      item?.provider,
       item?.people,
       item?.person,
       item?.provider,
@@ -256,13 +256,13 @@ export default function HomePage({ navigation }) {
         };
         const proposalsParams = {
           'contractModel.context': 'proposal',
-          beneficiary: currentCompany.id,
+          provider: currentCompany.id,
           itemsPerPage: 5,
           'order[id]': 'DESC'
         };
         const contractsParams = {
           'contractModel.context': 'contract',
-          beneficiary: currentCompany.id,
+          provider: currentCompany.id,
           itemsPerPage: 5,
           'order[id]': 'DESC'
         };

@@ -60,7 +60,7 @@ const CreateContractModal = ({ visible, onClose, onSuccess }) => {
   const [date, setDate] = useState(new Date());
   const [selectedModel, setSelectedModel] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
-  const [selectedBeneficiary, setSelectedBeneficiary] = useState('');
+  const [selectedProvider, setSelectedProvider] = useState('');
   const [docKey, setDocKey] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -91,13 +91,13 @@ const CreateContractModal = ({ visible, onClose, onSuccess }) => {
   };
 
   const handleSubmit = async () => {
-    if (!selectedModel || !selectedBeneficiary || !selectedStatus || !startDate) {
+    if (!selectedModel || !selectedProvider || !selectedStatus || !startDate) {
       showError(tr('error', 'requiredFields', 'Preencha todos os campos obrigatorios.'));
       return;
     }
     setIsLoading(true);
     try {
-      const contractData = { contractModel: selectedModel, status: selectedStatus, beneficiary: selectedBeneficiary, docKey: docKey || undefined, startDate, endDate: endDate || undefined, creationDate: new Date().toISOString(), alterDate: new Date().toISOString(), peoples: [] };
+      const contractData = { contractModel: selectedModel, status: selectedStatus, provider: selectedProvider, docKey: docKey || undefined, startDate, endDate: endDate || undefined, creationDate: new Date().toISOString(), alterDate: new Date().toISOString(), peoples: [] };
       await contractActions.save(contractData);
       showSuccess(tr('success', 'created', 'Contrato criado com sucesso!'));
       resetForm();
@@ -107,7 +107,7 @@ const CreateContractModal = ({ visible, onClose, onSuccess }) => {
     finally { setIsLoading(false); }
   };
 
-  const resetForm = () => { setSelectedModel(''); setSelectedStatus(''); setSelectedBeneficiary(''); setDocKey(''); setStartDate(''); setEndDate(''); };
+  const resetForm = () => { setSelectedModel(''); setSelectedStatus(''); setSelectedProvider(''); setDocKey(''); setStartDate(''); setEndDate(''); };
   const handleClose = () => { resetForm(); onClose(); };
   const onChange = (event, selectedDate) => {
     if (selectedDate) {
@@ -130,7 +130,7 @@ const CreateContractModal = ({ visible, onClose, onSuccess }) => {
           </View>
           <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
             <Dropdown label={`${tr('label', 'contractModel', 'Modelo do Contrato')} *`} value={selectedModel} onChange={setSelectedModel} options={contractModels.map(m => ({ label: m.model, value: m['@id'], icon: 'description' }))} />
-            <Dropdown label={`${tr('label', 'beneficiary', 'Beneficiario')} *`} value={selectedBeneficiary} onChange={setSelectedBeneficiary} options={people?.map(p => ({ label: p.name, value: p['@id'], icon: 'person' })) || []} />
+            <Dropdown label={`${tr('label', 'provider', 'Beneficiario')} *`} value={selectedProvider} onChange={setSelectedProvider} options={people?.map(p => ({ label: p.name, value: p['@id'], icon: 'person' })) || []} />
             <Dropdown label={`${tr('label', 'status', 'Status')} *`} value={selectedStatus} onChange={setSelectedStatus} options={status?.map(s => ({ label: s.realStatus || s.status, value: s['@id'] })) || []} />
 
             <View style={styles.inputGroup}>
@@ -142,7 +142,7 @@ const CreateContractModal = ({ visible, onClose, onSuccess }) => {
 
           <View style={styles.modalFooter}>
             <TouchableOpacity style={styles.cancelButton} onPress={handleClose}><Text style={styles.cancelButtonText}>{tr('action', 'cancel', 'Cancelar')}</Text></TouchableOpacity>
-            <TouchableOpacity style={[styles.createButton, (!selectedModel || !selectedBeneficiary || !selectedStatus || !startDate) && styles.createButtonDisabled]} onPress={handleSubmit} disabled={isLoading || !selectedModel || !selectedBeneficiary || !selectedStatus || !startDate}>
+            <TouchableOpacity style={[styles.createButton, (!selectedModel || !selectedProvider || !selectedStatus || !startDate) && styles.createButtonDisabled]} onPress={handleSubmit} disabled={isLoading || !selectedModel || !selectedProvider || !selectedStatus || !startDate}>
               {isLoading ? <ActivityIndicator size="small" color="#FFF" /> : <>
                 <Icon name="add" size={20} color="#FFF" style={{ marginRight: 8 }} />
                 <Text style={styles.createButtonText}>{tr('action', 'createContract', 'Criar Contrato')}</Text>

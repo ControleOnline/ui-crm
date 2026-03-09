@@ -44,7 +44,7 @@ export default function CrmIndex() {
   const [categoryPickerVisible, setCategoryPickerVisible] = useState(false);
   const [criticalityPickerVisible, setCriticalityPickerVisible] =
     useState(false);
-  const [beneficiaryPickerVisible, setBeneficiaryPickerVisible] =
+  const [providerPickerVisible, setProviderPickerVisible] =
     useState(false);
   const [reasonPickerVisible, setReasonPickerVisible] = useState(false);
 
@@ -553,7 +553,7 @@ export default function CrmIndex() {
     [normalizePeopleReference, people],
   );
 
-  const getBeneficiaryName = useCallback(
+  const getProviderName = useCallback(
     value => {
       if (value && typeof value === 'object') {
         const directName = value.name || value.realname || value.alias;
@@ -599,14 +599,14 @@ export default function CrmIndex() {
     navigation.navigate('CrmConversation', { opportunity });
   };
 
-  const handleEditBeneficiary = useCallback(
+  const handleEditProvider = useCallback(
     opportunity => {
       const reference = normalizePeopleReference(opportunity?.client);
       if (!reference) {
         showError?.(
           tr(
             'toast',
-            'beneficiaryNotIdentified',
+            'providerNotIdentified',
             'Nao foi possivel identificar o beneficiario desta oportunidade.',
           ),
         );
@@ -622,13 +622,13 @@ export default function CrmIndex() {
         {
           id: extractId(reference),
           '@id': reference,
-          name: getBeneficiaryName(opportunity?.client) || tr('label', 'client', 'Cliente'),
+          name: getProviderName(opportunity?.client) || tr('label', 'client', 'Cliente'),
         };
 
       navigation.navigate('ClientDetails', { client: selectedClient });
     },
     [
-      getBeneficiaryName,
+      getProviderName,
       getPersonByReference,
       navigation,
       normalizePeopleReference,
@@ -813,7 +813,7 @@ export default function CrmIndex() {
       const dueDateYear = (newOpportunity?.dueDateYear || '').trim();
 
       const missingFields = [];
-      if (!clientId) missingFields.push(tr('required', 'beneficiary', 'beneficiario'));
+      if (!clientId) missingFields.push(tr('required', 'provider', 'beneficiario'));
       if (!taskStatusId) missingFields.push(tr('required', 'status', 'status'));
       if (!categoryId) missingFields.push(tr('required', 'category', 'categoria'));
       if (!criticalityId) missingFields.push(tr('required', 'criticality', 'criticidade'));
@@ -1013,9 +1013,9 @@ export default function CrmIndex() {
             </Text>
             <View style={styles.clientNameRow}>
               {(() => {
-                const beneficiaryName = getBeneficiaryName(opportunity?.client);
+                const providerName = getProviderName(opportunity?.client);
                 const showClientSkeleton =
-                  !beneficiaryName && (isPeopleLoading || people == null);
+                  !providerName && (isPeopleLoading || people == null);
 
                 if (showClientSkeleton) {
                   return (
@@ -1028,12 +1028,12 @@ export default function CrmIndex() {
                 return (
                   <>
                     <Text style={styles.clientName}>
-                      {beneficiaryName ||
+                      {providerName ||
                         tr('card', 'clientNotInformed', 'Cliente nao informado')}
                     </Text>
                     <TouchableOpacity
                       style={styles.editClientButton}
-                      onPress={() => handleEditBeneficiary(opportunity)}
+                      onPress={() => handleEditProvider(opportunity)}
                       activeOpacity={0.8}>
                       <Icon name="edit" size={12} color={colors.primary} />
                     </TouchableOpacity>
@@ -1359,17 +1359,17 @@ export default function CrmIndex() {
     </View>
   );
 
-  const renderBeneficiarySelectModal = () => (
+  const renderProviderSelectModal = () => (
     <AnimatedModal
-      visible={beneficiaryPickerVisible}
-      onRequestClose={() => setBeneficiaryPickerVisible(false)}>
+      visible={providerPickerVisible}
+      onRequestClose={() => setProviderPickerVisible(false)}>
       <View style={styles.selectModalContent}>
         <View style={styles.selectModalHeader}>
           <Text style={styles.selectModalTitle}>
-            {tr('modal', 'selectBeneficiary', 'Selecionar Beneficiario')}
+            {tr('modal', 'selectProvider', 'Selecionar Beneficiario')}
           </Text>
           <TouchableOpacity
-            onPress={() => setBeneficiaryPickerVisible(false)}
+            onPress={() => setProviderPickerVisible(false)}
             style={styles.closeButton}>
             <Icon name="times" size={20} color="#7f8c8d" />
           </TouchableOpacity>
@@ -1432,7 +1432,7 @@ export default function CrmIndex() {
                       client: clientData,
                     }));
                   }
-                  setBeneficiaryPickerVisible(false);
+                  setProviderPickerVisible(false);
                 }}>
                 <View style={styles.personInfo}>
                   <View style={styles.avatarContainer}>
@@ -1465,7 +1465,7 @@ export default function CrmIndex() {
             <View style={styles.emptyState}>
               <Icon name="user" size={48} color="#bdc3c7" />
               <Text style={styles.emptyText}>
-                {tr('empty', 'noBeneficiaryFound', 'Nenhum beneficiario encontrado')}
+                {tr('empty', 'noProviderFound', 'Nenhum beneficiario encontrado')}
               </Text>
             </View>
           )}
@@ -1493,10 +1493,10 @@ export default function CrmIndex() {
 
         <ScrollView style={styles.modalBody}>
           <View style={styles.editSection}>
-            <Text style={styles.editLabel}>{tr('form', 'beneficiary', 'Beneficiario')}</Text>
+            <Text style={styles.editLabel}>{tr('form', 'provider', 'Beneficiario')}</Text>
             <TouchableOpacity
               style={styles.selectButton}
-              onPress={() => setBeneficiaryPickerVisible(true)}>
+              onPress={() => setProviderPickerVisible(true)}>
               <View style={styles.selectButtonContent}>
                 <Icon
                   name="user"
@@ -1505,8 +1505,8 @@ export default function CrmIndex() {
                   style={styles.selectButtonIcon}
                 />
                 <Text style={styles.selectButtonText}>
-                  {getBeneficiaryName(editingOpportunity?.client) ||
-                    tr('form', 'selectBeneficiary', 'Selecione um beneficiario')}
+                  {getProviderName(editingOpportunity?.client) ||
+                    tr('form', 'selectProvider', 'Selecione um beneficiario')}
                 </Text>
               </View>
               <Icon name="chevron-down" size={16} color="#7f8c8d" />
@@ -1670,10 +1670,10 @@ export default function CrmIndex() {
 
         <ScrollView style={styles.modalBody}>
           <View style={styles.editSection}>
-            <Text style={styles.editLabel}>{tr('form', 'beneficiary', 'Beneficiario')}</Text>
+            <Text style={styles.editLabel}>{tr('form', 'provider', 'Beneficiario')}</Text>
             <TouchableOpacity
               style={styles.selectButton}
-              onPress={() => setBeneficiaryPickerVisible(true)}>
+              onPress={() => setProviderPickerVisible(true)}>
               <View style={styles.selectButtonContent}>
                 <Icon
                   name="user"
@@ -1682,8 +1682,8 @@ export default function CrmIndex() {
                   style={styles.selectButtonIcon}
                 />
                 <Text style={styles.selectButtonText}>
-                  {getBeneficiaryName(newOpportunity?.client) ||
-                    tr('form', 'selectBeneficiary', 'Selecione um beneficiario')}
+                  {getProviderName(newOpportunity?.client) ||
+                    tr('form', 'selectProvider', 'Selecione um beneficiario')}
                 </Text>
               </View>
               <Icon name="chevron-down" size={16} color="#7f8c8d" />
@@ -2082,7 +2082,7 @@ export default function CrmIndex() {
         )
       }
 
-      {renderBeneficiarySelectModal()}
+      {renderProviderSelectModal()}
 
       {/* Date Pickers for Due Date */}
       {

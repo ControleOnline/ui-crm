@@ -38,13 +38,13 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
   const [loadingModels, setLoadingModels] = useState(false);
 
   const [selectedModel, setSelectedModel] = useState('');
-  const [selectedBeneficiary, setSelectedBeneficiary] = useState('');
+  const [selectedProvider, setSelectedProvider] = useState('');
   const [startDay, setStartDay] = useState('');
   const [startMonth, setStartMonth] = useState('');
   const [startYear, setStartYear] = useState('');
 
   const [modelPickerVisible, setModelPickerVisible] = useState(false);
-  const [beneficiaryPickerVisible, setBeneficiaryPickerVisible] = useState(false);
+  const [providerPickerVisible, setProviderPickerVisible] = useState(false);
   const [dayPickerVisible, setDayPickerVisible] = useState(false);
   const [monthPickerVisible, setMonthPickerVisible] = useState(false);
 
@@ -101,7 +101,7 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
     try {
       const contractData = {
         contractModel: selectedModel,
-        beneficiary: `/people/${currentCompany.id}`,
+        provider: `/people/${currentCompany.id}`,
         startDate,
       };
       await contractActions.save(contractData);
@@ -117,7 +117,7 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
 
   const resetForm = () => {
     setSelectedModel('');
-    setSelectedBeneficiary('');
+    setSelectedProvider('');
     setStartDay('');
     setStartMonth('');
     setStartYear('');
@@ -182,15 +182,15 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
     </Modal>
   );
 
-  const renderBeneficiarySelectModal = () => (
-    <Modal animationType="slide" transparent visible={beneficiaryPickerVisible} onRequestClose={() => setBeneficiaryPickerVisible(false)}>
+  const renderProviderSelectModal = () => (
+    <Modal animationType="slide" transparent visible={providerPickerVisible} onRequestClose={() => setProviderPickerVisible(false)}>
       <View style={styles.pickerModalOverlay}>
         <View style={styles.pickerModalContent}>
           <View style={styles.pickerModalHeader}>
             <Text style={styles.pickerModalTitle}>
-              {tr('title', 'selectBeneficiary', 'Selecionar Beneficiario')}
+              {tr('title', 'selectProvider', 'Selecionar Beneficiario')}
             </Text>
-            <TouchableOpacity onPress={() => setBeneficiaryPickerVisible(false)}>
+            <TouchableOpacity onPress={() => setProviderPickerVisible(false)}>
               <Icon name="close" size={24} color="#666666" />
             </TouchableOpacity>
           </View>
@@ -199,20 +199,20 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
               people.map(person => (
                 <TouchableOpacity
                   key={person['@id']}
-                  style={[styles.selectOption, selectedBeneficiary === person['@id'] && styles.selectOptionActive]}
+                  style={[styles.selectOption, selectedProvider === person['@id'] && styles.selectOptionActive]}
                   onPress={() => {
-                    setSelectedBeneficiary(person['@id']);
-                    setBeneficiaryPickerVisible(false);
+                    setSelectedProvider(person['@id']);
+                    setProviderPickerVisible(false);
                   }}>
                   <View style={styles.personInfo}>
                     <View style={styles.iconContainer}>
                       <Icon name="person" size={20} color="#2529a1" />
                     </View>
-                    <Text style={[styles.personName, selectedBeneficiary === person['@id'] && styles.selectOptionTextActive]}>
+                    <Text style={[styles.personName, selectedProvider === person['@id'] && styles.selectOptionTextActive]}>
                       {person.name}
                     </Text>
                   </View>
-                  {selectedBeneficiary === person['@id'] && <Icon name="check-circle" size={24} color="#4CAF50" />}
+                  {selectedProvider === person['@id'] && <Icon name="check-circle" size={24} color="#4CAF50" />}
                 </TouchableOpacity>
               ))
             ) : (
@@ -414,7 +414,7 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
       </View>
 
       {renderModelSelectModal()}
-      {renderBeneficiarySelectModal()}
+      {renderProviderSelectModal()}
       {renderDayPicker()}
       {renderMonthPicker()}
     </AnimatedModal>
