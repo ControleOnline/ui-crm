@@ -75,11 +75,29 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
         return;
       }
 
+      const currentCompanyId = String(currentCompany.id).replace(/\D/g, '');
+      const companyIri = `/people/${currentCompanyId}`;
       const response = await modelsActions.getItems({
         context: 'proposal',
-        people: currentCompany.id,
+        company: companyIri,
+        people: currentCompanyId,
       });
-      setContractModels(response);
+
+      const filteredModels = Array.isArray(response)
+        ? response.filter(model => {
+            const modelCompanyId = String(
+              model?.people?.['@id'] ||
+                model?.people ||
+                model?.company?.['@id'] ||
+                model?.company ||
+                '',
+            ).replace(/\D/g, '');
+
+            return !modelCompanyId || modelCompanyId === currentCompanyId;
+          })
+        : [];
+
+      setContractModels(filteredModels);
     } catch (error) {
     } finally {
       setLoadingModels(false);
