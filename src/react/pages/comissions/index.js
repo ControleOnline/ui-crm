@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -12,9 +12,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 
 import { useStore } from '@store';
-import { useMessage } from '@controleonline/ui-common/src/react/components/MessageService';
+import AnimatedModal from '../../components/AnimatedModal';
 import translateWithFallback from '../../utils/translateWithFallback';
 
 const Invoices = () => {
@@ -23,16 +24,13 @@ const Invoices = () => {
       translateWithFallback('comissions', type, key, fallback),
     [],
   );
-  const { showDialog } = useMessage();
 
   const invoiceStore = useStore('invoice');
   const peopleStore = useStore('people');
-  const deviceConfigStore = useStore('device_config');
 
   const invoiceGetters = invoiceStore?.getters || {};
   const invoiceActions = invoiceStore?.actions || {};
   const peopleGetters = peopleStore?.getters || {};
-  const deviceGetters = deviceConfigStore?.getters || {};
 
   const {
     items = [],
@@ -41,11 +39,13 @@ const Invoices = () => {
   } = invoiceGetters;
 
   const { currentCompany } = peopleGetters;
-  const { item: device = {} } = deviceGetters;
 
   const [refreshing, setRefreshing] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState('0');
   const [selectedYear, setSelectedYear] = useState(String(new Date().getFullYear()));
+  const hasLoadedInitially = useRef(false);
+  const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [invoiceDetailsVisible, setInvoiceDetailsVisible] = useState(false);
 
   const monthOptions = useMemo(
     () => [
@@ -105,17 +105,16 @@ const Invoices = () => {
   const canLoad = useMemo(() => {
     return Boolean(
       currentCompany?.id &&
-      device?.configs &&
       typeof invoiceActions?.getItems === 'function',
     );
-  }, [currentCompany?.id, device?.configs, invoiceActions]);
+  }, [currentCompany?.id, invoiceActions]);
 
   const loadInvoices = useCallback(async () => {
     if (!canLoad) return;
 
     const range = getDateRange(selectedYear, selectedMonth);
     const params = {
-      payer: `/people/${currentCompany.id}`,
+      payer: currentCompany.id,
       'order[dueDate]': 'desc',
     };
 
@@ -136,9 +135,18 @@ const Invoices = () => {
 
   useFocusEffect(
     useCallback(() => {
+      hasLoadedInitially.current = true;
       loadInvoices();
     }, [loadInvoices]),
   );
+
+  useEffect(() => {
+    if (!canLoad || !hasLoadedInitially.current) {
+      return;
+    }
+
+    loadInvoices();
+  }, [canLoad, loadInvoices, selectedMonth, selectedYear]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -165,15 +173,13 @@ const Invoices = () => {
   const getStatusColor = status => status?.color || '#64748B';
 
   const handleInvoicePress = invoice => {
-    showDialog({
-      title: tr('title', 'invoiceDetails', 'Detalhes da fatura'),
-      message:
-        `${tr('label', 'id', 'ID')}: ${invoice?.id || '-'}\n` +
-        `${tr('label', 'value', 'Valor')}: ${formatCurrency(invoice?.price)}\n` +
-        `${tr('label', 'status', 'Status')}: ${invoice?.status?.status || '-'}\n` +
-        `${tr('label', 'dueDate', 'Vencimento')}: ${formatDate(invoice?.dueDate)}`,
-      confirmLabel: tr('action', 'ok', 'OK'),
-    });
+    setSelectedInvoice(invoice);
+    setInvoiceDetailsVisible(true);
+  };
+
+  const handleCloseInvoiceDetails = () => {
+    setInvoiceDetailsVisible(false);
+    setSelectedInvoice(null);
   };
 
   const showEmptyState = !isLoading && !error && invoices.length === 0;
@@ -348,7 +354,112 @@ const Invoices = () => {
   }
 
   return (
-    <SafeAreaView style={styles.page}>{pageChildren}</SafeAreaView>
+    <SafeAreaView style={styles.page}>
+      {pageChildren}
+
+      <AnimatedModal
+        visible={invoiceDetailsVisible}
+        onRequestClose={handleCloseInvoiceDetails}
+        style={{ justifyContent: 'flex-end' }}>
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>
+              {tr('title', 'invoiceDetails', 'Detalhes da fatura')}
+            </Text>
+            <TouchableOpacity
+              onPress={() => setInvoiceDetailsVisible(false)}
+              style={styles.modalCloseButton}>
+              <Icon name="close" size={20} color="#64748B" />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.modalBody}>
+            <View style={styles.modalSummaryCard}>
+              <Text style={styles.modalAmount}>
+                {formatCurrency(selectedInvoice?.price)}
+              </Text>
+              <View
+                style={[
+                  styles.modalStatusPill,
+                  {
+                    backgroundColor: getStatusColor(selectedInvoice?.status),
+                  },
+                ]}>
+                <Text style={styles.modalStatusText}>
+                  {(
+                    selectedInvoice?.status?.status ||
+                    tr('label', 'na', 'N/A')
+                  ).toUpperCase()}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.modalDetailsCard}>
+              <View style={styles.modalDetailRow}>
+                <Text style={styles.modalDetailLabel}>
+                  {tr('label', 'id', 'ID')}
+                </Text>
+                <Text style={styles.modalDetailValue}>
+                  #{selectedInvoice?.id || '-'}
+                </Text>
+              </View>
+              <View style={styles.modalDetailRow}>
+                <Text style={styles.modalDetailLabel}>
+                  {tr('label', 'category', 'Categoria')}
+                </Text>
+                <Text style={styles.modalDetailValue}>
+                  {selectedInvoice?.category?.name ||
+                    tr('label', 'noCategory', 'Sem categoria')}
+                </Text>
+              </View>
+              <View style={styles.modalDetailRow}>
+                <Text style={styles.modalDetailLabel}>
+                  {tr('label', 'payment', 'Pagamento')}
+                </Text>
+                <Text style={styles.modalDetailValue}>
+                  {selectedInvoice?.paymentType?.paymentType ||
+                    tr('label', 'na', 'N/A')}
+                </Text>
+              </View>
+              <View style={styles.modalDetailRow}>
+                <Text style={styles.modalDetailLabel}>
+                  {tr('label', 'dueDate', 'Vencimento')}
+                </Text>
+                <Text style={styles.modalDetailValue}>
+                  {formatDate(selectedInvoice?.dueDate)}
+                </Text>
+              </View>
+              <View style={styles.modalDetailRow}>
+                <Text style={styles.modalDetailLabel}>
+                  {tr('label', 'from', 'De')}
+                </Text>
+                <Text style={styles.modalDetailValue}>
+                  {selectedInvoice?.sourceWallet?.wallet || '-'}
+                </Text>
+              </View>
+              <View style={styles.modalDetailRow}>
+                <Text style={styles.modalDetailLabel}>
+                  {tr('label', 'to', 'Para')}
+                </Text>
+                <Text style={styles.modalDetailValue}>
+                  {selectedInvoice?.destinationWallet?.wallet || '-'}
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.modalFooter}>
+            <TouchableOpacity
+              style={styles.modalPrimaryButton}
+              onPress={() => setInvoiceDetailsVisible(false)}>
+              <Text style={styles.modalPrimaryButtonText}>
+                {tr('action', 'close', 'Fechar')}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </AnimatedModal>
+    </SafeAreaView>
   );
 };
 
@@ -505,6 +616,113 @@ const styles = StyleSheet.create({
   metaLine: {
     color: '#475569',
     marginBottom: 4,
+  },
+  modalContainer: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '80%',
+    width: '100%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 10,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  modalCloseButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalBody: {
+    padding: 24,
+    gap: 16,
+  },
+  modalSummaryCard: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 14,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  modalAmount: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#007AFF',
+    marginBottom: 12,
+  },
+  modalStatusPill: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+  },
+  modalStatusText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  modalDetailsCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    overflow: 'hidden',
+  },
+  modalDetailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+    gap: 12,
+  },
+  modalDetailLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  modalDetailValue: {
+    flex: 1,
+    textAlign: 'right',
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#0F172A',
+  },
+  modalFooter: {
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#E9ECEF',
+  },
+  modalPrimaryButton: {
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: '#007AFF',
+    alignItems: 'center',
+  },
+  modalPrimaryButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
 });
 

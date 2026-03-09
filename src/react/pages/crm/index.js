@@ -1,4 +1,4 @@
-ï»¿import React, { useState, useEffect, useCallback, useLayoutEffect } from 'react';
+import React, { useState, useEffect, useCallback, useLayoutEffect, useRef } from 'react';
 import {
   StyleSheet,
   View,
@@ -54,6 +54,7 @@ export default function CrmIndex() {
   const [selectedStatusFilterKey, setSelectedStatusFilterKey] = useState('');
   const [isStatusFilterBootstrapping, setIsStatusFilterBootstrapping] =
     useState(true);
+  const [isStatusFilterApplying, setIsStatusFilterApplying] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [allOpportunities, setAllOpportunities] = useState([]);
@@ -66,6 +67,7 @@ export default function CrmIndex() {
     useState(false);
   const [alterDateMonthPickerVisible, setAlterDateMonthPickerVisible] =
     useState(false);
+  const hasInitializedStatusFilter = useRef(false);
   const tasksStore = useStore('tasks');
   const opportunitiesGetters = tasksStore.getters;
   const opportunitiesActions = tasksStore.actions;
@@ -223,8 +225,6 @@ export default function CrmIndex() {
 
   useFocusEffect(
     useCallback(() => {
-      let isMounted = true;
-
       const params = buildOpportunityParams();
       if (params) {
         opportunitiesActions.getItems(params);
@@ -233,18 +233,6 @@ export default function CrmIndex() {
           linkType: 'client',
         });
       }
-
-      const loadStatusFilters = async () => {
-        setIsStatusFilterBootstrapping(true);
-        try {
-          await statusActions.getItems({ context: 'relationship' });
-        } finally {
-          if (isMounted) {
-            setIsStatusFilterBootstrapping(false);
-          }
-        }
-      };
-      loadStatusFilters().catch(() => null);
 
       categoriesActions.getItems({
         context: [
@@ -255,11 +243,27 @@ export default function CrmIndex() {
         ],
       });
 
-      return () => {
-        isMounted = false;
-      };
+      return () => {};
     }, [buildOpportunityParams, currentCompany?.id]),
   );
+
+  useEffect(() => {
+    let mounted = true;
+
+    setIsStatusFilterBootstrapping(true);
+    statusActions
+      .getItems({ context: 'relationship' })
+      .catch(() => null)
+      .finally(() => {
+        if (mounted) {
+          setIsStatusFilterBootstrapping(false);
+        }
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -270,6 +274,16 @@ export default function CrmIndex() {
   useEffect(() => {
     setCurrentPage(1);
   }, [searchQuery, itemsPerPage, selectedStatusFilterKey]);
+
+  useEffect(() => {
+    if (!hasInitializedStatusFilter.current) {
+      hasInitializedStatusFilter.current = true;
+      return;
+    }
+
+    setIsStatusFilterApplying(true);
+    setAllOpportunities([]);
+  }, [selectedStatusFilterKey]);
 
   useEffect(() => {
     if (isLoading) return;
@@ -286,6 +300,12 @@ export default function CrmIndex() {
       }
     }
   }, [opportunities, currentPage, isLoading]);
+
+  useEffect(() => {
+    if (!isLoading) {
+      setIsStatusFilterApplying(false);
+    }
+  }, [isLoading]);
 
   useEffect(() => {
     if (!selectedStatusFilterKey || status.length === 0) {
@@ -578,7 +598,7 @@ export default function CrmIndex() {
     const months = [
       tr('month', 'january', 'Janeiro'),
       tr('month', 'february', 'Fevereiro'),
-      tr('month', 'march', 'MarÃ§o'),
+      tr('month', 'march', 'Março'),
       tr('month', 'april', 'Abril'),
       tr('month', 'may', 'Maio'),
       tr('month', 'june', 'Junho'),
@@ -979,7 +999,10 @@ export default function CrmIndex() {
     </View>
   );
 
-  const showInitialSkeleton = isLoading && allOpportunities.length === 0;
+  const showInitialSkeleton =
+    isLoading && allOpportunities.length === 0 && !isStatusFilterApplying;
+  const showOpportunityCardsSkeleton =
+    isStatusFilterApplying || (isLoading && allOpportunities.length === 0);
 
   const renderTopSkeleton = () => (
     <View style={styles.subHeader}>
@@ -1002,46 +1025,34 @@ export default function CrmIndex() {
     </View>
   );
 
-  const renderOpportunityCard = (opportunity, index) => (
-    <View key={opportunity.id} style={styles.cardWrapper}>
-      <View style={styles.card}>
-        <View style={styles.cardHeader}>
-          <View style={styles.titleContainer}>
-            <Text style={styles.opportunityTitle}>
-              {tr('card', 'opportunityNumber', 'Oportunidade #')}
-              {opportunity.id}
-            </Text>
-            <View style={styles.clientNameRow}>
-              {(() => {
-                const providerName = getProviderName(opportunity?.client);
-                const showClientSkeleton =
-                  !providerName && (isPeopleLoading || people == null);
+  const renderOpportunityCard = (opportunity, index) => {
+    const providerName = getProviderName(opportunity?.client);
+    const showClientSkeleton =
+      !providerName && (isPeopleLoading || people == null);
 
-                if (showClientSkeleton) {
-                  return (
-                    <View
-                      style={[styles.skeletonLine, styles.clientNameSkeleton]}
-                    />
-                  );
-                }
-
-                return (
-                  <>
-                    <Text style={styles.clientName}>
-                      {providerName ||
-                        tr('card', 'clientNotInformed', 'Cliente nao informado')}
-                    </Text>
-                    <TouchableOpacity
-                      style={styles.editClientButton}
-                      onPress={() => handleEditProvider(opportunity)}
-                      activeOpacity={0.8}>
-                      <Icon name="edit" size={12} color={colors.primary} />
-                    </TouchableOpacity>
-                  </>
-                );
-              })()}
+    return (
+      <View key={opportunity.id} style={styles.cardWrapper}>
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <View style={styles.titleContainer}>
+              {showClientSkeleton ? (
+                <View style={[styles.skeletonLine, styles.opportunityTitleSkeleton]} />
+              ) : (
+                <Text style={styles.opportunityTitle}>
+                  {providerName ||
+                    tr('card', 'clientNotInformed', 'Cliente nao informado')}
+                </Text>
+              )}
+              <View style={styles.clientNameRow}>
+                <Text style={styles.clientName}>#{opportunity.id}</Text>
+                <TouchableOpacity
+                  style={styles.editClientButton}
+                  onPress={() => handleEditProvider(opportunity)}
+                  activeOpacity={0.8}>
+                  <Icon name="edit" size={12} color={colors.primary} />
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
           {!opportunity?.taskStatus?.realStatus && isStatusLoading ? (
             <View style={[styles.stageTag, styles.stageTagSkeleton]}>
               <View style={[styles.skeletonLine, styles.stageTextSkeleton]} />
@@ -1067,7 +1078,7 @@ export default function CrmIndex() {
           )}
         </View>
 
-        <View style={styles.cardBody}>
+          <View style={styles.cardBody}>
           <View style={styles.infoRow}>
             <View style={styles.infoContainer}>
               <Icon name="tag" size={14} color="#9b59b6" />
@@ -1109,7 +1120,7 @@ export default function CrmIndex() {
           </View>
         )}
 
-        <View style={styles.actionContainer}>
+          <View style={styles.actionContainer}>
           <TouchableOpacity
             style={[styles.actionButton, styles.chatButton]}
             onPress={() => handleOpportunityPress(opportunity)}>
@@ -1127,10 +1138,11 @@ export default function CrmIndex() {
               {tr('action', 'edit', 'Editar')}
             </Text>
           </TouchableOpacity>
+          </View>
         </View>
       </View>
-    </View>
-  );
+    );
+  };
 
   const getSelectModalEmptyConfig = (title) => {
     const normalizedTitle = String(title || '').toLowerCase();
@@ -1185,7 +1197,7 @@ export default function CrmIndex() {
 
     if (
       normalizedTitle.includes('dia') ||
-      normalizedTitle.includes('mÃªs') ||
+      normalizedTitle.includes('mês') ||
       normalizedTitle.includes('mes')
     ) {
       return {
@@ -1450,7 +1462,7 @@ export default function CrmIndex() {
                       <Text style={styles.personDocument}>
                         {typeof person.document === 'string'
                           ? person.document
-                          : 'Documento disponÃ­vel'}
+                          : 'Documento disponível'}
                       </Text>
                     )}
                   </View>
@@ -1615,7 +1627,7 @@ export default function CrmIndex() {
                     ? getMonthsArray().find(
                       m => m.id === editingOpportunity.dueDateMonth,
                     )?.name
-                    : tr('form', 'month', 'MÃªs')}
+                    : tr('form', 'month', 'Mês')}
                 </Text>
                 <Icon name="chevron-down" size={16} color="#7f8c8d" />
               </TouchableOpacity>
@@ -1792,7 +1804,7 @@ export default function CrmIndex() {
                     ? getMonthsArray().find(
                       m => m.id === newOpportunity.dueDateMonth,
                     )?.name
-                    : tr('form', 'month', 'MÃªs')}
+                    : tr('form', 'month', 'Mês')}
                 </Text>
                 <Icon name="chevron-down" size={16} color="#7f8c8d" />
               </TouchableOpacity>
@@ -1942,7 +1954,7 @@ export default function CrmIndex() {
       )}
 
       <FlatList
-        data={visibleOpportunities}
+        data={showOpportunityCardsSkeleton ? [] : visibleOpportunities}
         keyExtractor={item => String(item.id)}
         renderItem={({ item, index }) => renderOpportunityCard(item, index)}
         refreshControl={
@@ -1950,10 +1962,10 @@ export default function CrmIndex() {
         }
         contentContainerStyle={[
           styles.scrollContent,
-          isLoading && allOpportunities.length === 0 && styles.scrollContentSkeleton,
+          showOpportunityCardsSkeleton && styles.scrollContentSkeleton,
         ]}
         ListEmptyComponent={() =>
-          isLoading ? (
+          showOpportunityCardsSkeleton ? (
             <View style={styles.skeletonListWrapper}>
               {[1, 2, 3, 4, 5].map(key => (
                 <View key={key}>{renderSkeletonCard()}</View>
@@ -2109,7 +2121,7 @@ export default function CrmIndex() {
 
       {
         renderSelectModal(
-          tr('modal', 'selectMonth', 'Selecionar MÃªs'),
+          tr('modal', 'selectMonth', 'Selecionar Mês'),
           getMonthsArray(),
           {
             id: editModalVisible
@@ -2154,7 +2166,7 @@ export default function CrmIndex() {
 
       {
         renderSelectModal(
-          tr('modal', 'selectMonth', 'Selecionar MÃªs'),
+          tr('modal', 'selectMonth', 'Selecionar Mês'),
           getMonthsArray(),
           {
             id: editModalVisible
@@ -2389,6 +2401,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#0F172A',
     marginBottom: 3,
+  },
+  opportunityTitleSkeleton: {
+    width: '72%',
+    height: 16,
+    borderRadius: 8,
+    marginBottom: 4,
   },
   clientName: {
     fontSize: 13,
@@ -2859,3 +2877,4 @@ const styles = StyleSheet.create({
     backgroundColor: '#F43F5E10',
   },
 });
+
