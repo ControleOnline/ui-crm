@@ -34,14 +34,14 @@ export default function HomePage({ navigation }) {
   const authGetters = authStore.getters;
   const themeGetters = themeStore.getters;
   const { currentCompany, companies } = peopleGetters;
-  const {user: authUser} = authGetters;
+  const { user: authUser } = authGetters;
   const currentUser = {
     ...authUser,
     name: String(
       authUser?.realname || authUser?.name || authUser?.username || '',
     ).trim(),
   };
-  const {colors: themeColors} = themeGetters;
+  const { colors: themeColors } = themeGetters;
 
   const [stats, setStats] = useState([
     { label: tr('stats', 'opportunities', 'Oportunidades'), value: '...', icon: 'trello', color: '#F59E0B', route: 'CrmIndex' },
@@ -444,12 +444,12 @@ export default function HomePage({ navigation }) {
   }, [recentActivity, activitySortDirection]);
 
   return (
-    <View style={[styles.container, {backgroundColor: brandColors.background}]}>
+    <View style={[styles.container, { backgroundColor: brandColors.background }]}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scroll}>
 
-       
+
         {/* Stats Grid - atalhos navegáveis */}
         <Text style={styles.sectionTitle}>{tr('sectionTitle', 'overview', 'Visão Geral')}</Text>
         <View style={styles.statsContainer}>
@@ -486,6 +486,17 @@ export default function HomePage({ navigation }) {
 
         {/* Atalhos Clientes e Comissões */}
         <View style={styles.shortcutsRow}>
+
+          <TouchableOpacity
+            style={styles.shortcutCard}
+            activeOpacity={0.9}
+            onPress={() => navigation.navigate('ProspectsIndex')}>
+            <View style={[styles.shortcutIcon, { backgroundColor: '#D1FAE5' }]}>
+              <Icon name="users" size={24} color={brandColors.primary} />
+            </View>
+            <Text style={styles.shortcutLabel}>{tr('actionBanner', 'clients', 'Prospects')}</Text>
+            <Text style={styles.shortcutSub}>{tr('actionBanner', 'viewClients', 'Ver lista de prospects')}</Text>
+          </TouchableOpacity>
           <TouchableOpacity
             style={styles.shortcutCard}
             activeOpacity={0.9}
