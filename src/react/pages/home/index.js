@@ -21,11 +21,8 @@ import Icon from 'react-native-vector-icons/Feather';
 import { useStore } from '@store';
 import { api } from '@controleonline/ui-common/src/api';
 import Formatter from '@controleonline/ui-common/src/utils/formatter';
-import translateWithFallback from '../../utils/translateWithFallback';
 
 export default function HomePage({ navigation }) {
-  const tr = (type, key, fallback) =>
-    translateWithFallback('people', type, key, fallback);
   const peopleStore = useStore('people');
   const peopleActions = peopleStore.actions;
   const authStore = useStore('auth');
@@ -44,9 +41,9 @@ export default function HomePage({ navigation }) {
   const { colors: themeColors } = themeGetters;
 
   const [stats, setStats] = useState([
-    { label: tr('stats', 'opportunities', 'Oportunidades'), value: '...', icon: 'trello', color: '#F59E0B', route: 'CrmIndex' },
-    { label: tr('stats', 'proposals', 'Propostas'), value: '...', icon: 'file-text', color: '#3B82F6', route: 'ProposalsIndex' },
-    { label: tr('stats', 'contracts', 'Contratos'), value: '...', icon: 'briefcase', color: '#10B981', route: 'ContractsIndex' },
+    { label: global.t?.t('people', 'title', 'opportunities'), value: '...', icon: 'trello', color: '#F59E0B', route: 'CrmIndex' },
+    { label: global.t?.t('people', 'title', 'proposals'), value: '...', icon: 'file-text', color: '#3B82F6', route: 'ProposalsIndex' },
+    { label: global.t?.t('people', 'title', 'contracts'), value: '...', icon: 'briefcase', color: '#10B981', route: 'ContractsIndex' },
   ]);
 
   const [recentActivity, setRecentActivity] = useState([]);
@@ -55,7 +52,7 @@ export default function HomePage({ navigation }) {
   const normalizeDigits = value => String(value || '').replace(/\D/g, '');
   const normalizeText = value => String(value || '').trim();
 
-  const firstName = currentUser?.name?.split(' ')[0] || tr('header', 'userFallback', 'Usuario');
+  const firstName = currentUser?.name?.split(' ')[0] || global.t?.t('people', 'title', 'user');
   const canSwitchCompany = Array.isArray(companies) && companies.length > 1;
 
   const brandColors = useMemo(
@@ -346,9 +343,9 @@ export default function HomePage({ navigation }) {
 
         // Update Stats
         setStats([
-          { label: tr('stats', 'opportunities', 'Oportunidades'), value: String(opportunities.totalItems || 0), icon: 'trello', color: '#F59E0B', route: 'CrmIndex' },
-          { label: tr('stats', 'proposals', 'Propostas'), value: String(proposals.totalItems || 0), icon: 'file-text', color: '#3B82F6', route: 'ProposalsIndex' },
-          { label: tr('stats', 'contracts', 'Contratos'), value: String(contracts.totalItems || 0), icon: 'briefcase', color: '#10B981', route: 'ContractsIndex' },
+          { label: global.t?.t('people', 'title', 'opportunities'), value: String(opportunities.totalItems || 0), icon: 'trello', color: '#F59E0B', route: 'CrmIndex' },
+          { label: global.t?.t('people', 'title', 'proposals'), value: String(proposals.totalItems || 0), icon: 'file-text', color: '#3B82F6', route: 'ProposalsIndex' },
+          { label: global.t?.t('people', 'title', 'contracts'), value: String(contracts.totalItems || 0), icon: 'briefcase', color: '#10B981', route: 'ContractsIndex' },
         ]);
 
         // Process Recent Activity
@@ -359,12 +356,12 @@ export default function HomePage({ navigation }) {
           const sortDate = item.dueDate ? new Date(item.dueDate).getTime() : 0;
           const clientName =
             getOpportunityClientName(item, peopleNameById) ||
-            tr('activity', 'unknownClient', 'Cliente desconhecido');
+            global.t?.t('people', 'title', 'unknownClient');
           activities.push({
             id: item.id,
             originalId: item.id,
-            title: `${tr('activity', 'newOpportunityPrefix', 'Nova oportunidade:')} ${clientName}`,
-            time: item.dueDate ? Formatter.formatDateYmdTodmY(item.dueDate) : tr('activity', 'withoutDate', 'Sem data'),
+            title: `${global.t?.t('people', 'title', 'newOpportunityPrefix')} ${clientName}`,
+            time: item.dueDate ? Formatter.formatDateYmdTodmY(item.dueDate) : global.t?.t('people', 'title', 'withoutDate'),
             clientName,
             type: 'lead',
             sortDate,
@@ -378,12 +375,12 @@ export default function HomePage({ navigation }) {
           const sortDate = item.startDate ? new Date(item.startDate).getTime() : 0;
           const clientName =
             getContractClientName(item, peopleNameById) ||
-            tr('activity', 'unknownClient', 'Cliente desconhecido');
+            global.t?.t('people', 'title', 'unknownClient');
           activities.push({
             id: item.id,
             originalId: item.id,
-            title: `${tr('activity', 'proposalPrefix', 'Proposta:')} ${item.contractModel?.model || tr('activity', 'newProposal', 'Nova proposta')}`,
-            time: item.startDate ? Formatter.formatDateYmdTodmY(item.startDate) : tr('activity', 'withoutDate', 'Sem data'),
+            title: `${global.t?.t('people', 'title', 'proposalPrefix')} ${item.contractModel?.model || global.t?.t('people', 'title', 'newProposal')}`,
+            time: item.startDate ? Formatter.formatDateYmdTodmY(item.startDate) : global.t?.t('people', 'title', 'withoutDate'),
             clientName,
             type: 'proposal',
             sortDate,
@@ -397,12 +394,12 @@ export default function HomePage({ navigation }) {
           const sortDate = item.startDate ? new Date(item.startDate).getTime() : 0;
           const clientName =
             getContractClientName(item, peopleNameById) ||
-            tr('activity', 'unknownClient', 'Cliente desconhecido');
+            global.t?.t('people', 'title', 'unknownClient');
           activities.push({
             id: item.id,
             originalId: item.id,
-            title: `${tr('activity', 'contractPrefix', 'Contrato:')} ${item.contractModel?.model || tr('activity', 'newContract', 'Novo contrato')}`,
-            time: item.startDate ? Formatter.formatDateYmdTodmY(item.startDate) : tr('activity', 'withoutDate', 'Sem data'),
+            title: `${global.t?.t('people', 'title', 'contractPrefix')} ${item.contractModel?.model || global.t?.t('people', 'title', 'newContract')}`,
+            time: item.startDate ? Formatter.formatDateYmdTodmY(item.startDate) : global.t?.t('people', 'title', 'withoutDate'),
             clientName,
             type: 'calendar', // Using calendar icon for contracts
             sortDate,
@@ -451,7 +448,7 @@ export default function HomePage({ navigation }) {
 
 
         {/* Stats Grid - atalhos navegáveis */}
-        <Text style={styles.sectionTitle}>{tr('sectionTitle', 'overview', 'Visão Geral')}</Text>
+        <Text style={styles.sectionTitle}>{global.t?.t('people', 'title', 'overView')}</Text>
         <View style={styles.statsContainer}>
           {stats.map((stat, idx) => (
             <TouchableOpacity
@@ -475,8 +472,8 @@ export default function HomePage({ navigation }) {
           onPress={() => navigation.navigate('CrmIndex')}>
           <View style={styles.actionContent}>
             <View>
-              <Text style={styles.actionTitle}>{tr('actionBanner', 'accessPipeline', 'Acessar Pipeline')}</Text>
-              <Text style={styles.actionSub}>{tr('actionBanner', 'manageDeals', 'Gerencie suas negociações')}</Text>
+              <Text style={styles.actionTitle}>{global.t?.t('people', 'title', 'accessPipeline')}</Text>
+              <Text style={styles.actionSub}>{global.t?.t('people', 'title', 'manageDeals')}</Text>
             </View>
             <View style={styles.actionButton}>
               <Icon name="arrow-right" size={20} color={brandColors.primary} />
@@ -494,8 +491,8 @@ export default function HomePage({ navigation }) {
             <View style={[styles.shortcutIcon, { backgroundColor: '#D1FAE5' }]}>
               <Icon name="users" size={24} color={brandColors.primary} />
             </View>
-            <Text style={styles.shortcutLabel}>{tr('actionBanner', 'clients', 'Prospects')}</Text>
-            <Text style={styles.shortcutSub}>{tr('actionBanner', 'viewClients', 'Ver lista de prospects')}</Text>
+            <Text style={styles.shortcutLabel}>{global.t?.t('people', 'title', 'prospects')}</Text>
+            <Text style={styles.shortcutSub}>{global.t?.t('people', 'title', 'viewProspects')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.shortcutCard}
@@ -504,8 +501,8 @@ export default function HomePage({ navigation }) {
             <View style={[styles.shortcutIcon, { backgroundColor: withOpacity(brandColors.primary, 0.12) }]}>
               <Icon name="users" size={24} color={brandColors.primary} />
             </View>
-            <Text style={styles.shortcutLabel}>{tr('actionBanner', 'clients', 'Clientes')}</Text>
-            <Text style={styles.shortcutSub}>{tr('actionBanner', 'viewClients', 'Ver lista de clientes')}</Text>
+            <Text style={styles.shortcutLabel}>{global.t?.t('people', 'title', 'clients')}</Text>
+            <Text style={styles.shortcutSub}>{global.t?.t('people', 'title', 'viewClients')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.shortcutCard}
@@ -514,15 +511,15 @@ export default function HomePage({ navigation }) {
             <View style={[styles.shortcutIcon, { backgroundColor: '#D1FAE5' }]}>
               <Icon name="trending-up" size={24} color="#10B981" />
             </View>
-            <Text style={styles.shortcutLabel}>{tr('actionBanner', 'commissions', 'Comissões')}</Text>
-            <Text style={styles.shortcutSub}>{tr('actionBanner', 'financialReport', 'Relatório financeiro')}</Text>
+            <Text style={styles.shortcutLabel}>{global.t?.t('people', 'title', 'commissions')}</Text>
+            <Text style={styles.shortcutSub}>{global.t?.t('people', 'title', 'financialReport')}</Text>
           </TouchableOpacity>
         </View>
 
         {/* Recent Activity */}
         <View style={styles.sectionTitleRow}>
           <Text style={[styles.sectionTitle, styles.sectionTitleRowText]}>
-            {tr('sectionTitle', 'recentActivity', 'Atividade Recente')}
+            {global.t?.t('people', 'title', 'recentActivity')}
           </Text>
           <TouchableOpacity
             style={styles.sortButton}
@@ -537,8 +534,8 @@ export default function HomePage({ navigation }) {
             />
             <Text style={[styles.sortButtonText, { color: brandColors.primary }]}>
               {activitySortDirection === 'desc'
-                ? tr('activity', 'mostRecent', 'Mais recente')
-                : tr('activity', 'oldest', 'Mais antiga')}
+                ? global.t?.t('people', 'title', 'mostRecent')
+                : global.t?.t('people', 'title', 'oldest')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -547,7 +544,7 @@ export default function HomePage({ navigation }) {
             <ActivityIndicator size="small" color={brandColors.primary} style={{ padding: 20 }} />
           ) : sortedRecentActivity.length === 0 ? (
             <View style={{ padding: 20, alignItems: 'center' }}>
-              <Text style={{ color: '#94A3B8' }}>{tr('sectionTitle', 'noRecentActivity', 'Sem atividades recentes')}</Text>
+              <Text style={{ color: '#94A3B8' }}>{global.t?.t('people', 'title', 'noRecentActivity')}</Text>
             </View>
           ) : (
             sortedRecentActivity.map((item, idx) => (
@@ -573,7 +570,7 @@ export default function HomePage({ navigation }) {
                 <View style={styles.activityContent}>
                   <Text style={styles.activityTitle} numberOfLines={1}>{item.title}</Text>
                   <Text style={styles.activityClient} numberOfLines={1}>
-                    {tr('activity', 'client', 'Cliente')}: {item.clientName || tr('activity', 'unknownClient', 'Cliente desconhecido')}
+                    {global.t?.t('people', 'title', 'client')}: {item.clientName || global.t?.t('people', 'title', 'unknownClient')}
                   </Text>
                   <Text style={styles.activityTime}>{item.time}</Text>
                 </View>
