@@ -20,63 +20,7 @@ import { useMessage } from '@controleonline/ui-common/src/react/components/Messa
 
 const { width } = Dimensions.get('window');
 
-const ResumoTab = ({ contract, clientLabel }) => {
-  const statusColor = contract?.status?.color || '#64748B';
-
-  return (
-    <ScrollView
-      style={styles.tabScroll}
-      contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
-      <View style={styles.summaryCard}>
-        <View style={styles.summaryHeader}>
-          <Text style={styles.sectionTitle}>Resumo</Text>
-          <View
-            style={[
-              styles.statusBadge,
-              {
-                backgroundColor: `${statusColor}20`,
-                borderColor: statusColor,
-              },
-            ]}>
-            <Text style={[styles.statusBadgeText, { color: statusColor }]}>
-              {contract?.status?.status?.toUpperCase() || '-'}
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.summaryGrid}>
-          <View style={styles.summaryItem}>
-            <Text style={styles.summaryLabel}>ID</Text>
-            <Text style={styles.summaryValue}>{contract?.id || '-'}</Text>
-          </View>
-          <View style={styles.summaryItem}>
-            <Text style={styles.summaryLabel}>Inicio</Text>
-            <Text style={styles.summaryValue}>
-              {contract?.startDate
-                ? new Date(contract.startDate).toLocaleDateString('pt-br')
-                : '-'}
-            </Text>
-          </View>
-          <View style={styles.summaryItem}>
-            <Text style={styles.summaryLabel}>Termino</Text>
-            <Text style={styles.summaryValue}>
-              {contract?.endDate
-                ? new Date(contract.endDate).toLocaleDateString('pt-br')
-                : '-'}
-            </Text>
-          </View>
-        </View>
-
-        <View style={[styles.summaryItem, styles.summaryItemWide]}>
-          <Text style={styles.summaryLabel}>Cliente</Text>
-          <Text style={styles.summaryValue}>{clientLabel}</Text>
-        </View>
-      </View>
-    </ScrollView>
-  );
-};
-
-const PropostaTab = ({ fileContent, fileLoading, fileError, canEdit, handleSendPropostal }) => {
+const PropostaTab = ({ contract, fileContent, fileLoading, fileError, canEdit, handleSendPropostal }) => {
   return (
     <View style={{ flex: 1 }}>
       <ScrollView
@@ -145,153 +89,13 @@ const ContractDetails = () => {
   const [fileLoading, setFileLoading] = useState(false);
   const [fileError, setFileError] = useState(null);
   const [activeTab, setActiveTab] = useState(0);
-  const [peopleNameById, setPeopleNameById] = useState({});
 
   const scrollRef = useRef(null);
 
   const canEdit = contract?.status?.realStatus === 'open';
-  const normalizeDigits = value => String(value || '').replace(/\D/g, '');
-  const normalizeText = value => String(value || '').trim();
-
-  const extractPeopleId = person => {
-    if (!person) {
-      return '';
-    }
-
-    if (typeof person === 'string' || typeof person === 'number') {
-      return normalizeDigits(person);
-    }
-
-    return normalizeDigits(person?.['@id'] || person?.id || person?.people);
-  };
-
-  const resolvePeopleName = person => {
-    if (!person || typeof person !== 'object') {
-      return '';
-    }
-
-    return normalizeText(
-      person?.name || person?.alias || person?.nickname || person?.realname,
-    );
-  };
-
-  const getResolvedPeopleName = person => {
-    const directName = resolvePeopleName(person);
-    if (directName) {
-      return directName;
-    }
-
-    const personId = extractPeopleId(person);
-    return personId ? peopleNameById[personId] || '' : '';
-  };
-
-  const getContractPartyCandidates = currentContract => {
-    const participants = Array.isArray(currentContract?.peoples)
-      ? currentContract.peoples
-      : [];
-    const participantsOrdered = [...participants].sort((left, right) => {
-      const leftType = String(left?.peopleType || '').trim().toLowerCase();
-      const rightType = String(right?.peopleType || '').trim().toLowerCase();
-
-      const weight = type => {
-        if (type === 'provider') return 0;
-        if (type === 'contractor') return 1;
-        if (type === 'witness') return 2;
-        return 3;
-      };
-
-      return weight(leftType) - weight(rightType);
-    });
-
-    return [
-      ...participantsOrdered.map(entry => entry?.people),
-      currentContract?.client,
-      currentContract?.customer,
-      currentContract?.contractor,
-      currentContract?.people,
-      currentContract?.provider,
-    ].filter(Boolean);
-  };
-
-  const isCurrentCompanyPerson = person => {
-    const reference = String(
-      typeof person === 'object' ? person?.['@id'] || person?.id : person || '',
-    ).trim();
-    const companyId = normalizeDigits(currentCompany?.id);
-    if (!reference || !companyId) {
-      return false;
-    }
-
-    const referenceDigits = extractPeopleId(reference);
-    return (
-      reference === `/people/${companyId}` ||
-      reference === `/peoples/${companyId}` ||
-      referenceDigits === companyId
-    );
-  };
-
-  const isIgnoredContractPartyId = (currentContract, personId) => {
-    if (!personId) {
-      return true;
-    }
-
-    const companyId = normalizeDigits(currentCompany?.id);
-    const modelPeopleId = normalizeDigits(currentContract?.contractModel?.people);
-    const signerId = normalizeDigits(currentContract?.contractModel?.signer);
-
-    return [companyId, modelPeopleId, signerId].some(
-      referenceId => referenceId && referenceId === personId,
-    );
-  };
-
-  const getContractClientName = currentContract => {
-    const candidates = getContractPartyCandidates(currentContract);
-    for (const candidate of candidates) {
-      const personId = extractPeopleId(candidate);
-      if (personId && isIgnoredContractPartyId(currentContract, personId)) {
-        continue;
-      }
-
-      if (personId && isCurrentCompanyPerson(candidate)) {
-        continue;
-      }
-
-      const name = getResolvedPeopleName(candidate);
-      if (name) {
-        return name;
-      }
-    }
-
-    return '';
-  };
-
-  const isContractClientPendingResolution = currentContract => {
-    const candidates = getContractPartyCandidates(currentContract);
-    return candidates.some(candidate => {
-      const personId = extractPeopleId(candidate);
-      if (!personId || isIgnoredContractPartyId(currentContract, personId)) {
-        return false;
-      }
-
-      const name = getResolvedPeopleName(candidate);
-      return !name;
-    });
-  };
-
-  const clientName = getContractClientName(contract);
-  const clientLabel = clientName
-    ? clientName
-    : isContractClientPendingResolution(contract)
-    ? 'Carregando cliente...'
-    : 'Cliente nao informado';
 
   useLayoutEffect(() => {
-    navigation.setOptions({
-      headerTitle: '',
-      headerShadowVisible: false,
-      headerStyle: { backgroundColor: '#F8FAFC' },
-      headerRight: () => null,
-    });
+    navigation.setOptions({ headerShown: false });
   }, [navigation]);
 
   useEffect(() => {
@@ -328,69 +132,9 @@ const ContractDetails = () => {
     });
   }, [contractId, currentCompany?.id]);
 
-  useEffect(() => {
-    if (!contract || !peopleActions?.get) {
-      return;
-    }
-
-    const missingIds = new Set();
-
-    getContractPartyCandidates(contract).forEach(candidate => {
-      const personId = extractPeopleId(candidate);
-      if (!personId || isIgnoredContractPartyId(contract, personId)) {
-        return;
-      }
-
-      const name = getResolvedPeopleName(candidate);
-      if (!name && !peopleNameById[personId]) {
-        missingIds.add(personId);
-      }
-    });
-
-    if (missingIds.size === 0) {
-      return;
-    }
-
-    let cancelled = false;
-
-    (async () => {
-      const fetchedPeople = await Promise.all(
-        [...missingIds].map(async personId => {
-          try {
-            const person = await peopleActions.get(personId);
-            return {
-              personId,
-              name: resolvePeopleName(person),
-            };
-          } catch (error) {
-            return { personId, name: '' };
-          }
-        }),
-      );
-
-      if (cancelled) {
-        return;
-      }
-
-      setPeopleNameById(prev => {
-        const next = { ...prev };
-        fetchedPeople.forEach(({ personId, name }) => {
-          if (name && !next[personId]) {
-            next[personId] = name;
-          }
-        });
-        return next;
-      });
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [contract, currentCompany?.id, peopleActions, peopleNameById]);
-
   const handleSendPropostal = async () => {
     try {
-      console.log('Implementar logica de envio');
+      console.log('Implementar lógica de envio');
       showSuccess('Proposta enviada com sucesso');
 
       const updated = await contractActions.get(contractId);
@@ -410,7 +154,7 @@ const ContractDetails = () => {
 
   if (isLoading || !contract) {
     return (
-      <SafeAreaView style={styles.container} edges={['bottom']}>
+      <SafeAreaView style={styles.container}>
         <View style={styles.topSkeleton} />
         <View style={styles.infoSkeleton} />
         <View style={styles.tabsSkeleton} />
@@ -419,41 +163,54 @@ const ContractDetails = () => {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
-      <View style={styles.headerProfile}>
-        <View style={styles.avatarContainer}>
+    <SafeAreaView style={styles.container}>
+      <View style={styles.topHeader}>
+        <View style={styles.topAvatar}>
           <Icon name="description" size={32} color="#fff" />
         </View>
-        <Text style={styles.profileName} numberOfLines={1} ellipsizeMode="tail">
-          {contract.contractModel?.model || 'Proposta sem modelo'}
-        </Text>
-        <Text style={styles.profileId}>{`ID: ${contract.id}`}</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.topTitle} numberOfLines={1}>
+            {contract.contractModel?.model || 'Proposta sem modelo'}
+          </Text>
+          <Text style={styles.topSubtitle}>ID: {contract.id}</Text>
+        </View>
       </View>
 
-      <View style={styles.tabsHeader}>
+      <View style={styles.fixedInfo}>
+        <View
+          style={[
+            styles.statusBox,
+            {
+              backgroundColor: `${contract.status?.color || '#64748b'}20`,
+              borderColor: contract.status?.color || '#94a3b8',
+            },
+          ]}>
+          <Text style={[styles.statusText, { color: contract.status?.color || '#334155' }]}>
+            {contract.status?.status?.toUpperCase() || '—'}
+          </Text>
+        </View>
+
+        <View style={styles.datesRow}>
+          <View style={styles.dateBlock}>
+            <Text style={styles.dateLabel}>Início</Text>
+            <Text style={styles.dateValue}>
+              {contract.startDate ? new Date(contract.startDate).toLocaleDateString('pt-BR') : '—'}
+            </Text>
+          </View>
+          <View style={styles.dateBlock}>
+            <Text style={styles.dateLabel}>Término</Text>
+            <Text style={styles.dateValue}>
+              {contract.endDate ? new Date(contract.endDate).toLocaleDateString('pt-BR') : '—'}
+            </Text>
+          </View>
+        </View>
+      </View>
+
+      <View style={styles.tabs}>
         <TouchableOpacity
-          style={[styles.tabButton, activeTab === 0 && styles.tabButtonActive]}
+          style={[styles.tabItem, activeTab === 0 && styles.tabActive]}
           onPress={() => handleTabPress(0)}>
-          <Text
-            style={[
-              styles.tabButtonText,
-              activeTab === 0 && styles.tabButtonTextActive,
-            ]}>
-            Resumo
-          </Text>
-          {activeTab === 0 && <View style={styles.activeIndicator} />}
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tabButton, activeTab === 1 && styles.tabButtonActive]}
-          onPress={() => handleTabPress(1)}>
-          <Text
-            style={[
-              styles.tabButtonText,
-              activeTab === 1 && styles.tabButtonTextActive,
-            ]}>
-            Proposta
-          </Text>
-          {activeTab === 1 && <View style={styles.activeIndicator} />}
+          <Text style={[styles.tabLabel, activeTab === 0 && styles.tabLabelActive]}>Proposta</Text>
         </TouchableOpacity>
       </View>
 
@@ -462,18 +219,13 @@ const ContractDetails = () => {
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ flexGrow: 1 }}
         onScroll={(e) => {
           const idx = Math.round(e.nativeEvent.contentOffset.x / width);
           if (idx !== activeTab) setActiveTab(idx);
-        }}
-        scrollEventThrottle={16}
-        style={styles.contentContainer}>
-        <View style={{ width, flex: 1 }}>
-          <ResumoTab contract={contract} clientLabel={clientLabel} />
-        </View>
+        }}>
         <View style={{ width, flex: 1 }}>
           <PropostaTab
+            contract={contract}
             fileContent={fileContent}
             fileLoading={fileLoading}
             fileError={fileError}
@@ -487,166 +239,112 @@ const ContractDetails = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8FAFC' },
+  container: { flex: 1, backgroundColor: '#f8fafc' },
 
-  headerProfile: {
+  topHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 20,
-    backgroundColor: '#F8FAFC',
+    padding: 16,
+    paddingTop: Platform.OS === 'ios' ? 50 : 16,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e8f0',
   },
 
-  avatarContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+  topAvatar: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
+    marginRight: 16,
   },
 
-  profileName: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#0F172A',
-    marginBottom: 4,
-    textAlign: 'center',
-    maxWidth: '86%',
+  topTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#0f172a',
   },
 
-  profileId: {
+  topSubtitle: {
     fontSize: 14,
-    color: '#64748B',
-    fontWeight: '500',
+    color: '#64748b',
+    marginTop: 4,
   },
 
-  tabsHeader: {
-    flexDirection: 'row',
+  fixedInfo: {
     backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-  },
-
-  tabButton: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 16,
-    position: 'relative',
-  },
-
-  tabButtonActive: {},
-
-  tabButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#64748B',
-  },
-
-  tabButtonTextActive: {
-    color: colors.primary,
-    fontWeight: '700',
-  },
-
-  activeIndicator: {
-    position: 'absolute',
-    bottom: 0,
-    width: '60%',
-    height: 3,
-    backgroundColor: colors.primary,
-    borderTopLeftRadius: 3,
-    borderTopRightRadius: 3,
-  },
-
-  contentContainer: {
-    flex: 1,
-  },
-
-  tabScroll: { flex: 1 },
-
-  summaryCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
     padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 2,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e8f0',
   },
 
-  summaryHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  statusBox: {
+    alignSelf: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+    borderRadius: 30,
+    borderWidth: 1.5,
     marginBottom: 16,
-    gap: 12,
   },
 
-  statusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 999,
-    borderWidth: 1,
-  },
-
-  statusBadgeText: {
-    fontSize: 11,
-    fontWeight: '700',
+  statusText: {
+    fontSize: 17,
+    fontWeight: '800',
     textTransform: 'uppercase',
   },
 
-  summaryGrid: {
+  datesRow: {
     flexDirection: 'row',
-    gap: 10,
+    justifyContent: 'space-between',
   },
 
-  summaryItem: {
+  dateBlock: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 12,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  summaryItemWide: {
-    marginTop: 10,
+    alignItems: 'center',
+    paddingVertical: 10,
+    backgroundColor: '#f1f5f9',
+    borderRadius: 10,
+    marginHorizontal: 6,
   },
 
-  summaryLabel: {
-    fontSize: 12,
-    color: '#64748B',
-    fontWeight: '600',
-    marginBottom: 6,
+  dateLabel: { fontSize: 12, color: '#64748b', marginBottom: 4 },
+  dateValue: { fontSize: 16, fontWeight: '700', color: '#0f172a' },
+
+  tabs: {
+    flexDirection: 'row',
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e8f0',
   },
 
-  summaryValue: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#0F172A',
-  },
+  tabItem: { flex: 1, paddingVertical: 16, alignItems: 'center' },
+
+  tabActive: { borderBottomWidth: 3, borderBottomColor: colors.primary },
+
+  tabLabel: { fontSize: 15, fontWeight: '600', color: '#64748b' },
+
+  tabLabelActive: { color: colors.primary, fontWeight: '700' },
+
+  tabScroll: { flex: 1 },
 
   section: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
+    backgroundColor: '#fff',
+    borderRadius: 12,
     padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 2,
+    elevation: 1,
   },
 
-  sectionTitle: { fontSize: 18, fontWeight: '700', color: '#0F172A', marginBottom: 16 },
+  sectionTitle: { fontSize: 18, fontWeight: '700', marginBottom: 16 },
 
   centerContainer: { alignItems: 'center', paddingVertical: 60 },
 
-  loadingText: { marginTop: 16, color: '#64748B', fontSize: 15 },
+  loadingText: { marginTop: 16, color: '#64748b', fontSize: 15 },
 
   errorText: { color: colors.error, textAlign: 'center', padding: 24 },
 
-  htmlWrapper: { backgroundColor: '#FFFFFF' },
+  htmlWrapper: { backgroundColor: '#fff' },
 
   fixedSignButtonContainer: {
     position: 'absolute',
@@ -671,32 +369,21 @@ const styles = StyleSheet.create({
 
   signButtonText: { color: '#fff', fontSize: 16, fontWeight: '700', marginLeft: 12 },
 
-  topSkeleton: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: '#E2E8F0',
-    alignSelf: 'center',
-    marginTop: 20,
-    marginBottom: 12,
-  },
+  topSkeleton: { height: 100, backgroundColor: '#e2e8f0', margin: 16, borderRadius: 12 },
 
   infoSkeleton: {
-    height: 22,
-    width: 180,
-    backgroundColor: '#E2E8F0',
-    alignSelf: 'center',
+    height: 140,
+    backgroundColor: '#e2e8f0',
+    marginHorizontal: 16,
     marginBottom: 8,
-    borderRadius: 8,
+    borderRadius: 12,
   },
 
   tabsSkeleton: {
-    height: 14,
-    width: 90,
-    backgroundColor: '#E2E8F0',
-    alignSelf: 'center',
-    borderRadius: 8,
-    marginBottom: 24,
+    height: 56,
+    backgroundColor: '#e2e8f0',
+    marginHorizontal: 16,
+    borderRadius: 12,
   },
 });
 
