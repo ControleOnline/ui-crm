@@ -493,7 +493,7 @@ export default function CrmIndex() {
 
   const formatDate = dateString => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('pt-BR', {
+    return date.toLocaleDateString('pt-br', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
@@ -598,7 +598,7 @@ export default function CrmIndex() {
     const months = [
       tr('month', 'january', 'Janeiro'),
       tr('month', 'february', 'Fevereiro'),
-      tr('month', 'march', 'Março'),
+      tr('month', 'march', 'Marï¿½o'),
       tr('month', 'april', 'Abril'),
       tr('month', 'may', 'Maio'),
       tr('month', 'june', 'Junho'),
@@ -1197,7 +1197,7 @@ export default function CrmIndex() {
 
     if (
       normalizedTitle.includes('dia') ||
-      normalizedTitle.includes('mês') ||
+      normalizedTitle.includes('mï¿½s') ||
       normalizedTitle.includes('mes')
     ) {
       return {
@@ -1462,7 +1462,7 @@ export default function CrmIndex() {
                       <Text style={styles.personDocument}>
                         {typeof person.document === 'string'
                           ? person.document
-                          : 'Documento disponível'}
+                          : 'Documento disponï¿½vel'}
                       </Text>
                     )}
                   </View>
@@ -1627,7 +1627,7 @@ export default function CrmIndex() {
                     ? getMonthsArray().find(
                       m => m.id === editingOpportunity.dueDateMonth,
                     )?.name
-                    : tr('form', 'month', 'Mês')}
+                    : tr('form', 'month', 'Mï¿½s')}
                 </Text>
                 <Icon name="chevron-down" size={16} color="#7f8c8d" />
               </TouchableOpacity>
@@ -1804,7 +1804,7 @@ export default function CrmIndex() {
                     ? getMonthsArray().find(
                       m => m.id === newOpportunity.dueDateMonth,
                     )?.name
-                    : tr('form', 'month', 'Mês')}
+                    : tr('form', 'month', 'Mï¿½s')}
                 </Text>
                 <Icon name="chevron-down" size={16} color="#7f8c8d" />
               </TouchableOpacity>
@@ -2121,7 +2121,7 @@ export default function CrmIndex() {
 
       {
         renderSelectModal(
-          tr('modal', 'selectMonth', 'Selecionar Mês'),
+          tr('modal', 'selectMonth', 'Selecionar Mï¿½s'),
           getMonthsArray(),
           {
             id: editModalVisible
@@ -2166,7 +2166,7 @@ export default function CrmIndex() {
 
       {
         renderSelectModal(
-          tr('modal', 'selectMonth', 'Selecionar Mês'),
+          tr('modal', 'selectMonth', 'Selecionar Mï¿½s'),
           getMonthsArray(),
           {
             id: editModalVisible

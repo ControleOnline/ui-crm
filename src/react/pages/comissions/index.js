@@ -158,7 +158,7 @@ const Invoices = () => {
   }, [loadInvoices]);
 
   const formatCurrency = value =>
-    new Intl.NumberFormat('pt-BR', {
+    new Intl.NumberFormat('pt-br', {
       style: 'currency',
       currency: 'BRL',
     }).format(Number(value || 0));
@@ -167,7 +167,7 @@ const Invoices = () => {
     if (!dateString) return '-';
     const parsedDate = new Date(dateString);
     if (Number.isNaN(parsedDate.getTime())) return '-';
-    return parsedDate.toLocaleDateString('pt-BR');
+    return parsedDate.toLocaleDateString('pt-br');
   };
 
   const getStatusColor = status => status?.color || '#64748B';

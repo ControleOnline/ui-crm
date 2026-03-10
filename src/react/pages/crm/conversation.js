@@ -101,7 +101,7 @@ export default function CrmConversation() {
     return linkedPerson?.name || linkedPerson?.realname || tr('label', 'client', 'Cliente');
   }, [opportunity, people, tr]);
   const formatTime = timestamp =>
-    timestamp.toLocaleTimeString('pt-BR', {
+    timestamp.toLocaleTimeString('pt-br', {
       hour: '2-digit',
       minute: '2-digit',
     });
@@ -166,7 +166,7 @@ export default function CrmConversation() {
       return tr('date', 'yesterday', 'Ontem');
     }
 
-    return messageDate.toLocaleDateString('pt-BR', {
+    return messageDate.toLocaleDateString('pt-br', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
