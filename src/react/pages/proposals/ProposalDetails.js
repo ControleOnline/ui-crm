@@ -53,7 +53,7 @@ const ResumoTab = ({ contract, clientLabel }) => {
             <Text style={styles.summaryLabel}>Inicio</Text>
             <Text style={styles.summaryValue}>
               {contract?.startDate
-                ? new Date(contract.startDate).toLocaleDateString('pt-BR')
+                ? new Date(contract.startDate).toLocaleDateString('pt-br')
                 : '-'}
             </Text>
           </View>
@@ -61,7 +61,7 @@ const ResumoTab = ({ contract, clientLabel }) => {
             <Text style={styles.summaryLabel}>Termino</Text>
             <Text style={styles.summaryValue}>
               {contract?.endDate
-                ? new Date(contract.endDate).toLocaleDateString('pt-BR')
+                ? new Date(contract.endDate).toLocaleDateString('pt-br')
                 : '-'}
             </Text>
           </View>

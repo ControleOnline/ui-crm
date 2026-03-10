@@ -18,7 +18,7 @@ export const translateWithFallback = (store, type, key, fallback) => {
     }
   } catch (e) {}
 
-  const language = String(global.t?.language || configLanguage || 'pt-BR')
+  const language = String(global.t?.language || configLanguage || 'pt-br')
     .trim()
     .replace('_', '-')
     .toLowerCase();
