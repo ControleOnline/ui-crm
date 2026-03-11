@@ -116,7 +116,7 @@ export default function CrmIndex() {
     };
 
     return labels[normalized] || item?.status || global.t?.t('people','status', 'noStatus');
-  }, [tr]);
+  }, []);
 
   const getOptionIdentity = useCallback(item => {
     if (!item) {
@@ -258,7 +258,7 @@ export default function CrmIndex() {
     navigation.setOptions({
       headerTitle: global.t?.t('people','header', 'opportunities'),
     });
-  }, [navigation, tr]);
+  }, [navigation]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -608,11 +608,7 @@ export default function CrmIndex() {
       const reference = normalizePeopleReference(opportunity?.client);
       if (!reference) {
         showError?.(
-          tr(
-            'toast',
-            'providerNotIdentified',
-            'Nao foi possivel identificar o beneficiario desta oportunidade.',
-          ),
+          global.t?.t('people','toast', 'providerNotIdentified'),
         );
         return;
       }
@@ -1131,11 +1127,7 @@ export default function CrmIndex() {
       return {
         icon: 'tags',
         title: global.t?.t('people','modal', 'noCategories'),
-        subtitle: tr(
-          'modal',
-          'noCategoriesHint',
-          'Verifique se existem categorias cadastradas para esta empresa.',
-        ),
+        subtitle: global.t?.t('people','modal', 'noCategoriesHint'),
       };
     }
 
@@ -1143,11 +1135,7 @@ export default function CrmIndex() {
       return {
         icon: 'flag',
         title: global.t?.t('people','modal', 'noStatus'),
-        subtitle: tr(
-          'modal',
-          'noStatusHint',
-          'Verifique a configuracao de status disponivel no contexto atual.',
-        ),
+        subtitle: global.t?.t('people','modal', 'noStatusHint'),
       };
     }
 
@@ -1155,11 +1143,7 @@ export default function CrmIndex() {
       return {
         icon: 'exclamation-circle',
         title: global.t?.t('people','modal', 'noCriticalities'),
-        subtitle: tr(
-          'modal',
-          'noCriticalitiesHint',
-          'Verifique se ha opcoes cadastradas para esta empresa.',
-        ),
+        subtitle: global.t?.t('people','modal', 'noCriticalitiesHint'),
       };
     }
 
@@ -1167,18 +1151,13 @@ export default function CrmIndex() {
       return {
         icon: 'question-circle',
         title: global.t?.t('people','modal', 'noReasons'),
-        subtitle: tr(
-          'modal',
-          'noReasonsHint',
-          'Verifique se ha motivos cadastrados no contexto atual.',
-        ),
+        subtitle: global.t?.t('people','modal', 'noReasonsHint'),
       };
     }
 
     if (
       normalizedTitle.includes('dia') ||
-      normalizedTitle.includes('m�s') ||
-      normalizedTitle.includes('mes')
+      normalizedTitle.includes('mês')
     ) {
       return {
         icon: 'calendar',
