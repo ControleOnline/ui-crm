@@ -14,11 +14,8 @@ import { useStore } from '@store';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import AnimatedModal from '@controleonline/ui-crm/src/react/components/AnimatedModal';
 import useToastMessage from '../../hooks/useToastMessage';
-import translateWithFallback from '../../utils/translateWithFallback';
 
 const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
-  const tr = (type, key, fallback) =>
-    translateWithFallback('createProposalModal', type, key, fallback);
   const {showError} = useToastMessage();
   const contractStore = useStore('contract');
   const contractActions = contractStore.actions;
@@ -136,12 +133,12 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
   const handleSubmit = async () => {
     const startDate = formatDate(startYear, startMonth, startDay);
     if (!selectedModel) {
-      showError(tr('error', 'requiredFields', 'Por favor, preencha todos os campos obrigatorios.'));
+      showError(global.t?.t('contract','error', 'requiredFields'));
       return;
     }
 
     if (!startDate) {
-      showError(tr('error', 'invalidStartDate', 'Informe uma data de inicio valida.'));
+      showError(global.t?.t('contract','error', 'invalidStartDate'));
       return;
     }
 
@@ -157,7 +154,7 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
       handleClose();
     } catch (error) {
       console.error(error);
-      showError(tr('error', 'createFailed', 'Erro ao criar proposta. Tente novamente.'));
+      showError(global.t?.t('contract','error', 'createFailed'));
     } finally {
       setIsLoading(false);
     }
@@ -182,7 +179,7 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
         <View style={styles.pickerModalContent}>
           <View style={styles.pickerModalHeader}>
             <Text style={styles.pickerModalTitle}>
-              {tr('title', 'selectModel', 'Selecionar Modelo')}
+              {global.t?.t('contract','title', 'selectModel')}
             </Text>
             <TouchableOpacity onPress={() => setModelPickerVisible(false)}>
               <Icon name="close" size={24} color="#666666" />
@@ -193,7 +190,7 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="small" color="#2529a1" />
                 <Text style={styles.loadingText}>
-                  {tr('state', 'loadingModels', 'Carregando modelos...')}
+                  {global.t?.t('contract','state', 'loadingModels')}
                 </Text>
               </View>
             ) : contractModels.length > 0 ? (
@@ -220,7 +217,7 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
               <View style={styles.emptyState}>
                 <Icon name="description" size={48} color="#CCCCCC" />
                 <Text style={styles.emptyText}>
-                  {tr('state', 'noModelFound', 'Nenhum modelo encontrado')}
+                  {global.t?.t('contract','state', 'noModelFound')}
                 </Text>
               </View>
             )}
@@ -236,7 +233,7 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
         <View style={styles.pickerModalContent}>
           <View style={styles.pickerModalHeader}>
             <Text style={styles.pickerModalTitle}>
-              {tr('title', 'selectProvider', 'Selecionar Beneficiario')}
+              {global.t?.t('contract','title', 'selectProvider')}
             </Text>
             <TouchableOpacity onPress={() => setProviderPickerVisible(false)}>
               <Icon name="close" size={24} color="#666666" />
@@ -267,7 +264,7 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
               <View style={styles.emptyState}>
                 <Icon name="person-outline" size={48} color="#CCCCCC" />
                 <Text style={styles.emptyText}>
-                  {tr('state', 'noPeopleFound', 'Nenhuma pessoa encontrada')}
+                  {global.t?.t('contract','state', 'noPeopleFound')}
                 </Text>
               </View>
             )}
@@ -283,7 +280,7 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
         <View style={styles.pickerModalContent}>
           <View style={styles.pickerModalHeader}>
             <Text style={styles.pickerModalTitle}>
-              {tr('title', 'selectDay', 'Selecionar Dia')}
+              {global.t?.t('contract','title', 'selectDay')}
             </Text>
             <TouchableOpacity onPress={() => setDayPickerVisible(false)}>
               <Icon name="close" size={24} color="#666" />
@@ -309,18 +306,18 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
 
   const renderMonthPicker = () => {
     const months = [
-      tr('month', 'january', 'Janeiro'),
-      tr('month', 'february', 'Fevereiro'),
-      tr('month', 'march', 'Marco'),
-      tr('month', 'april', 'Abril'),
-      tr('month', 'may', 'Maio'),
-      tr('month', 'june', 'Junho'),
-      tr('month', 'july', 'Julho'),
-      tr('month', 'august', 'Agosto'),
-      tr('month', 'september', 'Setembro'),
-      tr('month', 'october', 'Outubro'),
-      tr('month', 'november', 'Novembro'),
-      tr('month', 'december', 'Dezembro'),
+      global.t?.t('contract','month', 'january'),
+      global.t?.t('contract','month', 'february'),
+      global.t?.t('contract','month', 'march'),
+      global.t?.t('contract','month', 'april'),
+      global.t?.t('contract','month', 'may'),
+      global.t?.t('contract','month', 'june'),
+      global.t?.t('contract','month', 'july'),
+      global.t?.t('contract','month', 'august'),
+      global.t?.t('contract','month', 'september'),
+      global.t?.t('contract','month', 'october'),
+      global.t?.t('contract','month', 'november'),
+      global.t?.t('contract','month', 'december'),
     ];
     return (
       <Modal transparent visible={monthPickerVisible} animationType="slide" onRequestClose={() => setMonthPickerVisible(false)}>
@@ -328,7 +325,7 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
           <View style={styles.pickerModalContent}>
             <View style={styles.pickerModalHeader}>
               <Text style={styles.pickerModalTitle}>
-                {tr('title', 'selectMonth', 'Selecionar Mes')}
+                {global.t?.t('contract','title', 'selectMonth')}
               </Text>
               <TouchableOpacity onPress={() => setMonthPickerVisible(false)}>
                 <Icon name="close" size={24} color="#666" />
@@ -358,7 +355,7 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
       <View style={styles.modalContainer}>
         <View style={styles.modalHeader}>
           <Text style={styles.modalTitle}>
-            {tr('title', 'createProposal', 'Criar Nova Proposta')}
+            {global.t?.t('contract','title', 'createProposal')}
           </Text>
           <TouchableOpacity onPress={handleClose} style={styles.headerCloseButton}>
             <Icon name="close" size={20} color="#64748B" />
@@ -372,7 +369,7 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
           keyboardDismissMode="on-drag">
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>
-              {tr('label', 'proposalModel', 'Modelo da Proposta')} <Text style={styles.required}>*</Text>
+              {global.t?.t('contract','label', 'proposalModel')} <Text style={styles.required}>*</Text>
             </Text>
             <TouchableOpacity style={styles.selectInput} onPress={() => setModelPickerVisible(true)}>
               <View style={styles.selectInputContent}>
@@ -380,7 +377,7 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
                 <Text style={[styles.selectInputText, { color: selectedModel ? '#1A1A1A' : '#999999' }]}>
                   {selectedModel
                     ? contractModels.find(m => m['@id'] === selectedModel)?.model
-                    : tr('placeholder', 'selectModel', 'Selecionar modelo')}
+                    : global.t?.t('contract','placeholder', 'selectModel')}
                 </Text>
               </View>
               <Icon name="keyboard-arrow-down" size={24} color="#666666" />
@@ -389,12 +386,12 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
 
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>
-              {tr('label', 'startDate', 'Data de Inicio')} <Text style={styles.required}>*</Text>
+              {global.t?.t('contract','label', 'startDate')} <Text style={styles.required}>*</Text>
             </Text>
             <View style={styles.dateContainer}>
               <TouchableOpacity style={styles.selectInputDate} onPress={() => setDayPickerVisible(true)}>
                 <Text style={[styles.selectInputText, !startDay && { color: '#999' }]}>
-                  {startDay || tr('placeholder', 'day', 'Dia')}
+                  {startDay || global.t?.t('contract','placeholder', 'day')}
                 </Text>
                 <Icon name="arrow-drop-down" size={20} color="#666" />
               </TouchableOpacity>
@@ -402,20 +399,20 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
                 <Text style={[styles.selectInputText, !startMonth && { color: '#999' }]}>
                   {startMonth
                     ? [
-                        tr('monthShort', 'jan', 'Jan'),
-                        tr('monthShort', 'feb', 'Fev'),
-                        tr('monthShort', 'mar', 'Mar'),
-                        tr('monthShort', 'apr', 'Abr'),
-                        tr('monthShort', 'may', 'Mai'),
-                        tr('monthShort', 'jun', 'Jun'),
-                        tr('monthShort', 'jul', 'Jul'),
-                        tr('monthShort', 'aug', 'Ago'),
-                        tr('monthShort', 'sep', 'Set'),
-                        tr('monthShort', 'oct', 'Out'),
-                        tr('monthShort', 'nov', 'Nov'),
-                        tr('monthShort', 'dec', 'Dez'),
+                        global.t?.t('contract','monthShort', 'jan'),
+                        global.t?.t('contract','monthShort', 'feb'),
+                        global.t?.t('contract','monthShort', 'mar'),
+                        global.t?.t('contract','monthShort', 'apr'),
+                        global.t?.t('contract','monthShort', 'may'),
+                        global.t?.t('contract','monthShort', 'jun'),
+                        global.t?.t('contract','monthShort', 'jul'),
+                        global.t?.t('contract','monthShort', 'aug'),
+                        global.t?.t('contract','monthShort', 'sep'),
+                        global.t?.t('contract','monthShort', 'oct'),
+                        global.t?.t('contract','monthShort', 'nov'),
+                        global.t?.t('contract','monthShort', 'dec'),
                       ][parseInt(startMonth) - 1]
-                    : tr('placeholder', 'month', 'Mes')}
+                    : global.t?.t('contract','placeholder', 'month')}
                 </Text>
                 <Icon name="arrow-drop-down" size={20} color="#666" />
               </TouchableOpacity>
@@ -441,7 +438,7 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
               Keyboard.dismiss();
               handleClose();
             }}>
-            <Text style={styles.cancelButtonText}>{tr('action', 'cancel', 'Cancelar')}</Text>
+            <Text style={styles.cancelButtonText}>{global.t?.t('contract','action', 'cancel')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[
@@ -457,7 +454,7 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
               isLoading || !selectedModel || !formatDate(startYear, startMonth, startDay)
             }>
             {isLoading ? <ActivityIndicator size="small" color="#FFFFFF" /> : (
-              <Text style={styles.createButtonText}>{tr('action', 'save', 'Salvar')}</Text>
+              <Text style={styles.createButtonText}>{global.t?.t('contract','action', 'save')}</Text>
             )}
           </TouchableOpacity>
         </View>
@@ -588,4 +585,3 @@ const styles = StyleSheet.create({
 });
 
 export default CreateProposalsModal;
-

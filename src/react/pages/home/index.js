@@ -774,7 +774,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   shortcutLabel: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '700',
     color: '#0F172A',
     marginBottom: 2,

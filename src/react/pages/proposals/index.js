@@ -19,14 +19,8 @@ import IconAdd from 'react-native-vector-icons/MaterialIcons';
 import MaterialIcon from 'react-native-vector-icons/MaterialIcons';
 import CreateProposalsModal from './CreateProposalsModal';
 import Formatter from '@controleonline/ui-common/src/utils/formatter';
-import translateWithFallback from '../../utils/translateWithFallback';
 
 const ProposalsPage = () => {
-  const tr = useCallback(
-    (type, key, fallback) =>
-      translateWithFallback('proposals', type, key, fallback),
-    [],
-  );
   const peopleStore = useStore('people');
   const { currentCompany } = peopleStore.getters;
   const peopleActions = peopleStore.actions;
@@ -275,7 +269,7 @@ const ProposalsPage = () => {
 
   useLayoutEffect(() => {
     navigation.setOptions({
-      headerTitle: tr('title', 'page', 'Propostas'),
+      headerTitle: global.t?.t('contract','title', 'page'),
     });
   }, [navigation, tr]);
 
@@ -362,29 +356,29 @@ const ProposalsPage = () => {
   const getStatusLabel = status => {
     const normalized = normalizeStatusKey(status);
     const map = {
-      ativo: tr('status', 'active', 'Ativo'),
-      active: tr('status', 'active', 'Ativo'),
-      inativo: tr('status', 'inactive', 'Inativo'),
-      inactive: tr('status', 'inactive', 'Inativo'),
-      pendente: tr('status', 'pending', 'Pendente'),
-      pending: tr('status', 'pending', 'Pendente'),
-      open: tr('status', 'open', 'Aberto'),
-      aberto: tr('status', 'open', 'Aberto'),
-      closed: tr('status', 'closed', 'Fechado'),
-      fechado: tr('status', 'closed', 'Fechado'),
-      cancelado: tr('status', 'canceled', 'Cancelado'),
-      cancelled: tr('status', 'canceled', 'Cancelado'),
-      canceled: tr('status', 'canceled', 'Cancelado'),
-      'waiting signature': tr('status', 'waitingSignature', 'Aguardando Assinatura'),
-      'awaiting signature': tr('status', 'waitingSignature', 'Aguardando Assinatura'),
-      'signature pending': tr('status', 'waitingSignature', 'Aguardando Assinatura'),
-      assinado: tr('status', 'signed', 'Assinado'),
-      signed: tr('status', 'signed', 'Assinado'),
-      draft: tr('status', 'draft', 'Rascunho'),
-      rascunho: tr('status', 'draft', 'Rascunho'),
+      ativo: global.t?.t('contract','status', 'active'),
+      active: global.t?.t('contract','status', 'active'),
+      inativo: global.t?.t('contract','status', 'inactive'),
+      inactive: global.t?.t('contract','status', 'inactive'),
+      pendente: global.t?.t('contract','status', 'pending'),
+      pending: global.t?.t('contract','status', 'pending'),
+      open: global.t?.t('contract','status', 'open'),
+      aberto: global.t?.t('contract','status', 'open'),
+      closed: global.t?.t('contract','status', 'closed'),
+      fechado: global.t?.t('contract','status', 'closed'),
+      cancelado: global.t?.t('contract','status', 'canceled'),
+      cancelled: global.t?.t('contract','status', 'canceled'),
+      canceled: global.t?.t('contract','status', 'canceled'),
+      'waiting signature': global.t?.t('contract','status', 'waitingSignature'),
+      'awaiting signature': global.t?.t('contract','status', 'waitingSignature'),
+      'signature pending': global.t?.t('contract','status', 'waitingSignature'),
+      assinado: global.t?.t('contract','status', 'signed'),
+      signed: global.t?.t('contract','status', 'signed'),
+      draft: global.t?.t('contract','status', 'draft'),
+      rascunho: global.t?.t('contract','status', 'draft'),
     };
 
-    return map[normalized] || status || tr('label', 'na', '-');
+    return map[normalized] || status || global.t?.t('contract','label', 'na');
   };
 
   const getStatusFilterKey = useCallback(
@@ -504,7 +498,7 @@ const ProposalsPage = () => {
       <View style={styles.cardHeader}>
         <View style={styles.headerContent}>
           <Text style={styles.cardTitle}>
-            {contract.contractModel?.model || tr('label', 'untitled', 'Sem titulo')}
+            {contract.contractModel?.model || global.t?.t('contract','label', 'untitled')}
           </Text>
           <View style={[styles.statusBadge, { backgroundColor: getStatusColor(contract.status?.status) }]}>
             <Text style={styles.statusText}>{getStatusLabel(contract.status?.status)}</Text>
@@ -519,14 +513,14 @@ const ProposalsPage = () => {
           const clientLabel = clientName
             ? clientName
             : isPendingClient
-            ? tr('label', 'loadingClient', 'Carregando cliente...')
-            : tr('label', 'clientNotInformed', 'Cliente nao informado');
+            ? global.t?.t('contract','label', 'loadingClient')
+            : global.t?.t('contract','label', 'clientNotInformed');
 
           return (
             <View style={styles.clientRow}>
               <MaterialIcon name="person" size={14} color="#64748B" />
               <Text style={styles.clientText}>
-                {tr('label', 'client', 'Cliente')}: {clientLabel}
+                {global.t?.t('contract','label', 'client')}: {clientLabel}
               </Text>
             </View>
           );
@@ -536,14 +530,14 @@ const ProposalsPage = () => {
           <View style={styles.dateBadge}>
             <MaterialIcon name="event" size={14} color="#64748B" />
             <Text style={styles.dateText}>
-              {tr('label', 'startDate', 'Inicio')}: {contract.startDate ? Formatter.formatDateYmdTodmY(contract.startDate) : tr('label', 'na', '-')}
+              {global.t?.t('contract','label', 'startDate')}: {contract.startDate ? Formatter.formatDateYmdTodmY(contract.startDate) : global.t?.t('contract','label', 'na')}
             </Text>
           </View>
           {contract.endDate && (
             <View style={styles.dateBadge}>
               <MaterialIcon name="event-available" size={14} color="#64748B" />
               <Text style={styles.dateText}>
-                {tr('label', 'endDate', 'Fim')}: {Formatter.formatDateYmdTodmY(contract.endDate)}
+                {global.t?.t('contract','label', 'endDate')}: {Formatter.formatDateYmdTodmY(contract.endDate)}
               </Text>
             </View>
           )}
@@ -551,7 +545,7 @@ const ProposalsPage = () => {
       </View>
 
       <View style={styles.cardFooter}>
-        <Text style={styles.viewDetailsText}>{tr('action', 'viewDetails', 'Ver detalhes')}</Text>
+        <Text style={styles.viewDetailsText}>{global.t?.t('contract','action', 'viewDetails')}</Text>
         <Icon name="chevron-right" size={12} color={colors.primary} />
       </View>
     </TouchableOpacity>
@@ -565,7 +559,7 @@ const ProposalsPage = () => {
             <Icon name="search" size={16} color="#94A3B8" />
             <TextInput
               style={styles.searchInput}
-              placeholder={tr('placeholder', 'search', 'Buscar proposta...')}
+              placeholder={global.t?.t('contract','placeholder', 'search')}
               placeholderTextColor="#94A3B8"
               value={search}
               onChangeText={setSearch}
@@ -588,7 +582,7 @@ const ProposalsPage = () => {
         </View>
 
         <View style={styles.statusFilterSection}>
-          <Text style={styles.statusFilterLabel}>{tr('label', 'status', 'Status')}</Text>
+          <Text style={styles.statusFilterLabel}>{global.t?.t('contract','label', 'status')}</Text>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -604,7 +598,7 @@ const ProposalsPage = () => {
                   styles.statusFilterChipText,
                   !selectedStatusFilterKey && styles.statusFilterChipTextActive,
                 ]}>
-                {tr('filter', 'all', 'Todos')}
+                {global.t?.t('contract','filter', 'all')}
               </Text>
             </TouchableOpacity>
 
@@ -650,7 +644,7 @@ const ProposalsPage = () => {
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color={colors.primary} />
                 <Text style={styles.loadingText}>
-                  {tr('state', 'loading', 'Carregando propostas...')}
+                  {global.t?.t('contract','state', 'loading')}
                 </Text>
               </View>
             );
@@ -660,7 +654,7 @@ const ProposalsPage = () => {
               <View style={styles.emptyContainer}>
                 <MaterialIcon name="error-outline" size={48} color="#EF4444" />
                 <Text style={styles.emptyTitle}>
-                  {tr('state', 'errorTitle', 'Erro ao carregar')}
+                  {global.t?.t('contract','state', 'errorTitle')}
                 </Text>
                 <Text style={styles.emptySubtitle}>{error}</Text>
               </View>
@@ -672,20 +666,20 @@ const ProposalsPage = () => {
                 <Icon name="file-text-o" size={48} color="#CBD5E1" />
                 <Text style={styles.emptyTitle}>
                   {selectedStatusFilterKey
-                    ? tr('state', 'emptyByStatus', 'Nenhuma proposta com este status')
-                    : tr('state', 'empty', 'Nenhuma proposta encontrada')}
+                    ? global.t?.t('contract','state', 'emptyByStatus')
+                    : global.t?.t('contract','state', 'empty')}
                 </Text>
                 {searchQuery ? (
                   <Text style={styles.emptySubtitle}>
-                    {tr('state', 'searchTip', 'Tente buscar por outro termo')}
+                    {global.t?.t('contract','state', 'searchTip')}
                   </Text>
                 ) : selectedStatusFilterKey ? (
                   <Text style={styles.emptySubtitle}>
-                    {tr('state', 'statusTip', 'Selecione outro status')}
+                    {global.t?.t('contract','state', 'statusTip')}
                   </Text>
                 ) : (
                   <Text style={styles.emptySubtitle}>
-                    {tr('state', 'createTip', 'Use o botao + para criar uma nova proposta')}
+                    {global.t?.t('contract','state', 'createTip')}
                   </Text>
                 )}
               </View>
@@ -922,4 +916,3 @@ const styles = StyleSheet.create({
 });
 
 export default ProposalsPage;
-

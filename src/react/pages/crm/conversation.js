@@ -16,14 +16,8 @@ import {useStore} from '@store';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import useToastMessage from '../../hooks/useToastMessage';
 import {colors} from '@controleonline/../../src/styles/colors';
-import translateWithFallback from '../../utils/translateWithFallback';
 
 export default function CrmConversation() {
-  const tr = useCallback(
-    (type, key, fallback) =>
-      translateWithFallback('crmConversation', type, key, fallback),
-    [],
-  );
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState([]);
   const scrollViewRef = useRef(null);
@@ -91,14 +85,14 @@ export default function CrmConversation() {
 
     const clientRef = normalizePeopleReference(opportunity?.client);
     if (!clientRef || !Array.isArray(people)) {
-      return tr('label', 'client', 'Cliente');
+      return global.t?.t('users','label', 'client', 'Cliente');
     }
 
     const linkedPerson = people.find(
       person => normalizePeopleReference(person) === clientRef,
     );
 
-    return linkedPerson?.name || linkedPerson?.realname || tr('label', 'client', 'Cliente');
+    return linkedPerson?.name || linkedPerson?.realname || global.t?.t('users','label', 'client', 'Cliente');
   }, [opportunity, people, tr]);
   const formatTime = timestamp =>
     timestamp.toLocaleTimeString('pt-br', {
@@ -108,7 +102,7 @@ export default function CrmConversation() {
 
   useEffect(() => {
     if (!opportunity) {
-      showError(tr('error', 'opportunityNotFound', 'Oportunidade nao encontrada para abrir a conversa.'));
+      showError(global.t?.t('users','error', 'opportunityNotFound', 'Oportunidade nao encontrada para abrir a conversa.'));
       navigation.goBack();
     }
   }, [opportunity, navigation, showError, tr]);
@@ -120,7 +114,7 @@ export default function CrmConversation() {
 
     actions.getItems({task: taskResource}).catch(error => {
       console.error('Erro ao carregar conversa:', error);
-      showError(tr('error', 'loadMessages', 'Nao foi possivel carregar as mensagens da conversa.'));
+      showError(global.t?.t('users','error', 'loadMessages', 'Nao foi possivel carregar as mensagens da conversa.'));
     });
   }, [taskResource, actions, showError, tr]);
 
@@ -156,14 +150,14 @@ export default function CrmConversation() {
     const messageDate = new Date(timestamp);
 
     if (messageDate.toDateString() === today.toDateString()) {
-      return tr('date', 'today', 'Hoje');
+      return global.t?.t('users','date', 'today', 'Hoje');
     }
 
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
 
     if (messageDate.toDateString() === yesterday.toDateString()) {
-      return tr('date', 'yesterday', 'Ontem');
+      return global.t?.t('users','date', 'yesterday', 'Ontem');
     }
 
     return messageDate.toLocaleDateString('pt-br', {
@@ -191,7 +185,7 @@ export default function CrmConversation() {
       await actions.getItems?.({task: taskResource});
     } catch (error) {
       console.error('Erro ao enviar mensagem:', error);
-      showError(tr('error', 'sendMessage', 'Nao foi possivel enviar a mensagem.'));
+      showError(global.t?.t('users','error', 'sendMessage', 'Nao foi possivel enviar a mensagem.'));
     }
   };
 
@@ -296,10 +290,10 @@ export default function CrmConversation() {
               <IconMaterial name="chat-bubble-outline" size={72} color="#94A3B8" />
             </View>
             <Text style={styles.emptyStateTitle}>
-              {tr('state', 'emptyTitle', 'Nenhuma mensagem ainda')}
+              {global.t?.t('users','state', 'emptyTitle', 'Nenhuma mensagem ainda')}
             </Text>
             <Text style={styles.emptyStateSubtitle}>
-              {tr('state', 'emptySubtitle', 'Inicie a conversa enviando a primeira mensagem.')}
+              {global.t?.t('users','state', 'emptySubtitle', 'Inicie a conversa enviando a primeira mensagem.')}
             </Text>
           </View>
         ) : (
@@ -313,7 +307,7 @@ export default function CrmConversation() {
             style={styles.textInput}
             value={message}
             onChangeText={setMessage}
-            placeholder={tr('placeholder', 'message', 'Digite uma mensagem...')}
+            placeholder={global.t?.t('users','placeholder', 'message', 'Digite uma mensagem...')}
             placeholderTextColor="#7A8794"
             multiline={false}
             maxLength={1000}

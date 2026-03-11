@@ -16,14 +16,8 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 
 import { useStore } from '@store';
 import AnimatedModal from '../../components/AnimatedModal';
-import translateWithFallback from '../../utils/translateWithFallback';
 
 const Invoices = () => {
-  const tr = useCallback(
-    (type, key, fallback) =>
-      translateWithFallback('comissions', type, key, fallback),
-    [],
-  );
 
   const invoiceStore = useStore('invoice');
   const peopleStore = useStore('people');
@@ -49,19 +43,19 @@ const Invoices = () => {
 
   const monthOptions = useMemo(
     () => [
-      { id: '0', label: tr('month', 'all', 'Todos') },
-      { id: '1', label: tr('month', 'jan', 'Jan') },
-      { id: '2', label: tr('month', 'feb', 'Fev') },
-      { id: '3', label: tr('month', 'mar', 'Mar') },
-      { id: '4', label: tr('month', 'apr', 'Abr') },
-      { id: '5', label: tr('month', 'may', 'Mai') },
-      { id: '6', label: tr('month', 'jun', 'Jun') },
-      { id: '7', label: tr('month', 'jul', 'Jul') },
-      { id: '8', label: tr('month', 'aug', 'Ago') },
-      { id: '9', label: tr('month', 'sep', 'Set') },
-      { id: '10', label: tr('month', 'oct', 'Out') },
-      { id: '11', label: tr('month', 'nov', 'Nov') },
-      { id: '12', label: tr('month', 'dec', 'Dez') },
+      { id: '0', label: global.t?.t('people','month', 'all') },
+      { id: '1', label: global.t?.t('people','month', 'jan') },
+      { id: '2', label: global.t?.t('people','month', 'feb') },
+      { id: '3', label: global.t?.t('people','month', 'mar') },
+      { id: '4', label: global.t?.t('people','month', 'apr') },
+      { id: '5', label: global.t?.t('people','month', 'may') },
+      { id: '6', label: global.t?.t('people','month', 'jun') },
+      { id: '7', label: global.t?.t('people','month', 'jul') },
+      { id: '8', label: global.t?.t('people','month', 'aug') },
+      { id: '9', label: global.t?.t('people','month', 'sep') },
+      { id: '10', label: global.t?.t('people','month', 'oct') },
+      { id: '11', label: global.t?.t('people','month', 'nov') },
+      { id: '12', label: global.t?.t('people','month', 'dec') },
     ],
     [tr],
   );
@@ -190,7 +184,7 @@ const Invoices = () => {
   pageChildren.push(
     <View key="filters" style={styles.filtersContainer}>
       <View style={styles.yearRow}>
-        <Text style={styles.filterLabel}>{tr('label', 'year', 'Ano')}</Text>
+        <Text style={styles.filterLabel}>{global.t?.t('people','label', 'year')}</Text>
         <View style={styles.yearControl}>
           <TouchableOpacity
             style={styles.yearStepButton}
@@ -214,7 +208,7 @@ const Invoices = () => {
             }}
             keyboardType="numeric"
             style={styles.yearInput}
-            placeholder={tr('placeholder', 'year', 'AAAA')}
+            placeholder={global.t?.t('people','placeholder', 'year')}
             placeholderTextColor="#94A3B8"
           />
           <TouchableOpacity
@@ -265,13 +259,13 @@ const Invoices = () => {
   if (error) {
     pageChildren.push(
       <View key="error" style={styles.centerState}>
-        <Text style={styles.errorTitle}>{tr('state', 'errorTitle', 'Erro')}</Text>
+        <Text style={styles.errorTitle}>{global.t?.t('people','state', 'errorTitle')}</Text>
         <Text style={styles.errorSubtitle}>
-          {tr('state', 'errorSubtitle', 'Erro ao carregar faturas')}
+          {global.t?.t('people','state', 'errorSubtitle')}
         </Text>
         <TouchableOpacity style={styles.retryButton} onPress={loadInvoices}>
           <Text style={styles.retryButtonText}>
-            {tr('action', 'retry', 'Tentar novamente')}
+            {global.t?.t('people','action', 'retry')}
           </Text>
         </TouchableOpacity>
       </View>,
@@ -282,7 +276,7 @@ const Invoices = () => {
     pageChildren.push(
       <View key="empty" style={styles.centerState}>
         <Text style={styles.emptyText}>
-          {tr('state', 'empty', 'Nenhuma fatura encontrada')}
+          {global.t?.t('people','state', 'empty')}
         </Text>
       </View>,
     );
@@ -300,20 +294,20 @@ const Invoices = () => {
           {invoices.map((invoice, index) => {
             const cardMetaChildren = [
               <Text key="category" style={styles.metaLine}>
-                {tr('label', 'category', 'Categoria')}: {invoice?.category?.name || tr('label', 'noCategory', 'Sem categoria')}
+                {global.t?.t('people','label', 'category')}: {invoice?.category?.name || global.t?.t('people','label', 'noCategory')}
               </Text>,
               <Text key="payment" style={styles.metaLine}>
-                {tr('label', 'payment', 'Pagamento')}: {invoice?.paymentType?.paymentType || tr('label', 'na', 'N/A')}
+                {global.t?.t('people','label', 'payment')}: {invoice?.paymentType?.paymentType || global.t?.t('people','label', 'n/a?')}
               </Text>,
               <Text key="due" style={styles.metaLine}>
-                {tr('label', 'dueDate', 'Vencimento')}: {formatDate(invoice?.dueDate)}
+                {global.t?.t('people','label', 'dueDate')}: {formatDate(invoice?.dueDate)}
               </Text>,
             ];
 
             if (invoice?.sourceWallet) {
               cardMetaChildren.push(
                 <Text key="source" style={styles.metaLine}>
-                  {tr('label', 'from', 'De')}: {invoice.sourceWallet.wallet}
+                  {global.t?.t('people','label', 'from')}: {invoice.sourceWallet.wallet}
                 </Text>,
               );
             }
@@ -321,7 +315,7 @@ const Invoices = () => {
             if (invoice?.destinationWallet) {
               cardMetaChildren.push(
                 <Text key="destination" style={styles.metaLine}>
-                  {tr('label', 'to', 'Para')}: {invoice.destinationWallet.wallet}
+                  {global.t?.t('people','label', 'to')}: {invoice.destinationWallet.wallet}
                 </Text>,
               );
             }
@@ -333,14 +327,14 @@ const Invoices = () => {
                 onPress={() => handleInvoicePress(invoice)}>
                 <View style={styles.cardHeader}>
                   <Text style={styles.cardTitle}>
-                    {tr('label', 'invoice', 'Fatura')} #{invoice?.id || '-'}
+                    {global.t?.t('people','label', 'invoice')} #{invoice?.id || '-'}
                   </Text>
                   <Text
                     style={[
                       styles.statusPill,
                       { backgroundColor: getStatusColor(invoice?.status) },
                     ]}>
-                    {(invoice?.status?.status || tr('label', 'na', 'N/A')).toUpperCase()}
+                    {(invoice?.status?.status || global.t?.t('people','label', 'n/a ??')).toUpperCase()}
                   </Text>
                 </View>
                 <Text style={styles.amount}>{formatCurrency(invoice?.price)}</Text>
@@ -364,7 +358,7 @@ const Invoices = () => {
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>
-              {tr('title', 'invoiceDetails', 'Detalhes da fatura')}
+              {global.t?.t('people','title', 'invoiceDetails')}
             </Text>
             <TouchableOpacity
               onPress={() => setInvoiceDetailsVisible(false)}
@@ -388,7 +382,7 @@ const Invoices = () => {
                 <Text style={styles.modalStatusText}>
                   {(
                     selectedInvoice?.status?.status ||
-                    tr('label', 'na', 'N/A')
+                    global.t?.t('people','label', 'n/a')
                   ).toUpperCase()}
                 </Text>
               </View>
@@ -397,7 +391,7 @@ const Invoices = () => {
             <View style={styles.modalDetailsCard}>
               <View style={styles.modalDetailRow}>
                 <Text style={styles.modalDetailLabel}>
-                  {tr('label', 'id', 'ID')}
+                  {global.t?.t('people','label', 'id')}
                 </Text>
                 <Text style={styles.modalDetailValue}>
                   #{selectedInvoice?.id || '-'}
@@ -405,25 +399,25 @@ const Invoices = () => {
               </View>
               <View style={styles.modalDetailRow}>
                 <Text style={styles.modalDetailLabel}>
-                  {tr('label', 'category', 'Categoria')}
+                  {global.t?.t('people','label', 'category')}
                 </Text>
                 <Text style={styles.modalDetailValue}>
                   {selectedInvoice?.category?.name ||
-                    tr('label', 'noCategory', 'Sem categoria')}
+                    global.t?.t('people','label', 'noCategory')}
                 </Text>
               </View>
               <View style={styles.modalDetailRow}>
                 <Text style={styles.modalDetailLabel}>
-                  {tr('label', 'payment', 'Pagamento')}
+                  {global.t?.t('people','label', 'payment')}
                 </Text>
                 <Text style={styles.modalDetailValue}>
                   {selectedInvoice?.paymentType?.paymentType ||
-                    tr('label', 'na', 'N/A')}
+                    global.t?.t('people','label', 'n/a??')}
                 </Text>
               </View>
               <View style={styles.modalDetailRow}>
                 <Text style={styles.modalDetailLabel}>
-                  {tr('label', 'dueDate', 'Vencimento')}
+                  {global.t?.t('people','label', 'dueDate')}
                 </Text>
                 <Text style={styles.modalDetailValue}>
                   {formatDate(selectedInvoice?.dueDate)}
@@ -431,7 +425,7 @@ const Invoices = () => {
               </View>
               <View style={styles.modalDetailRow}>
                 <Text style={styles.modalDetailLabel}>
-                  {tr('label', 'from', 'De')}
+                  {global.t?.t('people','label', 'from')}
                 </Text>
                 <Text style={styles.modalDetailValue}>
                   {selectedInvoice?.sourceWallet?.wallet || '-'}
@@ -439,7 +433,7 @@ const Invoices = () => {
               </View>
               <View style={styles.modalDetailRow}>
                 <Text style={styles.modalDetailLabel}>
-                  {tr('label', 'to', 'Para')}
+                  {global.t?.t('people','label', 'to')}
                 </Text>
                 <Text style={styles.modalDetailValue}>
                   {selectedInvoice?.destinationWallet?.wallet || '-'}
@@ -453,7 +447,7 @@ const Invoices = () => {
               style={styles.modalPrimaryButton}
               onPress={() => setInvoiceDetailsVisible(false)}>
               <Text style={styles.modalPrimaryButtonText}>
-                {tr('action', 'close', 'Fechar')}
+                {global.t?.t('people','action', 'close')}
               </Text>
             </TouchableOpacity>
           </View>
