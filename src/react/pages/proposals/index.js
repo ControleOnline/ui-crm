@@ -271,7 +271,7 @@ const ProposalsPage = () => {
     navigation.setOptions({
       headerTitle: global.t?.t('contract','title', 'page'),
     });
-  }, [navigation, tr]);
+  }, [navigation]);
 
   useEffect(() => {
     const t = setTimeout(() => {
