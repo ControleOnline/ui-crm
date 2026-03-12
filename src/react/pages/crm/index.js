@@ -16,7 +16,7 @@ import IconWhatsApp from 'react-native-vector-icons/FontAwesome';
 
 import AnimatedModal from '../../components/AnimatedModal';
 import { FlatList } from 'react-native';
-
+import { env } from '@env';
 import { useStore } from '@store';
 import { colors } from '@controleonline/../../src/styles/colors';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -27,7 +27,7 @@ const FONT_AWESOME_GLYPH_MAP = Icon?.getRawGlyphMap
   : null;
 
 export default function CrmIndex() {
-  const {showSuccess, showError} = useToastMessage();
+  const { showSuccess, showError } = useToastMessage();
   const navigation = useNavigation();
   const [refreshing, setRefreshing] = useState(false);
   const [editingOpportunity, setEditingOpportunity] = useState(null);
@@ -80,6 +80,10 @@ export default function CrmIndex() {
   const categoriesActions = categoriesStore.actions;
   const { items: categories } = categoriesGetters;
   const { currentCompany, items: people, isLoading: isPeopleLoading } = getters;
+  const authStore = useStore('auth');
+  const authGetters = authStore.getters;
+  const { user } = authGetters;
+
 
   const getStatusFilterKey = useCallback(item => {
     if (!item) {
@@ -106,16 +110,16 @@ export default function CrmIndex() {
       .toLowerCase();
 
     const labels = {
-      open: global.t?.t('people','status', 'open'),
-      pending: global.t?.t('people','status', 'pending'),
-      closed: global.t?.t('people','status', 'closed'),
-      cancelled: global.t?.t('people','status', 'cancelled'),
-      cancelado: global.t?.t('people','status', 'cancelledPt'),
-      ativo: global.t?.t('people','status', 'active'),
-      inativo: global.t?.t('people','status', 'inactive'),
+      open: global.t?.t('people', 'status', 'open'),
+      pending: global.t?.t('people', 'status', 'pending'),
+      closed: global.t?.t('people', 'status', 'closed'),
+      cancelled: global.t?.t('people', 'status', 'cancelled'),
+      cancelado: global.t?.t('people', 'status', 'cancelledPt'),
+      ativo: global.t?.t('people', 'status', 'active'),
+      inativo: global.t?.t('people', 'status', 'inactive'),
     };
 
-    return labels[normalized] || item?.status || global.t?.t('people','status', 'noStatus');
+    return labels[normalized] || item?.status || global.t?.t('people', 'status', 'noStatus');
   }, []);
 
   const getOptionIdentity = useCallback(item => {
@@ -182,7 +186,7 @@ export default function CrmIndex() {
 
     const params = {
       type: 'relationship',
-      provider_id: currentCompany.id,
+      taskFor: env.APP_TYPE === 'CRM' && user?.people ? `/people/${user.people}` : null, //Tasks for this user only
       provider: currentCompany.id,
       page,
       itemsPerPage: itemsPerPage,
@@ -232,7 +236,7 @@ export default function CrmIndex() {
         ],
       });
 
-      return () => {};
+      return () => { };
     }, [buildOpportunityParams, currentCompany?.id]),
   );
 
@@ -256,7 +260,7 @@ export default function CrmIndex() {
 
   useLayoutEffect(() => {
     navigation.setOptions({
-      headerTitle: global.t?.t('people','header', 'opportunities'),
+      headerTitle: global.t?.t('people', 'header', 'opportunities'),
     });
   }, [navigation]);
 
@@ -462,12 +466,12 @@ export default function CrmIndex() {
 
   const getStageLabel = status => {
     const labels = {
-      open: global.t?.t('people','status', 'open'),
-      closed: global.t?.t('people','status', 'closed'),
-      pending: global.t?.t('people','status', 'pending'),
-      cancelled: global.t?.t('people','status', 'cancelled'),
+      open: global.t?.t('people', 'status', 'open'),
+      closed: global.t?.t('people', 'status', 'closed'),
+      pending: global.t?.t('people', 'status', 'pending'),
+      cancelled: global.t?.t('people', 'status', 'cancelled'),
     };
-    return labels[status] || status || global.t?.t('people','status', 'noStatus');
+    return labels[status] || status || global.t?.t('people', 'status', 'noStatus');
   };
 
   const getColorWithAlpha = (colorValue, alpha = '20') => {
@@ -580,18 +584,18 @@ export default function CrmIndex() {
 
   const getMonthsArray = () => {
     const months = [
-      global.t?.t('people','month', 'january'),
-      global.t?.t('people','month', 'february'),
-      global.t?.t('people','month', 'march'),
-      global.t?.t('people','month', 'april'),
-      global.t?.t('people','month', 'may'),
-      global.t?.t('people','month', 'june'),
-      global.t?.t('people','month', 'july'),
-      global.t?.t('people','month', 'august'),
-      global.t?.t('people','month', 'september'),
-      global.t?.t('people','month', 'october'),
-      global.t?.t('people','month', 'november'),
-      global.t?.t('people','month', 'december'),
+      global.t?.t('people', 'month', 'january'),
+      global.t?.t('people', 'month', 'february'),
+      global.t?.t('people', 'month', 'march'),
+      global.t?.t('people', 'month', 'april'),
+      global.t?.t('people', 'month', 'may'),
+      global.t?.t('people', 'month', 'june'),
+      global.t?.t('people', 'month', 'july'),
+      global.t?.t('people', 'month', 'august'),
+      global.t?.t('people', 'month', 'september'),
+      global.t?.t('people', 'month', 'october'),
+      global.t?.t('people', 'month', 'november'),
+      global.t?.t('people', 'month', 'december'),
     ];
     return months.map((month, index) => ({
       id: String(index + 1).padStart(2, '0'),
@@ -608,7 +612,7 @@ export default function CrmIndex() {
       const reference = normalizePeopleReference(opportunity?.client);
       if (!reference) {
         showError?.(
-          global.t?.t('people','toast', 'providerNotIdentified'),
+          global.t?.t('people', 'toast', 'providerNotIdentified'),
         );
         return;
       }
@@ -622,7 +626,7 @@ export default function CrmIndex() {
         {
           id: extractId(reference),
           '@id': reference,
-          name: getProviderName(opportunity?.client) || global.t?.t('people','label', 'client'),
+          name: getProviderName(opportunity?.client) || global.t?.t('people', 'label', 'client'),
         };
 
       navigation.navigate('ClientDetails', { client: selectedClient });
@@ -755,7 +759,7 @@ export default function CrmIndex() {
         .filter(Boolean);
 
       if (hasDuplicatePhones(validPhones)) {
-        showError(global.t?.t('people','toast', 'duplicatePhone'));
+        showError(global.t?.t('people', 'toast', 'duplicatePhone'));
         return;
       }
 
@@ -786,10 +790,10 @@ export default function CrmIndex() {
       setEditModalVisible(false);
       setEditingOpportunity(null);
 
-      showSuccess(global.t?.t('people','toast', 'opportunityUpdated'));
+      showSuccess(global.t?.t('people', 'toast', 'opportunityUpdated'));
     } catch (error) {
       console.error('Erro ao salvar:', error);
-      showError(global.t?.t('people','toast', 'saveChangesError'));
+      showError(global.t?.t('people', 'toast', 'saveChangesError'));
     }
   };
 
@@ -811,25 +815,25 @@ export default function CrmIndex() {
       const dueDateYear = (newOpportunity?.dueDateYear || '').trim();
 
       const missingFields = [];
-      if (!clientId) missingFields.push(global.t?.t('people','required', 'provider'));
-      if (!taskStatusId) missingFields.push(global.t?.t('people','required', 'status'));
-      if (!categoryId) missingFields.push(global.t?.t('people','required', 'category'));
-      if (!criticalityId) missingFields.push(global.t?.t('people','required', 'criticality'));
-      if (!reasonId) missingFields.push(global.t?.t('people','required', 'reason'));
+      if (!clientId) missingFields.push(global.t?.t('people', 'required', 'provider'));
+      if (!taskStatusId) missingFields.push(global.t?.t('people', 'required', 'status'));
+      if (!categoryId) missingFields.push(global.t?.t('people', 'required', 'category'));
+      if (!criticalityId) missingFields.push(global.t?.t('people', 'required', 'criticality'));
+      if (!reasonId) missingFields.push(global.t?.t('people', 'required', 'reason'));
       if (!dueDateDay || !dueDateMonth || !dueDateYear) {
-        missingFields.push(global.t?.t('people','required', 'returnDate'));
+        missingFields.push(global.t?.t('people', 'required', 'returnDate'));
       }
 
       if (missingFields.length > 0) {
         showError(
-          global.t?.t('people','toast', 'requiredFieldsPrefix') +
-            ` ${missingFields.join(', ')}.`,
+          global.t?.t('people', 'toast', 'requiredFieldsPrefix') +
+          ` ${missingFields.join(', ')}.`,
         );
         return;
       }
 
       if (!/^\d{4}$/.test(dueDateYear)) {
-        showError(global.t?.t('people','toast', 'invalidDueYear'));
+        showError(global.t?.t('people', 'toast', 'invalidDueYear'));
         return;
       }
 
@@ -848,7 +852,7 @@ export default function CrmIndex() {
         String(dueDateObj.getFullYear()) === dueDateYear;
 
       if (!isValidDueDate) {
-        showError(global.t?.t('people','toast', 'invalidReturnDate'));
+        showError(global.t?.t('people', 'toast', 'invalidReturnDate'));
         return;
       }
 
@@ -857,7 +861,7 @@ export default function CrmIndex() {
         .filter(Boolean);
 
       if (hasDuplicatePhones(validPhones)) {
-        showError(global.t?.t('people','toast', 'duplicatePhone'));
+        showError(global.t?.t('people', 'toast', 'duplicatePhone'));
         return;
       }
 
@@ -882,7 +886,7 @@ export default function CrmIndex() {
       setAddModalVisible(false);
       setNewOpportunity(null);
 
-      showSuccess(global.t?.t('people','toast', 'opportunityCreated'));
+      showSuccess(global.t?.t('people', 'toast', 'opportunityCreated'));
 
       const params = buildOpportunityParams({ page: 1 });
       if (params) {
@@ -891,7 +895,7 @@ export default function CrmIndex() {
       setCurrentPage(1);
     } catch (error) {
       console.error('Erro ao criar:', error);
-      showError(global.t?.t('people','toast', 'createOpportunityError'));
+      showError(global.t?.t('people', 'toast', 'createOpportunityError'));
     }
   };
 
@@ -1016,7 +1020,7 @@ export default function CrmIndex() {
               ) : (
                 <Text style={styles.opportunityTitle}>
                   {providerName ||
-                    global.t?.t('people','card', 'clientNotInformed')}
+                    global.t?.t('people', 'card', 'clientNotInformed')}
                 </Text>
               )}
               <View style={styles.clientNameRow}>
@@ -1029,91 +1033,91 @@ export default function CrmIndex() {
                 </TouchableOpacity>
               </View>
             </View>
-          {!opportunity?.taskStatus?.realStatus && isStatusLoading ? (
-            <View style={[styles.stageTag, styles.stageTagSkeleton]}>
-              <View style={[styles.skeletonLine, styles.stageTextSkeleton]} />
-            </View>
-          ) : (
-            <TouchableOpacity
-              style={[
-                styles.stageTag,
-                {
-                  backgroundColor:
-                    getStageColor(opportunity.taskStatus?.realStatus) + '20',
-                },
-              ]}
-              onPress={() => toggleStatus(opportunity)}>
-              <Text
+            {!opportunity?.taskStatus?.realStatus && isStatusLoading ? (
+              <View style={[styles.stageTag, styles.stageTagSkeleton]}>
+                <View style={[styles.skeletonLine, styles.stageTextSkeleton]} />
+              </View>
+            ) : (
+              <TouchableOpacity
                 style={[
-                  styles.stageText,
-                  { color: getStageColor(opportunity.taskStatus?.realStatus) },
-                ]}>
-                {getStageLabel(opportunity.taskStatus?.realStatus)}
-              </Text>
-            </TouchableOpacity>
-          )}
-        </View>
+                  styles.stageTag,
+                  {
+                    backgroundColor:
+                      getStageColor(opportunity.taskStatus?.realStatus) + '20',
+                  },
+                ]}
+                onPress={() => toggleStatus(opportunity)}>
+                <Text
+                  style={[
+                    styles.stageText,
+                    { color: getStageColor(opportunity.taskStatus?.realStatus) },
+                  ]}>
+                  {getStageLabel(opportunity.taskStatus?.realStatus)}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
 
           <View style={styles.cardBody}>
-          <View style={styles.infoRow}>
-            <View style={styles.infoContainer}>
-              <Icon name="tag" size={14} color="#9b59b6" />
-              <Text style={styles.infoText}>
-                {opportunity.category?.name || global.t?.t('people','card', 'withoutCategory')}
-              </Text>
+            <View style={styles.infoRow}>
+              <View style={styles.infoContainer}>
+                <Icon name="tag" size={14} color="#9b59b6" />
+                <Text style={styles.infoText}>
+                  {opportunity.category?.name || global.t?.t('people', 'card', 'withoutCategory')}
+                </Text>
+              </View>
+              <View style={styles.infoContainer}>
+                <Icon name="exclamation-circle" size={14} color="#e67e22" />
+                <Text style={styles.infoText}>
+                  {opportunity.criticality?.name || 'Normal'}
+                </Text>
+              </View>
             </View>
-            <View style={styles.infoContainer}>
-              <Icon name="exclamation-circle" size={14} color="#e67e22" />
-              <Text style={styles.infoText}>
-                {opportunity.criticality?.name || 'Normal'}
-              </Text>
+
+            <View style={styles.infoRow}>
+              <View style={styles.infoContainer}>
+                <Icon name="calendar" size={14} color="#3498db" />
+                <Text style={styles.infoText}>
+                  {formatDate(opportunity.dueDate)}
+                </Text>
+              </View>
+              <View style={styles.infoContainer}>
+                <Icon name="clock-o" size={14} color="#95a5a6" />
+                <Text style={styles.infoText}>
+                  {formatDate(opportunity.alterDate)}
+                </Text>
+              </View>
             </View>
           </View>
 
-          <View style={styles.infoRow}>
-            <View style={styles.infoContainer}>
-              <Icon name="calendar" size={14} color="#3498db" />
-              <Text style={styles.infoText}>
-                {formatDate(opportunity.dueDate)}
+          {opportunity.announce && (
+            <View style={styles.announceContainer}>
+              <Icon name="bullhorn" size={12} color="#9b59b6" />
+              <Text style={styles.announceText}>
+                {global.t?.t('people', 'card', 'phones')}:{' '}
+                {parsePhoneNumbers(opportunity.announce).join(', ') || global.t?.t('people', 'card', 'notAvailable')}
               </Text>
             </View>
-            <View style={styles.infoContainer}>
-              <Icon name="clock-o" size={14} color="#95a5a6" />
-              <Text style={styles.infoText}>
-                {formatDate(opportunity.alterDate)}
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        {opportunity.announce && (
-          <View style={styles.announceContainer}>
-            <Icon name="bullhorn" size={12} color="#9b59b6" />
-            <Text style={styles.announceText}>
-              {global.t?.t('people','card', 'phones')}:{' '}
-              {parsePhoneNumbers(opportunity.announce).join(', ') || global.t?.t('people','card', 'notAvailable')}
-            </Text>
-          </View>
-        )}
+          )}
 
           <View style={styles.actionContainer}>
-          <TouchableOpacity
-            style={[styles.actionButton, styles.chatButton]}
-            onPress={() => handleOpportunityPress(opportunity)}>
-            <IconWhatsApp name="whatsapp" size={16} color="#25D366" />
-            <Text style={[styles.actionButtonText, { color: '#25D366' }]}>
-              {global.t?.t('people','action', 'chat')}
-            </Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.actionButton, styles.chatButton]}
+              onPress={() => handleOpportunityPress(opportunity)}>
+              <IconWhatsApp name="whatsapp" size={16} color="#25D366" />
+              <Text style={[styles.actionButtonText, { color: '#25D366' }]}>
+                {global.t?.t('people', 'action', 'chat')}
+              </Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.actionButton, styles.editButton]}
-            onPress={() => handleEditOpportunity(opportunity)}>
-            <Icon name="edit" size={16} color="#f39c12" />
-            <Text style={[styles.actionButtonText, { color: '#f39c12' }]}>
-              {global.t?.t('people','action', 'edit')}
-            </Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.actionButton, styles.editButton]}
+              onPress={() => handleEditOpportunity(opportunity)}>
+              <Icon name="edit" size={16} color="#f39c12" />
+              <Text style={[styles.actionButtonText, { color: '#f39c12' }]}>
+                {global.t?.t('people', 'action', 'edit')}
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
       </View>
@@ -1126,32 +1130,32 @@ export default function CrmIndex() {
     if (normalizedTitle.includes('categoria')) {
       return {
         icon: 'tags',
-        title: global.t?.t('people','modal', 'noCategories'),
-        subtitle: global.t?.t('people','modal', 'noCategoriesHint'),
+        title: global.t?.t('people', 'modal', 'noCategories'),
+        subtitle: global.t?.t('people', 'modal', 'noCategoriesHint'),
       };
     }
 
     if (normalizedTitle.includes('status')) {
       return {
         icon: 'flag',
-        title: global.t?.t('people','modal', 'noStatus'),
-        subtitle: global.t?.t('people','modal', 'noStatusHint'),
+        title: global.t?.t('people', 'modal', 'noStatus'),
+        subtitle: global.t?.t('people', 'modal', 'noStatusHint'),
       };
     }
 
     if (normalizedTitle.includes('criticidade')) {
       return {
         icon: 'exclamation-circle',
-        title: global.t?.t('people','modal', 'noCriticalities'),
-        subtitle: global.t?.t('people','modal', 'noCriticalitiesHint'),
+        title: global.t?.t('people', 'modal', 'noCriticalities'),
+        subtitle: global.t?.t('people', 'modal', 'noCriticalitiesHint'),
       };
     }
 
     if (normalizedTitle.includes('motivo')) {
       return {
         icon: 'question-circle',
-        title: global.t?.t('people','modal', 'noReasons'),
-        subtitle: global.t?.t('people','modal', 'noReasonsHint'),
+        title: global.t?.t('people', 'modal', 'noReasons'),
+        subtitle: global.t?.t('people', 'modal', 'noReasonsHint'),
       };
     }
 
@@ -1161,15 +1165,15 @@ export default function CrmIndex() {
     ) {
       return {
         icon: 'calendar',
-        title: global.t?.t('people','modal', 'noOptions'),
-        subtitle: global.t?.t('people','modal', 'tryAgainSoon'),
+        title: global.t?.t('people', 'modal', 'noOptions'),
+        subtitle: global.t?.t('people', 'modal', 'tryAgainSoon'),
       };
     }
 
     return {
       icon: 'inbox',
-      title: global.t?.t('people','modal', 'nothingToShow'),
-      subtitle: global.t?.t('people','modal', 'noOptionsNow'),
+      title: global.t?.t('people', 'modal', 'nothingToShow'),
+      subtitle: global.t?.t('people', 'modal', 'noOptionsNow'),
     };
   };
 
@@ -1233,53 +1237,53 @@ export default function CrmIndex() {
                 const isSelected = selectedIdentity === optionIdentity;
                 const optionLabel = isStatusModal
                   ? getStatusFilterLabel(item)
-                  : item[renderKey] || item.name || item.status || global.t?.t('people','label', 'withoutName');
+                  : item[renderKey] || item.name || item.status || global.t?.t('people', 'label', 'withoutName');
 
                 return (
-                <TouchableOpacity
-                  key={String(optionIdentity || item[renderKey])}
-                  style={[
-                    styles.selectOption,
-                    isSelected && styles.selectOptionActive,
-                  ]}
-                  onPress={() => {
-                    onSelect(item);
-                    setVisible(false);
-                  }}>
-                  {item.color && (
-                    <View
-                      style={[
-                        styles.selectOptionDot,
-                        { backgroundColor: item.color },
-                      ]}
-                    />
-                  )}
-                  {item.icon &&
-                    !isCategoryOrCriticalityModal &&
-                    (!isReasonModal ||
-                      (isValidFontAwesomeIcon(item.icon) &&
-                        !isQuestionLikeIcon(item.icon))) && (
-                    <Icon
-                      name={
-                        item.icon === 'keyboard-arrow-down'
-                          ? 'angle-down'
-                          : item.icon
-                      }
-                      size={16}
-                      color={
-                        isSelected ? colors.primary : '#3498db'
-                      }
-                      style={styles.selectOptionIcon}
-                    />
-                  )}
-                  <Text
+                  <TouchableOpacity
+                    key={String(optionIdentity || item[renderKey])}
                     style={[
-                      styles.selectOptionText,
-                      isSelected && styles.selectOptionTextActive,
-                    ]}>
-                    {optionLabel}
-                  </Text>
-                </TouchableOpacity>
+                      styles.selectOption,
+                      isSelected && styles.selectOptionActive,
+                    ]}
+                    onPress={() => {
+                      onSelect(item);
+                      setVisible(false);
+                    }}>
+                    {item.color && (
+                      <View
+                        style={[
+                          styles.selectOptionDot,
+                          { backgroundColor: item.color },
+                        ]}
+                      />
+                    )}
+                    {item.icon &&
+                      !isCategoryOrCriticalityModal &&
+                      (!isReasonModal ||
+                        (isValidFontAwesomeIcon(item.icon) &&
+                          !isQuestionLikeIcon(item.icon))) && (
+                        <Icon
+                          name={
+                            item.icon === 'keyboard-arrow-down'
+                              ? 'angle-down'
+                              : item.icon
+                          }
+                          size={16}
+                          color={
+                            isSelected ? colors.primary : '#3498db'
+                          }
+                          style={styles.selectOptionIcon}
+                        />
+                      )}
+                    <Text
+                      style={[
+                        styles.selectOptionText,
+                        isSelected && styles.selectOptionTextActive,
+                      ]}>
+                      {optionLabel}
+                    </Text>
+                  </TouchableOpacity>
                 );
               })}
             </ScrollView>
@@ -1296,7 +1300,7 @@ export default function CrmIndex() {
           style={styles.addPhoneButton}
           onPress={() => addPhoneInput(isEdit)}>
           <Icon name="plus" size={16} color="#27ae60" />
-          <Text style={styles.addPhoneText}>{global.t?.t('people','action', 'addPhone')}</Text>
+          <Text style={styles.addPhoneText}>{global.t?.t('people', 'action', 'addPhone')}</Text>
         </TouchableOpacity>
       )}
 
@@ -1324,7 +1328,7 @@ export default function CrmIndex() {
           style={styles.addPhoneButton}
           onPress={() => addPhoneInput(isEdit)}>
           <Icon name="plus" size={16} color="#27ae60" />
-          <Text style={styles.addPhoneText}>{global.t?.t('people','action', 'addAnotherPhone')}</Text>
+          <Text style={styles.addPhoneText}>{global.t?.t('people', 'action', 'addAnotherPhone')}</Text>
         </TouchableOpacity>
       )}
     </View>
@@ -1337,7 +1341,7 @@ export default function CrmIndex() {
       <View style={styles.selectModalContent}>
         <View style={styles.selectModalHeader}>
           <Text style={styles.selectModalTitle}>
-            {global.t?.t('people','modal', 'selectProvider')}
+            {global.t?.t('people', 'modal', 'selectProvider')}
           </Text>
           <TouchableOpacity
             onPress={() => setProviderPickerVisible(false)}
@@ -1378,65 +1382,65 @@ export default function CrmIndex() {
                   selectedClientRef === personRef;
 
                 return (
-              <TouchableOpacity
-                key={personKey}
-                style={[
-                  styles.selectOption,
-                  isSelected && styles.selectOptionActive,
-                ]}
-                onPress={() => {
-                  const clientData = {
-                    '@id': personRef || person['@id'] || '',
-                    id: person.id ?? personRef,
-                    name: person.name,
-                    document: person.document,
-                  };
+                  <TouchableOpacity
+                    key={personKey}
+                    style={[
+                      styles.selectOption,
+                      isSelected && styles.selectOptionActive,
+                    ]}
+                    onPress={() => {
+                      const clientData = {
+                        '@id': personRef || person['@id'] || '',
+                        id: person.id ?? personRef,
+                        name: person.name,
+                        document: person.document,
+                      };
 
-                  if (editModalVisible) {
-                    setEditingOpportunity(prev => ({
-                      ...prev,
-                      client: clientData,
-                    }));
-                  } else {
-                    setNewOpportunity(prev => ({
-                      ...prev,
-                      client: clientData,
-                    }));
-                  }
-                  setProviderPickerVisible(false);
-                }}>
-                <View style={styles.personInfo}>
-                  <View style={styles.avatarContainer}>
-                    <Icon name="user" size={20} color="#3498db" />
-                  </View>
-                  <View style={styles.personDetails}>
-                    <Text
-                      style={[
-                        styles.personName,
-                        isSelected && styles.selectOptionTextActive,
-                      ]}>
-                      {person.name}
-                    </Text>
-                    {person.document && (
-                      <Text style={styles.personDocument}>
-                        {typeof person.document === 'string'
-                          ? person.document
-                          : 'Documento dispon�vel'}
-                      </Text>
+                      if (editModalVisible) {
+                        setEditingOpportunity(prev => ({
+                          ...prev,
+                          client: clientData,
+                        }));
+                      } else {
+                        setNewOpportunity(prev => ({
+                          ...prev,
+                          client: clientData,
+                        }));
+                      }
+                      setProviderPickerVisible(false);
+                    }}>
+                    <View style={styles.personInfo}>
+                      <View style={styles.avatarContainer}>
+                        <Icon name="user" size={20} color="#3498db" />
+                      </View>
+                      <View style={styles.personDetails}>
+                        <Text
+                          style={[
+                            styles.personName,
+                            isSelected && styles.selectOptionTextActive,
+                          ]}>
+                          {person.name}
+                        </Text>
+                        {person.document && (
+                          <Text style={styles.personDocument}>
+                            {typeof person.document === 'string'
+                              ? person.document
+                              : 'Documento dispon�vel'}
+                          </Text>
+                        )}
+                      </View>
+                    </View>
+                    {isSelected && (
+                      <Icon name="check-circle" size={20} color="#27ae60" />
                     )}
-                  </View>
-                </View>
-                {isSelected && (
-                    <Icon name="check-circle" size={20} color="#27ae60" />
-                  )}
-              </TouchableOpacity>
+                  </TouchableOpacity>
                 );
               })
           ) : (
             <View style={styles.emptyState}>
               <Icon name="user" size={48} color="#bdc3c7" />
               <Text style={styles.emptyText}>
-                {global.t?.t('people','empty', 'noProviderFound')}
+                {global.t?.t('people', 'empty', 'noProviderFound')}
               </Text>
             </View>
           )}
@@ -1452,7 +1456,7 @@ export default function CrmIndex() {
       <View style={styles.modalContent}>
         <View style={styles.modalHeader}>
           <Text style={styles.modalTitle}>
-            {global.t?.t('people','modal', 'editOpportunity')}
+            {global.t?.t('people', 'modal', 'editOpportunity')}
             {editingOpportunity?.id}
           </Text>
           <TouchableOpacity
@@ -1464,7 +1468,7 @@ export default function CrmIndex() {
 
         <ScrollView style={styles.modalBody}>
           <View style={styles.editSection}>
-            <Text style={styles.editLabel}>{global.t?.t('people','form', 'provider')}</Text>
+            <Text style={styles.editLabel}>{global.t?.t('people', 'form', 'provider')}</Text>
             <TouchableOpacity
               style={styles.selectButton}
               onPress={() => setProviderPickerVisible(true)}>
@@ -1477,7 +1481,7 @@ export default function CrmIndex() {
                 />
                 <Text style={styles.selectButtonText}>
                   {getProviderName(editingOpportunity?.client) ||
-                    global.t?.t('people','form', 'selectProvider')}
+                    global.t?.t('people', 'form', 'selectProvider')}
                 </Text>
               </View>
               <Icon name="chevron-down" size={16} color="#7f8c8d" />
@@ -1485,7 +1489,7 @@ export default function CrmIndex() {
           </View>
 
           <View style={styles.editSection}>
-            <Text style={styles.editLabel}>{global.t?.t('people','form', 'status')}</Text>
+            <Text style={styles.editLabel}>{global.t?.t('people', 'form', 'status')}</Text>
             <TouchableOpacity
               style={styles.selectButton}
               onPress={() => setStatusPickerVisible(true)}>
@@ -1500,7 +1504,7 @@ export default function CrmIndex() {
                 )}
                 <Text style={styles.selectButtonText}>
                   {getStatusFilterLabel(editingOpportunity?.taskStatus) ||
-                    global.t?.t('people','form', 'selectStatus')}
+                    global.t?.t('people', 'form', 'selectStatus')}
                 </Text>
               </View>
               <Icon name="chevron-down" size={16} color="#7f8c8d" />
@@ -1508,14 +1512,14 @@ export default function CrmIndex() {
           </View>
 
           <View style={styles.editSection}>
-            <Text style={styles.editLabel}>{global.t?.t('people','form', 'category')}</Text>
+            <Text style={styles.editLabel}>{global.t?.t('people', 'form', 'category')}</Text>
             <TouchableOpacity
               style={styles.selectButton}
               onPress={() => setCategoryPickerVisible(true)}>
               <View style={styles.selectButtonContent}>
                 <Text style={styles.selectButtonText}>
                   {editingOpportunity?.category?.name ||
-                    global.t?.t('people','form', 'selectCategory')}
+                    global.t?.t('people', 'form', 'selectCategory')}
                 </Text>
               </View>
               <Icon name="chevron-down" size={16} color="#7f8c8d" />
@@ -1523,14 +1527,14 @@ export default function CrmIndex() {
           </View>
 
           <View style={styles.editSection}>
-            <Text style={styles.editLabel}>{global.t?.t('people','form', 'criticality')}</Text>
+            <Text style={styles.editLabel}>{global.t?.t('people', 'form', 'criticality')}</Text>
             <TouchableOpacity
               style={styles.selectButton}
               onPress={() => setCriticalityPickerVisible(true)}>
               <View style={styles.selectButtonContent}>
                 <Text style={styles.selectButtonText}>
                   {editingOpportunity?.criticality?.name ||
-                    global.t?.t('people','form', 'selectCriticality')}
+                    global.t?.t('people', 'form', 'selectCriticality')}
                 </Text>
               </View>
               <Icon name="chevron-down" size={16} color="#7f8c8d" />
@@ -1538,23 +1542,23 @@ export default function CrmIndex() {
           </View>
 
           <View style={styles.editSection}>
-            <Text style={styles.editLabel}>{global.t?.t('people','form', 'reason')}</Text>
+            <Text style={styles.editLabel}>{global.t?.t('people', 'form', 'reason')}</Text>
             <TouchableOpacity
               style={styles.selectButton}
               onPress={() => setReasonPickerVisible(true)}>
               <View style={styles.selectButtonContent}>
                 {editingOpportunity?.reason?.icon &&
-                isValidFontAwesomeIcon(editingOpportunity?.reason?.icon) &&
-                !isQuestionLikeIcon(editingOpportunity?.reason?.icon) && (
-                  <Icon
-                    name={editingOpportunity.reason.icon}
-                    size={16}
-                    color="#9b59b6"
-                    style={styles.selectButtonIcon}
-                  />
-                )}
+                  isValidFontAwesomeIcon(editingOpportunity?.reason?.icon) &&
+                  !isQuestionLikeIcon(editingOpportunity?.reason?.icon) && (
+                    <Icon
+                      name={editingOpportunity.reason.icon}
+                      size={16}
+                      color="#9b59b6"
+                      style={styles.selectButtonIcon}
+                    />
+                  )}
                 <Text style={styles.selectButtonText}>
-                  {editingOpportunity?.reason?.name || global.t?.t('people','form', 'selectReason')}
+                  {editingOpportunity?.reason?.name || global.t?.t('people', 'form', 'selectReason')}
                 </Text>
               </View>
               <Icon name="chevron-down" size={16} color="#7f8c8d" />
@@ -1562,18 +1566,18 @@ export default function CrmIndex() {
           </View>
 
           <View style={styles.editSection}>
-            <Text style={styles.editLabel}>{global.t?.t('people','form', 'phones')}</Text>
+            <Text style={styles.editLabel}>{global.t?.t('people', 'form', 'phones')}</Text>
             {renderPhoneInputs(editingOpportunity?.phones || [], true)}
           </View>
 
           <View style={styles.editSection}>
-            <Text style={styles.editLabel}>{global.t?.t('people','form', 'returnDate')}</Text>
+            <Text style={styles.editLabel}>{global.t?.t('people', 'form', 'returnDate')}</Text>
             <View style={styles.datePickerContainer}>
               <TouchableOpacity
                 style={[styles.dateSelectButton, { flex: 1 }]}
                 onPress={() => setDueDateDayPickerVisible(true)}>
                 <Text style={styles.dateSelectText}>
-                  {editingOpportunity?.dueDateDay || global.t?.t('people','form', 'day')}
+                  {editingOpportunity?.dueDateDay || global.t?.t('people', 'form', 'day')}
                 </Text>
                 <Icon name="chevron-down" size={16} color="#7f8c8d" />
               </TouchableOpacity>
@@ -1586,7 +1590,7 @@ export default function CrmIndex() {
                     ? getMonthsArray().find(
                       m => m.id === editingOpportunity.dueDateMonth,
                     )?.name
-                    : global.t?.t('people','form', 'month')}
+                    : global.t?.t('people', 'form', 'month')}
                 </Text>
                 <Icon name="chevron-down" size={16} color="#7f8c8d" />
               </TouchableOpacity>
@@ -1600,7 +1604,7 @@ export default function CrmIndex() {
                     dueDateYear: text,
                   }));
                 }}
-                placeholder={global.t?.t('people','form', 'year')}
+                placeholder={global.t?.t('people', 'form', 'year')}
                 placeholderTextColor="#6c757d"
                 keyboardType="numeric"
                 maxLength={4}
@@ -1613,12 +1617,12 @@ export default function CrmIndex() {
           <TouchableOpacity
             style={[styles.modalButton, styles.cancelButton]}
             onPress={() => setEditModalVisible(false)}>
-            <Text style={styles.cancelButtonText}>{global.t?.t('people','action', 'cancel')}</Text>
+            <Text style={styles.cancelButtonText}>{global.t?.t('people', 'action', 'cancel')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.modalButton, styles.saveButton]}
             onPress={handleSaveEdit}>
-            <Text style={styles.saveButtonText}>{global.t?.t('people','action', 'save')}</Text>
+            <Text style={styles.saveButtonText}>{global.t?.t('people', 'action', 'save')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -1631,7 +1635,7 @@ export default function CrmIndex() {
       onRequestClose={() => setAddModalVisible(false)}>
       <View style={styles.modalContent}>
         <View style={styles.modalHeader}>
-          <Text style={styles.modalTitle}>{global.t?.t('people','modal', 'newOpportunity')}</Text>
+          <Text style={styles.modalTitle}>{global.t?.t('people', 'modal', 'newOpportunity')}</Text>
           <TouchableOpacity
             onPress={() => setAddModalVisible(false)}
             style={styles.closeButton}>
@@ -1641,7 +1645,7 @@ export default function CrmIndex() {
 
         <ScrollView style={styles.modalBody}>
           <View style={styles.editSection}>
-            <Text style={styles.editLabel}>{global.t?.t('people','form', 'provider')}</Text>
+            <Text style={styles.editLabel}>{global.t?.t('people', 'form', 'provider')}</Text>
             <TouchableOpacity
               style={styles.selectButton}
               onPress={() => setProviderPickerVisible(true)}>
@@ -1654,7 +1658,7 @@ export default function CrmIndex() {
                 />
                 <Text style={styles.selectButtonText}>
                   {getProviderName(newOpportunity?.client) ||
-                    global.t?.t('people','form', 'selectProvider')}
+                    global.t?.t('people', 'form', 'selectProvider')}
                 </Text>
               </View>
               <Icon name="chevron-down" size={16} color="#7f8c8d" />
@@ -1662,7 +1666,7 @@ export default function CrmIndex() {
           </View>
 
           <View style={styles.editSection}>
-            <Text style={styles.editLabel}>{global.t?.t('people','form', 'status')}</Text>
+            <Text style={styles.editLabel}>{global.t?.t('people', 'form', 'status')}</Text>
             <TouchableOpacity
               style={styles.selectButton}
               onPress={() => setStatusPickerVisible(true)}>
@@ -1677,7 +1681,7 @@ export default function CrmIndex() {
                 )}
                 <Text style={styles.selectButtonText}>
                   {getStatusFilterLabel(newOpportunity?.taskStatus) ||
-                    global.t?.t('people','form', 'selectStatus')}
+                    global.t?.t('people', 'form', 'selectStatus')}
                 </Text>
               </View>
               <Icon name="chevron-down" size={16} color="#7f8c8d" />
@@ -1685,14 +1689,14 @@ export default function CrmIndex() {
           </View>
 
           <View style={styles.editSection}>
-            <Text style={styles.editLabel}>{global.t?.t('people','form', 'category')}</Text>
+            <Text style={styles.editLabel}>{global.t?.t('people', 'form', 'category')}</Text>
             <TouchableOpacity
               style={styles.selectButton}
               onPress={() => setCategoryPickerVisible(true)}>
               <View style={styles.selectButtonContent}>
                 <Text style={styles.selectButtonText}>
                   {newOpportunity?.category?.name ||
-                    global.t?.t('people','form', 'selectCategory')}
+                    global.t?.t('people', 'form', 'selectCategory')}
                 </Text>
               </View>
               <Icon name="chevron-down" size={16} color="#7f8c8d" />
@@ -1700,14 +1704,14 @@ export default function CrmIndex() {
           </View>
 
           <View style={styles.editSection}>
-            <Text style={styles.editLabel}>{global.t?.t('people','form', 'criticality')}</Text>
+            <Text style={styles.editLabel}>{global.t?.t('people', 'form', 'criticality')}</Text>
             <TouchableOpacity
               style={styles.selectButton}
               onPress={() => setCriticalityPickerVisible(true)}>
               <View style={styles.selectButtonContent}>
                 <Text style={styles.selectButtonText}>
                   {newOpportunity?.criticality?.name ||
-                    global.t?.t('people','form', 'selectCriticality')}
+                    global.t?.t('people', 'form', 'selectCriticality')}
                 </Text>
               </View>
               <Icon name="chevron-down" size={16} color="#7f8c8d" />
@@ -1715,23 +1719,23 @@ export default function CrmIndex() {
           </View>
 
           <View style={styles.editSection}>
-            <Text style={styles.editLabel}>{global.t?.t('people','form', 'reason')}</Text>
+            <Text style={styles.editLabel}>{global.t?.t('people', 'form', 'reason')}</Text>
             <TouchableOpacity
               style={styles.selectButton}
               onPress={() => setReasonPickerVisible(true)}>
               <View style={styles.selectButtonContent}>
                 {newOpportunity?.reason?.icon &&
-                isValidFontAwesomeIcon(newOpportunity?.reason?.icon) &&
-                !isQuestionLikeIcon(newOpportunity?.reason?.icon) && (
-                  <Icon
-                    name={newOpportunity.reason.icon}
-                    size={16}
-                    color="#9b59b6"
-                    style={styles.selectButtonIcon}
-                  />
-                )}
+                  isValidFontAwesomeIcon(newOpportunity?.reason?.icon) &&
+                  !isQuestionLikeIcon(newOpportunity?.reason?.icon) && (
+                    <Icon
+                      name={newOpportunity.reason.icon}
+                      size={16}
+                      color="#9b59b6"
+                      style={styles.selectButtonIcon}
+                    />
+                  )}
                 <Text style={styles.selectButtonText}>
-                  {newOpportunity?.reason?.name || global.t?.t('people','form', 'selectReason')}
+                  {newOpportunity?.reason?.name || global.t?.t('people', 'form', 'selectReason')}
                 </Text>
               </View>
               <Icon name="chevron-down" size={16} color="#7f8c8d" />
@@ -1739,18 +1743,18 @@ export default function CrmIndex() {
           </View>
 
           <View style={styles.editSection}>
-            <Text style={styles.editLabel}>{global.t?.t('people','form', 'phones')}</Text>
+            <Text style={styles.editLabel}>{global.t?.t('people', 'form', 'phones')}</Text>
             {renderPhoneInputs(newOpportunity?.phones || [], false)}
           </View>
 
           <View style={styles.editSection}>
-            <Text style={styles.editLabel}>{global.t?.t('people','form', 'returnDate')}</Text>
+            <Text style={styles.editLabel}>{global.t?.t('people', 'form', 'returnDate')}</Text>
             <View style={styles.datePickerContainer}>
               <TouchableOpacity
                 style={[styles.dateSelectButton, { flex: 1 }]}
                 onPress={() => setDueDateDayPickerVisible(true)}>
                 <Text style={styles.dateSelectText}>
-                  {newOpportunity?.dueDateDay || global.t?.t('people','form', 'day')}
+                  {newOpportunity?.dueDateDay || global.t?.t('people', 'form', 'day')}
                 </Text>
                 <Icon name="chevron-down" size={16} color="#7f8c8d" />
               </TouchableOpacity>
@@ -1763,7 +1767,7 @@ export default function CrmIndex() {
                     ? getMonthsArray().find(
                       m => m.id === newOpportunity.dueDateMonth,
                     )?.name
-                    : global.t?.t('people','form', 'month')}
+                    : global.t?.t('people', 'form', 'month')}
                 </Text>
                 <Icon name="chevron-down" size={16} color="#7f8c8d" />
               </TouchableOpacity>
@@ -1777,7 +1781,7 @@ export default function CrmIndex() {
                     dueDateYear: text,
                   }));
                 }}
-                placeholder={global.t?.t('people','form', 'year')}
+                placeholder={global.t?.t('people', 'form', 'year')}
                 placeholderTextColor="#6c757d"
                 keyboardType="numeric"
                 maxLength={4}
@@ -1790,12 +1794,12 @@ export default function CrmIndex() {
           <TouchableOpacity
             style={[styles.modalButton, styles.cancelButton]}
             onPress={() => setAddModalVisible(false)}>
-            <Text style={styles.cancelButtonText}>{global.t?.t('people','action', 'cancel')}</Text>
+            <Text style={styles.cancelButtonText}>{global.t?.t('people', 'action', 'cancel')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.modalButton, styles.saveButton]}
             onPress={handleSaveNewOpportunity}>
-            <Text style={styles.saveButtonText}>{global.t?.t('people','action', 'create')}</Text>
+            <Text style={styles.saveButtonText}>{global.t?.t('people', 'action', 'create')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -1814,7 +1818,7 @@ export default function CrmIndex() {
               <Icon name="search" size={16} color="#94A3B8" />
               <TextInput
                 style={styles.searchInput}
-                placeholder={global.t?.t('people','search', 'placeholder')}
+                placeholder={global.t?.t('people', 'search', 'placeholder')}
                 placeholderTextColor="#94A3B8"
                 value={searchText}
                 onChangeText={setSearchText}
@@ -1845,7 +1849,7 @@ export default function CrmIndex() {
           </View>
 
           <View style={styles.statusFilterSection}>
-            <Text style={styles.statusFilterLabel}>{global.t?.t('people','filter', 'status')}</Text>
+            <Text style={styles.statusFilterLabel}>{global.t?.t('people', 'filter', 'status')}</Text>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -1870,7 +1874,7 @@ export default function CrmIndex() {
                         styles.statusFilterChipText,
                         !selectedStatusFilterKey && styles.statusFilterChipTextActive,
                       ]}>
-                      {global.t?.t('people','filter', 'all')}
+                      {global.t?.t('people', 'filter', 'all')}
                     </Text>
                   </TouchableOpacity>
 
@@ -1935,20 +1939,20 @@ export default function CrmIndex() {
               {error ? (
                 <>
                   <Icon name="exclamation-triangle" size={48} color="#e74c3c" />
-                  <Text style={styles.loadingText}>{global.t?.t('people','state', 'loadError')}</Text>
+                  <Text style={styles.loadingText}>{global.t?.t('people', 'state', 'loadError')}</Text>
                 </>
               ) : (
                 <>
                   <Icon name="line-chart" size={64} color="#bdc3c7" />
                   <Text style={styles.emptyTitle}>
                     {searchQuery
-                      ? global.t?.t('people','state', 'noOpportunityFound')
-                      : global.t?.t('people','state', 'noOpportunity')}
+                      ? global.t?.t('people', 'state', 'noOpportunityFound')
+                      : global.t?.t('people', 'state', 'noOpportunity')}
                   </Text>
                   <Text style={styles.emptySubtitle}>
                     {searchQuery
-                      ? global.t?.t('people','state', 'tryOtherTerms')
-                      : global.t?.t('people','state', 'addFirstOpportunity')}
+                      ? global.t?.t('people', 'state', 'tryOtherTerms')
+                      : global.t?.t('people', 'state', 'addFirstOpportunity')}
                   </Text>
                 </>
               )}
@@ -1976,7 +1980,7 @@ export default function CrmIndex() {
 
       {
         renderSelectModal(
-          global.t?.t('people','modal', 'selectStatus'),
+          global.t?.t('people', 'modal', 'selectStatus'),
           status,
           editModalVisible
             ? editingOpportunity?.taskStatus
@@ -1996,7 +2000,7 @@ export default function CrmIndex() {
 
       {
         renderSelectModal(
-          global.t?.t('people','modal', 'selectCategory'),
+          global.t?.t('people', 'modal', 'selectCategory'),
           productCategories,
           editModalVisible
             ? editingOpportunity?.category
@@ -2016,7 +2020,7 @@ export default function CrmIndex() {
 
       {
         renderSelectModal(
-          global.t?.t('people','modal', 'selectCriticality'),
+          global.t?.t('people', 'modal', 'selectCriticality'),
           criticalityCategories,
           editModalVisible
             ? editingOpportunity?.criticality
@@ -2036,7 +2040,7 @@ export default function CrmIndex() {
 
       {
         renderSelectModal(
-          global.t?.t('people','modal', 'selectReason'),
+          global.t?.t('people', 'modal', 'selectReason'),
           reasonCategories,
           editModalVisible ? editingOpportunity?.reason : newOpportunity?.reason,
           item => {
@@ -2056,7 +2060,7 @@ export default function CrmIndex() {
 
       {
         renderSelectModal(
-          global.t?.t('people','modal', 'selectDay'),
+          global.t?.t('people', 'modal', 'selectDay'),
           getDaysArray(),
           {
             id: editModalVisible
@@ -2078,7 +2082,7 @@ export default function CrmIndex() {
 
       {
         renderSelectModal(
-          global.t?.t('people','modal', 'selectMonth'),
+          global.t?.t('people', 'modal', 'selectMonth'),
           getMonthsArray(),
           {
             id: editModalVisible
@@ -2100,7 +2104,7 @@ export default function CrmIndex() {
 
       {
         renderSelectModal(
-          global.t?.t('people','modal', 'selectDay'),
+          global.t?.t('people', 'modal', 'selectDay'),
           getDaysArray(),
           {
             id: editModalVisible
@@ -2122,7 +2126,7 @@ export default function CrmIndex() {
 
       {
         renderSelectModal(
-          global.t?.t('people','modal', 'selectMonth'),
+          global.t?.t('people', 'modal', 'selectMonth'),
           getMonthsArray(),
           {
             id: editModalVisible
