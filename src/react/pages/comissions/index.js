@@ -56,8 +56,7 @@ const Invoices = () => {
       { id: '10', label: global.t?.t('people','month', 'oct') },
       { id: '11', label: global.t?.t('people','month', 'nov') },
       { id: '12', label: global.t?.t('people','month', 'dec') },
-    ],
-    [tr],
+    ]
   );
 
   const getDateRange = useCallback((yearString, monthString) => {
