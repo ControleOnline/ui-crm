@@ -55,7 +55,7 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
     try {
       await peopleActions.getItems({
         company: '/people/' + currentCompany.id,
-        linkType: 'client',
+        'link.linkType': 'client',
       });
       await statusActions.getItems({ context: 'proposal' });
       await loadContractModels();
