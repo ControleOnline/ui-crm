@@ -54,7 +54,7 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
   const loadInitialData = async () => {
     try {
       await peopleActions.getItems({
-        company: '/people/' + currentCompany.id,
+        'link.company': '/people/' + currentCompany.id,
         'link.linkType': 'client',
       });
       await statusActions.getItems({ context: 'proposal' });

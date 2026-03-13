@@ -222,7 +222,7 @@ export default function CrmIndex() {
       if (params) {
         opportunitiesActions.getItems(params);
         peopleActions.getItems({
-          company: '/people/' + currentCompany.id,
+          'link.company': '/people/' + currentCompany.id,
           'link.linkType': 'client',
         });
       }
