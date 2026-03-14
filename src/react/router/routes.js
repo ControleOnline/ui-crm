@@ -15,7 +15,7 @@ const crmRoutes = [
       headerShown: true,
       headerBackVisible: true,
       companyFilterMode: 'icon',
-      title: 'Comiss\u00f5es',
+      title: 'Comissões',
     },
   },
   {
@@ -69,7 +69,7 @@ const crmRoutes = [
       showBottomToolBar: false,
       headerShown: false,
       headerBackVisible: false,
-      title: 'Propostas',
+      title: 'Conversas',
     },
   },
 ];
