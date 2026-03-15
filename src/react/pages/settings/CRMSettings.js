@@ -13,6 +13,7 @@ import { Picker } from '@react-native-picker/picker';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
 import css from '@controleonline/ui-orders/src/react/css/orders';
+import Formatter from '@controleonline/ui-common/src/utils/formatter';
 import { useStore } from '@store';
 
 const CRMSettings = () => {
@@ -134,6 +135,15 @@ const CRMSettings = () => {
 
   };
 
+  const formatRevenueDisplay = (value) => {
+    return Formatter.formatMoney(value || 0);
+  };
+
+  const formatDaysDisplay = (value) => {
+    const days = parseInt(value, 10) || 0;
+    return `${days} dias`;
+  };
+
 
 
   return (
@@ -147,7 +157,7 @@ const CRMSettings = () => {
         <View style={styles.Settings.mainContainer}>
 
           <Text style={styles.Settings.title}>
-            CRM Settings
+            {global.t?.t('configs','title','crmSettings')}
           </Text>
 
 
@@ -157,7 +167,7 @@ const CRMSettings = () => {
           <View style={{ marginTop: 20 }}>
 
             <Text style={styles.Settings.label}>
-              Salesman distribution strategy
+              {global.t?.t('configs','label','salesmanDistributionStrategy')}
             </Text>
 
             <Picker
@@ -173,13 +183,13 @@ const CRMSettings = () => {
               style={styles.Settings.picker}
             >
 
-              <Picker.Item label="Random" value="random" />
+              <Picker.Item label={global.t?.t('configs','option','random')} value="random" />
 
-              <Picker.Item label="Round Robin" value="round_robin" />
+              <Picker.Item label={global.t?.t('configs','option','roundRobin')} value="round_robin" />
 
-              <Picker.Item label="Least clients" value="least_clients" />
+              <Picker.Item label={global.t?.t('configs','option','leastClients')} value="least_clients" />
 
-              <Picker.Item label="Last received" value="last_received" />
+              <Picker.Item label={global.t?.t('configs','option','lastReceived')} value="last_received" />
 
             </Picker>
 
@@ -192,7 +202,7 @@ const CRMSettings = () => {
           <View style={{ marginTop: 20 }}>
 
             <Text style={styles.Settings.label}>
-              Max tasks per salesman
+              {global.t?.t('configs','label','maxTasksPerSalesman')}
             </Text>
 
             <TextInput
@@ -215,7 +225,7 @@ const CRMSettings = () => {
           <View style={{ marginTop: 20 }}>
 
             <Text style={styles.Settings.label}>
-              Revenue period (days)
+              {global.t?.t('configs','label','revenuePeriod')}
             </Text>
 
             <TextInput
@@ -238,7 +248,7 @@ const CRMSettings = () => {
           <View style={{ marginTop: 30 }}>
 
             <Text style={styles.Settings.label}>
-              After sales profiles
+              {global.t?.t('configs','label','afterSalesProfiles')}
             </Text>
 
             {
@@ -260,10 +270,10 @@ const CRMSettings = () => {
                       { flex: 1 }
                     ]}
                     keyboardType="numeric"
-                    value={String(p.maxRevenue)}
-                    placeholder="Revenue"
+                    value={formatRevenueDisplay(p.maxRevenue)}
+                    placeholder={global.t?.t('configs','placeholder','revenueAbove')}
                     onChangeText={(v) =>
-                      updateProfile(index, 'maxRevenue', parseFloat(v) || 0)
+                      updateProfile(index, 'maxRevenue', Formatter.formatFloat(v))
                     }
                   />
 
@@ -273,10 +283,10 @@ const CRMSettings = () => {
                       { flex: 1, marginLeft: 10 }
                     ]}
                     keyboardType="numeric"
-                    value={String(p.days)}
+                    value={formatDaysDisplay(p.days)}
                     placeholder="Days"
                     onChangeText={(v) =>
-                      updateProfile(index, 'days', parseInt(v) || 0)
+                      updateProfile(index, 'days', parseInt(Formatter.onlyNumbers(v), 10) || 0)
                     }
                   />
 
@@ -299,8 +309,6 @@ const CRMSettings = () => {
 
             }
 
-
-
             <TouchableOpacity
               style={[
                 globalStyles.button,
@@ -310,12 +318,10 @@ const CRMSettings = () => {
             >
 
               <Text style={{ color: '#fff' }}>
-                Add profile
+                {global.t?.t('configs','button','addProfile')}
               </Text>
 
             </TouchableOpacity>
-
-
 
             <TouchableOpacity
               style={[
@@ -326,7 +332,7 @@ const CRMSettings = () => {
             >
 
               <Text style={{ color: '#fff' }}>
-                Save profiles
+                {global.t?.t('configs','button','saveProfiles')}
               </Text>
 
             </TouchableOpacity>
