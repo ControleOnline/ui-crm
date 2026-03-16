@@ -31,6 +31,8 @@ const CRMSettings = () => {
   const [maxTasks, setMaxTasks] = useState('10');
   const [revenuePeriod, setRevenuePeriod] = useState('90');
   const [profiles, setProfiles] = useState([]);
+  const [editingRevenueIndex, setEditingRevenueIndex] = useState(null);
+  const [editingRevenueValue, setEditingRevenueValue] = useState('');
 
   const pickerMode = 'dropdown';
 
@@ -137,6 +139,28 @@ const CRMSettings = () => {
 
   const formatRevenueDisplay = (value) => {
     return Formatter.formatMoney(value || 0);
+  };
+
+  const formatRevenueEditValue = (value) => {
+    if (value === null || value === undefined)
+      return '';
+
+    return String(value).replace('.', ',');
+  };
+
+  const handleRevenueFocus = (index, value) => {
+    setEditingRevenueIndex(index);
+    setEditingRevenueValue(formatRevenueEditValue(value));
+  };
+
+  const handleRevenueChange = (value) => {
+    setEditingRevenueValue(value);
+  };
+
+  const handleRevenueBlur = (index) => {
+    updateProfile(index, 'maxRevenue', Formatter.formatFloat(editingRevenueValue));
+    setEditingRevenueIndex(null);
+    setEditingRevenueValue('');
   };
 
   const formatDaysDisplay = (value) => {
@@ -269,12 +293,14 @@ const CRMSettings = () => {
                       styles.Settings.input,
                       { flex: 1 }
                     ]}
-                    keyboardType="numeric"
-                    value={formatRevenueDisplay(p.maxRevenue)}
+                    keyboardType="decimal-pad"
+                    value={editingRevenueIndex === index
+                      ? editingRevenueValue
+                      : formatRevenueDisplay(p.maxRevenue)}
                     placeholder={global.t?.t('configs','placeholder','revenueAbove')}
-                    onChangeText={(v) =>
-                      updateProfile(index, 'maxRevenue', Formatter.formatFloat(v))
-                    }
+                    onFocus={() => handleRevenueFocus(index, p.maxRevenue)}
+                    onChangeText={handleRevenueChange}
+                    onBlur={() => handleRevenueBlur(index)}
                   />
 
                   <TextInput
