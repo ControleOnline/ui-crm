@@ -114,7 +114,7 @@ const ContractDetails = () => {
       if (data?.contractFile) {
         setFileLoading(true);
         try {
-          const res = await contractActions.getFileAsHtml(data.contractFile['@id']);
+          const res = await contractActions.getFileContent(data.contractFile['@id']);
           setFileContent(res.content || '');
         } catch {
           setFileError('Falha ao carregar a proposta');
@@ -139,7 +139,7 @@ const ContractDetails = () => {
 
       const updated = await contractActions.get(contractId);
       if (updated?.contractFile) {
-        const res = await contractActions.getFileAsHtml(updated.contractFile['@id']);
+        const res = await contractActions.getFileContent(updated.contractFile['@id']);
         setFileContent(res.content || '');
       }
     } catch {
