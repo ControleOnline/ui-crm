@@ -83,6 +83,7 @@ const ProposalsPage = () => {
       const leftType = String(left?.peopleType || '').trim().toLowerCase();
       const rightType = String(right?.peopleType || '').trim().toLowerCase();
 
+      // nunca traduzir
       const weight = type => {
         if (type === 'provider') return 0;
         if (type === 'contractor') return 1;
