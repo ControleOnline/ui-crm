@@ -120,15 +120,29 @@ export default function HomePage({ navigation }) {
     );
   };
 
-  const getResolvedPeopleName = (person, peopleNameById = {}) => {
+  const getResolvedPeopleName = (person, peopleMetaById = {}) => {
     const directName = resolvePeopleName(person);
     if (directName) {
       return directName;
     }
 
     const personId = extractPeopleId(person);
-    return personId ? peopleNameById[personId] || '' : '';
+    return personId ? peopleMetaById[personId]?.name || '' : '';
   };
+
+  const getResolvedPeopleType = (person, peopleMetaById = {}) => {
+    if (person && typeof person === 'object' && person?.peopleType) {
+      return String(person.peopleType || '').trim().toUpperCase();
+    }
+
+    const personId = extractPeopleId(person);
+    return personId
+      ? String(peopleMetaById[personId]?.peopleType || '').trim().toUpperCase()
+      : '';
+  };
+
+  const isLegalEntity = (person, peopleMetaById = {}) =>
+    getResolvedPeopleType(person, peopleMetaById) === 'J';
 
   const getContractPartyCandidates = contract => {
     const participants = Array.isArray(contract?.peoples) ? contract.peoples : [];
@@ -199,7 +213,7 @@ export default function HomePage({ navigation }) {
     );
   };
 
-  const getContractClientName = (contract, peopleNameById = {}) => {
+  const getContractClientName = (contract, peopleMetaById = {}) => {
     const candidates = getContractPartyCandidates(contract);
     for (const candidate of candidates) {
       const personId = extractPeopleId(candidate);
@@ -211,7 +225,11 @@ export default function HomePage({ navigation }) {
         continue;
       }
 
-      const name = getResolvedPeopleName(candidate, peopleNameById);
+      if (!isLegalEntity(candidate, peopleMetaById)) {
+        continue;
+      }
+
+      const name = getResolvedPeopleName(candidate, peopleMetaById);
       if (name) {
         return name;
       }
@@ -220,7 +238,7 @@ export default function HomePage({ navigation }) {
     return '';
   };
 
-  const getOpportunityClientName = (item, peopleNameById = {}) => {
+  const getOpportunityClientName = (item, peopleMetaById = {}) => {
     const candidates = getOpportunityPartyCandidates(item);
     for (const candidate of candidates) {
       const personId = extractPeopleId(candidate);
@@ -228,7 +246,11 @@ export default function HomePage({ navigation }) {
         continue;
       }
 
-      const name = getResolvedPeopleName(candidate, peopleNameById);
+      if (!isLegalEntity(candidate, peopleMetaById)) {
+        continue;
+      }
+
+      const name = getResolvedPeopleName(candidate, peopleMetaById);
       if (name) {
         return name;
       }
@@ -280,7 +302,7 @@ export default function HomePage({ navigation }) {
           ? contracts.member
           : [];
 
-        const peopleNameById = {};
+        const peopleMetaById = {};
         const missingPeopleIds = new Set();
 
         const collectMissingPerson = (person, shouldIgnore = () => false) => {
@@ -289,8 +311,9 @@ export default function HomePage({ navigation }) {
             return;
           }
 
-          const name = getResolvedPeopleName(person, peopleNameById);
-          if (!name) {
+          const name = getResolvedPeopleName(person, peopleMetaById);
+          const peopleType = getResolvedPeopleType(person, peopleMetaById);
+          if (!name || !peopleType) {
             missingPeopleIds.add(personId);
           }
         };
@@ -327,16 +350,17 @@ export default function HomePage({ navigation }) {
                 return {
                   personId,
                   name: resolvePeopleName(person),
+                  peopleType: String(person?.peopleType || '').trim().toUpperCase(),
                 };
               } catch (fetchError) {
-                return { personId, name: '' };
+                return { personId, name: '', peopleType: '' };
               }
             }),
           );
 
-          fetchedPeople.forEach(({ personId, name }) => {
-            if (name) {
-              peopleNameById[personId] = name;
+          fetchedPeople.forEach(({ personId, name, peopleType }) => {
+            if (name || peopleType) {
+              peopleMetaById[personId] = { name, peopleType };
             }
           });
         }
@@ -355,7 +379,7 @@ export default function HomePage({ navigation }) {
         opportunitiesList.forEach(item => {
           const sortDate = item.dueDate ? new Date(item.dueDate).getTime() : 0;
           const clientName =
-            getOpportunityClientName(item, peopleNameById) ||
+            getOpportunityClientName(item, peopleMetaById) ||
             global.t?.t('people', 'title', 'unknownClient');
           activities.push({
             id: item.id,
@@ -374,7 +398,7 @@ export default function HomePage({ navigation }) {
         proposalsList.forEach(item => {
           const sortDate = item.startDate ? new Date(item.startDate).getTime() : 0;
           const clientName =
-            getContractClientName(item, peopleNameById) ||
+            getContractClientName(item, peopleMetaById) ||
             global.t?.t('people', 'title', 'unknownClient');
           activities.push({
             id: item.id,
@@ -393,7 +417,7 @@ export default function HomePage({ navigation }) {
         contractsList.forEach(item => {
           const sortDate = item.startDate ? new Date(item.startDate).getTime() : 0;
           const clientName =
-            getContractClientName(item, peopleNameById) ||
+            getContractClientName(item, peopleMetaById) ||
             global.t?.t('people', 'title', 'unknownClient');
           activities.push({
             id: item.id,
