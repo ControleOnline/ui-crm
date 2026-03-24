@@ -16,7 +16,7 @@ import {
   withOpacity,
 } from '@controleonline/../../src/styles/branding';
 import md5 from 'md5';
-
+import { env } from '@env';
 import Icon from 'react-native-vector-icons/Feather';
 import { useStore } from '@store';
 import { api } from '@controleonline/ui-common/src/api';
@@ -31,11 +31,12 @@ export default function HomePage({ navigation }) {
   const authGetters = authStore.getters;
   const themeGetters = themeStore.getters;
   const { currentCompany, companies } = peopleGetters;
-  const { user: authUser } = authGetters;
+  const { user } = authGetters;
+
   const currentUser = {
-    ...authUser,
+    ...user,
     name: String(
-      authUser?.realname || authUser?.name || authUser?.username || '',
+      user?.realname || user?.name || user?.username || '',
     ).trim(),
   };
   const { colors: themeColors } = themeGetters;
@@ -269,7 +270,7 @@ export default function HomePage({ navigation }) {
         const opportunitiesParams = {
           type: 'relationship',
           provider: currentCompany.id, // Fixed: Added provider for correct count
-          provider_id: currentCompany.id,
+          taskFor: env.APP_TYPE === 'CRM' && user?.people ? `/people/${user.people}` : null, //Tasks for this user only
           itemsPerPage: 5,
           'order[id]': 'DESC' // Fetch latest
         };
