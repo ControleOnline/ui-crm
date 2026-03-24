@@ -178,7 +178,7 @@ export default function CrmConversation() {
         file: null,
         task: taskResource,
         type: 'comment',
-        visibility: 'private',
+        visibility: 'public',
       });
 
       setMessage('');
