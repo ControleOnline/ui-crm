@@ -93,7 +93,7 @@ export default function CrmConversation() {
     );
 
     return linkedPerson?.name || linkedPerson?.realname || global.t?.t('users','label', 'client', 'Cliente');
-  }, [opportunity, people, tr]);
+  }, [opportunity, people]);
   const formatTime = timestamp =>
     timestamp.toLocaleTimeString('pt-br', {
       hour: '2-digit',
@@ -105,7 +105,7 @@ export default function CrmConversation() {
       showError(global.t?.t('users','error', 'opportunityNotFound', 'Oportunidade nao encontrada para abrir a conversa.'));
       navigation.goBack();
     }
-  }, [opportunity, navigation, showError, tr]);
+  }, [opportunity, navigation, showError]);
 
   useEffect(() => {
     if (!taskResource || typeof actions.getItems !== 'function') {
@@ -116,7 +116,7 @@ export default function CrmConversation() {
       console.error('Erro ao carregar conversa:', error);
       showError(global.t?.t('users','error', 'loadMessages', 'Nao foi possivel carregar as mensagens da conversa.'));
     });
-  }, [taskResource, actions, showError, tr]);
+  }, [taskResource, actions, showError]);
 
   useEffect(() => {
     if (!Array.isArray(items) || items.length === 0) {
