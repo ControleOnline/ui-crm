@@ -47,7 +47,7 @@ export default function CrmIndex() {
     useState(true);
   const [isStatusFilterApplying, setIsStatusFilterApplying] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [itemsPerPage, setItemsPerPage] = useState(50);
   const [allOpportunities, setAllOpportunities] = useState([]);
   const [showItemsPerPageDropdown, setShowItemsPerPageDropdown] =
     useState(false);

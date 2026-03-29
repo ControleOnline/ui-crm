@@ -37,7 +37,7 @@ const ProposalsPage = () => {
   const [search, setSearch] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [itemsPerPage, setItemsPerPage] = useState(50);
   const [refreshing, setRefreshing] = useState(false);
   const [allContracts, setAllContracts] = useState([]);
   const [selectedStatusFilterKey, setSelectedStatusFilterKey] = useState('');
