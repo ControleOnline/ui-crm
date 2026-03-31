@@ -113,7 +113,7 @@ export default function CrmIndex() {
       open: global.t?.t('people', 'status', 'open'),
       pending: global.t?.t('people', 'status', 'pending'),
       closed: global.t?.t('people', 'status', 'closed'),
-      cancelled: global.t?.t('people', 'status', 'cancelled'),
+      canceled: global.t?.t('people', 'status', 'canceled'),
       cancelado: global.t?.t('people', 'status', 'cancelledPt'),
       ativo: global.t?.t('people', 'status', 'active'),
       inativo: global.t?.t('people', 'status', 'inactive'),
@@ -459,7 +459,7 @@ export default function CrmIndex() {
       open: '#f39c12',
       closed: '#27ae60',
       pending: '#3498db',
-      cancelled: '#e74c3c',
+      canceled: '#e74c3c',
     };
     return colors[status] || '#95a5a6';
   };
@@ -469,7 +469,7 @@ export default function CrmIndex() {
       open: global.t?.t('people', 'status', 'open'),
       closed: global.t?.t('people', 'status', 'closed'),
       pending: global.t?.t('people', 'status', 'pending'),
-      cancelled: global.t?.t('people', 'status', 'cancelled'),
+      canceled: global.t?.t('people', 'status', 'canceled'),
     };
     return labels[status] || status || global.t?.t('people', 'status', 'noStatus');
   };

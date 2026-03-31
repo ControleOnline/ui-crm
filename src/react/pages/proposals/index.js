@@ -340,7 +340,6 @@ const ProposalsPage = () => {
       case 'inativo':
       case 'inactive':
       case 'cancelado':
-      case 'cancelled':
       case 'canceled':
         return '#EF4444'; // Red
       case 'pendente':
@@ -368,7 +367,6 @@ const ProposalsPage = () => {
       closed: global.t?.t('contract','status', 'closed'),
       fechado: global.t?.t('contract','status', 'closed'),
       cancelado: global.t?.t('contract','status', 'canceled'),
-      cancelled: global.t?.t('contract','status', 'canceled'),
       canceled: global.t?.t('contract','status', 'canceled'),
       'waiting signature': global.t?.t('contract','status', 'waitingSignature'),
       'awaiting signature': global.t?.t('contract','status', 'waitingSignature'),
