@@ -1425,7 +1425,7 @@ export default function CrmIndex() {
                           <Text style={styles.personDocument}>
                             {typeof person.document === 'string'
                               ? person.document
-                              : 'Documento dispon�vel'}
+                              : 'Documento disponível???'}
                           </Text>
                         )}
                       </View>
