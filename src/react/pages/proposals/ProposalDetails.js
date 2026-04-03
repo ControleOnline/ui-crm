@@ -95,7 +95,11 @@ const ContractDetails = () => {
   const canEdit = contract?.status?.realStatus === 'open';
 
   useLayoutEffect(() => {
-    navigation.setOptions({ headerShown: false });
+    navigation.setOptions({
+      headerShown: true,
+      headerBackVisible: true,
+      title: global.t?.t('contract', 'title', 'proposal') || 'Proposta',
+    });
   }, [navigation]);
 
   useEffect(() => {

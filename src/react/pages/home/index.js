@@ -581,7 +581,7 @@ export default function HomePage({ navigation }) {
                 ]}
                 onPress={() => {
                   if (item.type === 'lead') navigation.navigate('CrmIndex'); // Could navigate to details if we had the route
-                  else if (item.type === 'proposal') navigation.navigate('ContractDetails', { contractId: item.originalId });
+                  else if (item.type === 'proposal') navigation.navigate('ProposalDetails', { contractId: item.originalId });
                   else if (item.type === 'calendar') navigation.navigate('ContractDetails', { contractId: item.originalId });
                 }}
               >
