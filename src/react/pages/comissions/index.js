@@ -18,7 +18,6 @@ import { useStore } from '@store';
 import AnimatedModal from '../../components/AnimatedModal';
 
 const Invoices = () => {
-
   const invoiceStore = useStore('invoice');
   const peopleStore = useStore('people');
 
@@ -26,20 +25,19 @@ const Invoices = () => {
   const invoiceActions = invoiceStore?.actions || {};
   const peopleGetters = peopleStore?.getters || {};
 
-  const {
-    items = [],
-    isLoading = false,
-    error = null,
-  } = invoiceGetters;
+  const { isLoading = false, error = null } = invoiceGetters;
 
   const { currentCompany } = peopleGetters;
 
   const [refreshing, setRefreshing] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState('0');
-  const [selectedYear, setSelectedYear] = useState(String(new Date().getFullYear()));
+  const [selectedYear, setSelectedYear] = useState(
+    String(new Date().getFullYear()),
+  );
   const hasLoadedInitially = useRef(false);
-  const [selectedInvoice, setSelectedInvoice] = useState(null);
-  const [invoiceDetailsVisible, setInvoiceDetailsVisible] = useState(false);
+  const [incomeStatements, setIncomeStatements] = useState({});
+  const [selectedStatement, setSelectedStatement] = useState(null);
+  const [detailsVisible, setDetailsVisible] = useState(false);
 
   const monthOptions = useMemo(
     () => [
@@ -59,69 +57,57 @@ const Invoices = () => {
     ]
   );
 
-  const getDateRange = useCallback((yearString, monthString) => {
-    const year = parseInt(yearString, 10);
-    const month = parseInt(monthString, 10);
-
-    if (!year) return null;
-
-    let start;
-    let end;
-
-    if (!month || month < 1 || month > 12) {
-      start = new Date(year, 0, 1, 0, 0, 0, 0);
-      end = new Date(year, 11, 31, 23, 59, 59, 999);
-    } else {
-      start = new Date(year, month - 1, 1, 0, 0, 0, 0);
-      end = new Date(year, month, 0, 23, 59, 59, 999);
-    }
-
-    const formatDateForApi = date => {
-      const y = date.getFullYear();
-      const m = String(date.getMonth() + 1).padStart(2, '0');
-      const d = String(date.getDate()).padStart(2, '0');
-      return `${y}-${m}-${d}`;
-    };
-
-    return {
-      after: formatDateForApi(start),
-      before: formatDateForApi(end),
-    };
-  }, []);
-
-  const invoices = useMemo(() => {
-    if (Array.isArray(items)) return items;
-    if (Array.isArray(items?.member)) return items.member;
-    return [];
-  }, [items]);
-
   const canLoad = useMemo(() => {
     return Boolean(
       currentCompany?.id &&
-      typeof invoiceActions?.getItems === 'function',
+      typeof invoiceActions?.getIncomeStatements === 'function',
     );
   }, [currentCompany?.id, invoiceActions]);
 
-  const loadInvoices = useCallback(async () => {
+  const normalizeParentCategories = useCallback(raw => {
+    const parentList = Array.isArray(raw)
+      ? raw
+      : Object.values(raw || {});
+
+    return parentList.map(parent => ({
+      parentId: parent?.parent_id || '',
+      parentName: parent?.parent_category_name || global.t?.t('people', 'label', 'noCategory'),
+      total: Number(parent?.total_parent_category_price || 0),
+      categories: (Array.isArray(parent?.categories_childs)
+        ? parent.categories_childs
+        : Object.values(parent?.categories_childs || {})
+      ).map(category => ({
+        id: category?.category_id || '',
+        name: category?.category_name || global.t?.t('people', 'label', 'noCategory'),
+        total: Number(category?.category_price || 0),
+      })),
+    }));
+  }, []);
+
+  const loadIncomeStatements = useCallback(async () => {
     if (!canLoad) return;
 
-    const range = getDateRange(selectedYear, selectedMonth);
+    const year = parseInt(selectedYear, 10);
+    if (!year) return;
+
     const params = {
-      payer: currentCompany.id,
-      'order[dueDate]': 'desc',
+      people: currentCompany.id,
+      year,
     };
 
-    if (range) {
-      params['dueDate[after]'] = range.after;
-      params['dueDate[before]'] = range.before;
+    const month = parseInt(selectedMonth, 10);
+    if (month >= 1 && month <= 12) {
+      params.month = month;
     }
 
-    await invoiceActions.getItems(params);
+    const response = await invoiceActions.getIncomeStatements(params);
+    setIncomeStatements(
+      response && typeof response === 'object' ? response : {},
+    );
   }, [
     canLoad,
     invoiceActions,
     currentCompany?.id,
-    getDateRange,
     selectedMonth,
     selectedYear,
   ]);
@@ -129,8 +115,8 @@ const Invoices = () => {
   useFocusEffect(
     useCallback(() => {
       hasLoadedInitially.current = true;
-      loadInvoices();
-    }, [loadInvoices]),
+      loadIncomeStatements();
+    }, [loadIncomeStatements]),
   );
 
   useEffect(() => {
@@ -138,17 +124,17 @@ const Invoices = () => {
       return;
     }
 
-    loadInvoices();
-  }, [canLoad, loadInvoices, selectedMonth, selectedYear]);
+    loadIncomeStatements();
+  }, [canLoad, loadIncomeStatements, selectedMonth, selectedYear]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      await loadInvoices();
+      await loadIncomeStatements();
     } finally {
       setRefreshing(false);
     }
-  }, [loadInvoices]);
+  }, [loadIncomeStatements]);
 
   const formatCurrency = value =>
     new Intl.NumberFormat('pt-br', {
@@ -156,27 +142,66 @@ const Invoices = () => {
       currency: 'BRL',
     }).format(Number(value || 0));
 
-  const formatDate = dateString => {
-    if (!dateString) return '-';
-    const parsedDate = new Date(dateString);
-    if (Number.isNaN(parsedDate.getTime())) return '-';
-    return parsedDate.toLocaleDateString('pt-br');
+  const monthLabelById = useMemo(() => {
+    return monthOptions.reduce((acc, option) => {
+      acc[option.id] = option.label;
+      return acc;
+    }, {});
+  }, [monthOptions]);
+
+  const monthRows = useMemo(() => {
+    const selectedMonthNumber = parseInt(selectedMonth, 10);
+    const monthKeys = selectedMonthNumber >= 1 && selectedMonthNumber <= 12
+      ? [selectedMonthNumber]
+      : Object.keys(incomeStatements || {})
+          .map(key => parseInt(key, 10))
+          .filter(month => month >= 1 && month <= 12)
+          .sort((a, b) => a - b);
+
+    return monthKeys
+      .map(monthNumber => {
+        const monthData =
+          incomeStatements?.[monthNumber] ||
+          incomeStatements?.[String(monthNumber)] ||
+          {};
+        const receiveTotal = Number(monthData?.receive?.total_month_price || 0);
+        const payTotal = Number(monthData?.pay?.total_month_price || 0);
+        const balance = receiveTotal - payTotal;
+
+        return {
+          month: monthNumber,
+          label:
+            monthLabelById[String(monthNumber)] ||
+            String(monthNumber).padStart(2, '0'),
+          receiveTotal,
+          payTotal,
+          balance,
+          receiveParents: normalizeParentCategories(
+            monthData?.receive?.parent_categories,
+          ),
+          payParents: normalizeParentCategories(monthData?.pay?.parent_categories),
+        };
+      })
+      .filter(row => {
+        if (selectedMonthNumber >= 1 && selectedMonthNumber <= 12) {
+          return true;
+        }
+        return row.receiveTotal !== 0 || row.payTotal !== 0;
+      });
+  }, [incomeStatements, monthLabelById, normalizeParentCategories, selectedMonth]);
+
+  const openStatementDetails = statement => {
+    setSelectedStatement(statement);
+    setDetailsVisible(true);
   };
 
-  const getStatusColor = status => status?.color || '#64748B';
-
-  const handleInvoicePress = invoice => {
-    setSelectedInvoice(invoice);
-    setInvoiceDetailsVisible(true);
+  const handleCloseDetails = () => {
+    setDetailsVisible(false);
+    setSelectedStatement(null);
   };
 
-  const handleCloseInvoiceDetails = () => {
-    setInvoiceDetailsVisible(false);
-    setSelectedInvoice(null);
-  };
-
-  const showEmptyState = !isLoading && !error && invoices.length === 0;
-  const showListState = !isLoading && !error && invoices.length > 0;
+  const showEmptyState = !isLoading && !error && monthRows.length === 0;
+  const showListState = !isLoading && !error && monthRows.length > 0;
 
   const pageChildren = [];
 
@@ -262,7 +287,7 @@ const Invoices = () => {
         <Text style={styles.errorSubtitle}>
           {global.t?.t('people','state', 'errorSubtitle')}
         </Text>
-        <TouchableOpacity style={styles.retryButton} onPress={loadInvoices}>
+        <TouchableOpacity style={styles.retryButton} onPress={loadIncomeStatements}>
           <Text style={styles.retryButtonText}>
             {global.t?.t('people','action', 'retry')}
           </Text>
@@ -290,54 +315,35 @@ const Invoices = () => {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }>
         <View style={styles.listContainer}>
-          {invoices.map((invoice, index) => {
-            const cardMetaChildren = [
-              <Text key="category" style={styles.metaLine}>
-                {global.t?.t('people','label', 'category')}: {invoice?.category?.name || global.t?.t('people','label', 'noCategory')}
-              </Text>,
-              <Text key="payment" style={styles.metaLine}>
-                {global.t?.t('people','label', 'payment')}: {invoice?.paymentType?.paymentType || global.t?.t('people','label', 'n/a?')}
-              </Text>,
-              <Text key="due" style={styles.metaLine}>
-                {global.t?.t('people','label', 'dueDate')}: {formatDate(invoice?.dueDate)}
-              </Text>,
-            ];
-
-            if (invoice?.sourceWallet) {
-              cardMetaChildren.push(
-                <Text key="source" style={styles.metaLine}>
-                  {global.t?.t('people','label', 'from')}: {invoice.sourceWallet.wallet}
-                </Text>,
-              );
-            }
-
-            if (invoice?.destinationWallet) {
-              cardMetaChildren.push(
-                <Text key="destination" style={styles.metaLine}>
-                  {global.t?.t('people','label', 'to')}: {invoice.destinationWallet.wallet}
-                </Text>,
-              );
-            }
+          {monthRows.map(statement => {
+            const balancePositive = statement.balance >= 0;
 
             return (
               <TouchableOpacity
-                key={String(invoice?.id ?? `idx-${index}`)}
+                key={`month-${statement.month}`}
                 style={styles.card}
-                onPress={() => handleInvoicePress(invoice)}>
+                onPress={() => openStatementDetails(statement)}>
                 <View style={styles.cardHeader}>
                   <Text style={styles.cardTitle}>
-                    {global.t?.t('people','label', 'invoice')} #{invoice?.id || '-'}
+                    {`${statement.label}/${selectedYear}`}
                   </Text>
                   <Text
                     style={[
                       styles.statusPill,
-                      { backgroundColor: getStatusColor(invoice?.status) },
+                      {
+                        backgroundColor: balancePositive ? '#16A34A' : '#DC2626',
+                      },
                     ]}>
-                    {(invoice?.status?.status || global.t?.t('people','label', 'n/a ??')).toUpperCase()}
+                    {balancePositive ? 'POSITIVO' : 'NEGATIVO'}
                   </Text>
                 </View>
-                <Text style={styles.amount}>{formatCurrency(invoice?.price)}</Text>
-                {cardMetaChildren}
+                <Text style={styles.amount}>{formatCurrency(statement.balance)}</Text>
+                <Text style={styles.metaLine}>
+                  Receitas: {formatCurrency(statement.receiveTotal)}
+                </Text>
+                <Text style={styles.metaLine}>
+                  Despesas: {formatCurrency(statement.payTotal)}
+                </Text>
               </TouchableOpacity>
             );
           })}
@@ -351,100 +357,130 @@ const Invoices = () => {
       {pageChildren}
 
       <AnimatedModal
-        visible={invoiceDetailsVisible}
-        onRequestClose={handleCloseInvoiceDetails}
+        visible={detailsVisible}
+        onRequestClose={handleCloseDetails}
         style={{ justifyContent: 'flex-end' }}>
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>
-              {global.t?.t('people','title', 'invoiceDetails')}
+              Detalhes do Mes
             </Text>
             <TouchableOpacity
-              onPress={() => setInvoiceDetailsVisible(false)}
+              onPress={handleCloseDetails}
               style={styles.modalCloseButton}>
               <Icon name="close" size={20} color="#64748B" />
             </TouchableOpacity>
           </View>
 
-          <View style={styles.modalBody}>
+          <ScrollView style={styles.modalBody} contentContainerStyle={{ paddingBottom: 20 }}>
             <View style={styles.modalSummaryCard}>
               <Text style={styles.modalAmount}>
-                {formatCurrency(selectedInvoice?.price)}
+                {formatCurrency(selectedStatement?.balance)}
               </Text>
               <View
                 style={[
                   styles.modalStatusPill,
                   {
-                    backgroundColor: getStatusColor(selectedInvoice?.status),
+                    backgroundColor:
+                      (selectedStatement?.balance || 0) >= 0
+                        ? '#16A34A'
+                        : '#DC2626',
                   },
                 ]}>
                 <Text style={styles.modalStatusText}>
-                  {(
-                    selectedInvoice?.status?.status ||
-                    global.t?.t('people','label', 'n/a')
-                  ).toUpperCase()}
+                  {(selectedStatement?.balance || 0) >= 0
+                    ? 'SALDO POSITIVO'
+                    : 'SALDO NEGATIVO'}
                 </Text>
               </View>
             </View>
 
             <View style={styles.modalDetailsCard}>
               <View style={styles.modalDetailRow}>
-                <Text style={styles.modalDetailLabel}>
-                  {global.t?.t('people','label', 'id')}
-                </Text>
+                <Text style={styles.modalDetailLabel}>Mes</Text>
                 <Text style={styles.modalDetailValue}>
-                  #{selectedInvoice?.id || '-'}
+                  {selectedStatement?.label || '-'}
                 </Text>
               </View>
               <View style={styles.modalDetailRow}>
-                <Text style={styles.modalDetailLabel}>
-                  {global.t?.t('people','label', 'category')}
-                </Text>
+                <Text style={styles.modalDetailLabel}>Ano</Text>
                 <Text style={styles.modalDetailValue}>
-                  {selectedInvoice?.category?.name ||
-                    global.t?.t('people','label', 'noCategory')}
+                  {selectedYear}
                 </Text>
               </View>
               <View style={styles.modalDetailRow}>
-                <Text style={styles.modalDetailLabel}>
-                  {global.t?.t('people','label', 'payment')}
-                </Text>
+                <Text style={styles.modalDetailLabel}>Receitas</Text>
                 <Text style={styles.modalDetailValue}>
-                  {selectedInvoice?.paymentType?.paymentType ||
-                    global.t?.t('people','label', 'n/a??')}
+                  {formatCurrency(selectedStatement?.receiveTotal)}
                 </Text>
               </View>
               <View style={styles.modalDetailRow}>
-                <Text style={styles.modalDetailLabel}>
-                  {global.t?.t('people','label', 'dueDate')}
-                </Text>
+                <Text style={styles.modalDetailLabel}>Despesas</Text>
                 <Text style={styles.modalDetailValue}>
-                  {formatDate(selectedInvoice?.dueDate)}
-                </Text>
-              </View>
-              <View style={styles.modalDetailRow}>
-                <Text style={styles.modalDetailLabel}>
-                  {global.t?.t('people','label', 'from')}
-                </Text>
-                <Text style={styles.modalDetailValue}>
-                  {selectedInvoice?.sourceWallet?.wallet || '-'}
-                </Text>
-              </View>
-              <View style={styles.modalDetailRow}>
-                <Text style={styles.modalDetailLabel}>
-                  {global.t?.t('people','label', 'to')}
-                </Text>
-                <Text style={styles.modalDetailValue}>
-                  {selectedInvoice?.destinationWallet?.wallet || '-'}
+                  {formatCurrency(selectedStatement?.payTotal)}
                 </Text>
               </View>
             </View>
-          </View>
+
+            <View style={styles.modalDetailsCard}>
+              <Text style={styles.modalSectionTitle}>Receitas por Categoria</Text>
+              {Array.isArray(selectedStatement?.receiveParents) &&
+              selectedStatement.receiveParents.length > 0 ? (
+                selectedStatement.receiveParents.map(parent => (
+                  <View key={`rcv-parent-${parent.parentId}`} style={styles.modalGroupBlock}>
+                    <View style={styles.modalGroupHeader}>
+                      <Text style={styles.modalGroupTitle}>{parent.parentName}</Text>
+                      <Text style={styles.modalGroupAmount}>
+                        {formatCurrency(parent.total)}
+                      </Text>
+                    </View>
+                    {parent.categories.map(category => (
+                      <View key={`rcv-cat-${category.id}`} style={styles.modalCategoryRow}>
+                        <Text style={styles.modalCategoryText}>{category.name}</Text>
+                        <Text style={styles.modalCategoryAmount}>
+                          {formatCurrency(category.total)}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                ))
+              ) : (
+                <Text style={styles.modalEmptyText}>Sem receitas no periodo.</Text>
+              )}
+            </View>
+
+            <View style={styles.modalDetailsCard}>
+              <Text style={styles.modalSectionTitle}>Despesas por Categoria</Text>
+              {Array.isArray(selectedStatement?.payParents) &&
+              selectedStatement.payParents.length > 0 ? (
+                selectedStatement.payParents.map(parent => (
+                  <View key={`pay-parent-${parent.parentId}`} style={styles.modalGroupBlock}>
+                    <View style={styles.modalGroupHeader}>
+                      <Text style={styles.modalGroupTitle}>{parent.parentName}</Text>
+                      <Text style={styles.modalGroupAmount}>
+                        {formatCurrency(parent.total)}
+                      </Text>
+                    </View>
+                    {parent.categories.map(category => (
+                      <View key={`pay-cat-${category.id}`} style={styles.modalCategoryRow}>
+                        <Text style={styles.modalCategoryText}>{category.name}</Text>
+                        <Text style={styles.modalCategoryAmount}>
+                          {formatCurrency(category.total)}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                ))
+              ) : (
+                <Text style={styles.modalEmptyText}>Sem despesas no periodo.</Text>
+              )}
+            </View>
+          </ScrollView>
 
           <View style={styles.modalFooter}>
             <TouchableOpacity
               style={styles.modalPrimaryButton}
-              onPress={() => setInvoiceDetailsVisible(false)}>
+              onPress={handleCloseDetails}>
               <Text style={styles.modalPrimaryButtonText}>
                 {global.t?.t('people','action', 'close')}
               </Text>
@@ -700,6 +736,59 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#0F172A',
+  },
+  modalSectionTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#0F172A',
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 10,
+  },
+  modalGroupBlock: {
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+  },
+  modalGroupHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  modalGroupTitle: {
+    flex: 1,
+    color: '#0F172A',
+    fontSize: 13,
+    fontWeight: '600',
+    marginRight: 8,
+  },
+  modalGroupAmount: {
+    color: '#0F172A',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  modalCategoryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  modalCategoryText: {
+    flex: 1,
+    color: '#475569',
+    fontSize: 12,
+    marginRight: 8,
+  },
+  modalCategoryAmount: {
+    color: '#475569',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  modalEmptyText: {
+    color: '#64748B',
+    fontSize: 12,
+    paddingHorizontal: 16,
+    paddingBottom: 14,
   },
   modalFooter: {
     padding: 20,
