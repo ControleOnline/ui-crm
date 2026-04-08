@@ -74,6 +74,45 @@ const normalizeNotificationTargets = value => {
 const getPrinterLabel = printer =>
   printer?.alias || printer?.name || printer?.device || 'Device sem nome';
 
+const toConfigRequestValue = value => {
+  if (value === undefined) {
+    return JSON.stringify('');
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+
+    if (trimmed === '') {
+      return JSON.stringify('');
+    }
+
+    try {
+      JSON.parse(trimmed);
+      return value;
+    } catch (e) {
+      return JSON.stringify(value);
+    }
+  }
+
+  return JSON.stringify(value);
+};
+
+const toConfigCacheValue = value => {
+  if (value === null || value === undefined) {
+    return '';
+  }
+
+  if (typeof value === 'string') {
+    return value;
+  }
+
+  if (typeof value === 'object') {
+    return JSON.stringify(value);
+  }
+
+  return String(value);
+};
+
 const GeneralSettings = () => {
   const {styles, globalStyles} = css();
 
@@ -81,7 +120,8 @@ const GeneralSettings = () => {
   const {currentCompany} = peopleStore.getters;
 
   const configsStore = useStore('configs');
-  const {items: companyConfigs, isSaving} = configsStore.getters;
+  const configsGetters = configsStore.getters;
+  const {items: companyConfigs, isSaving} = configsGetters;
   const configActions = configsStore.actions;
 
   const printerStore = useStore('printer');
@@ -232,13 +272,83 @@ const GeneralSettings = () => {
   }, [effectiveCompanyConfigs]);
 
   const syncConfigCache = useCallback(
-    (key, value) => {
+    entries => {
+      const baseConfigs =
+        configsGetters.items && typeof configsGetters.items === 'object'
+          ? configsGetters.items
+          : effectiveCompanyConfigs;
+
       configActions.setItems({
-        ...effectiveCompanyConfigs,
-        [key]: value,
+        ...baseConfigs,
+        ...entries,
       });
     },
-    [configActions, effectiveCompanyConfigs],
+    [configActions, configsGetters, effectiveCompanyConfigs],
+  );
+
+  const saveConfigs = useCallback(
+    entries => {
+      if (!currentCompany?.id) {
+        Alert.alert(
+          'Empresa nao selecionada',
+          'Selecione uma empresa para salvar as configuracoes.',
+        );
+        return Promise.resolve(false);
+      }
+
+      const normalizedEntries = Object.entries(entries || {}).reduce(
+        (accumulator, [key, value]) => {
+          accumulator[key] = value;
+          return accumulator;
+        },
+        {},
+      );
+
+      const requestEntries = Object.entries(normalizedEntries).reduce(
+        (accumulator, [key, value]) => {
+          accumulator[key] = toConfigRequestValue(value);
+          return accumulator;
+        },
+        {},
+      );
+
+      const cacheEntries = Object.entries(normalizedEntries).reduce(
+        (accumulator, [key, value]) => {
+          accumulator[key] = toConfigCacheValue(value);
+          return accumulator;
+        },
+        {},
+      );
+
+      return new Promise(resolve => {
+        configActions.addToQueue(() =>
+          configActions
+            .addManyConfigs({
+              configs: Object.entries(requestEntries).map(
+                ([configKey, configValue]) => ({
+                  configKey,
+                  configValue,
+                }),
+              ),
+              people: '/people/' + currentCompany.id,
+              module: 4,
+              visibility: 'public',
+            })
+            .then(data => {
+              syncConfigCache(cacheEntries);
+              resolve(true);
+              return data;
+            })
+            .catch(err => {
+              Alert.alert('Erro', err?.message || JSON.stringify(err));
+              resolve(false);
+              return null;
+            }),
+        );
+        configActions.initQueue();
+      });
+    },
+    [configActions, currentCompany?.id, syncConfigCache],
   );
 
   const saveConfig = useCallback(
@@ -251,18 +361,21 @@ const GeneralSettings = () => {
         return Promise.resolve(false);
       }
 
+      const requestValue = toConfigRequestValue(value);
+      const cacheValue = toConfigCacheValue(value);
+
       return new Promise(resolve => {
         configActions.addToQueue(() =>
           configActions
             .addConfigs({
               configKey: key,
-              configValue: value,
+              configValue: requestValue,
               people: '/people/' + currentCompany.id,
               module: 4,
               visibility: 'public',
             })
             .then(data => {
-              syncConfigCache(key, value);
+              syncConfigCache({[key]: cacheValue});
               resolve(true);
               return data;
             })
@@ -279,7 +392,7 @@ const GeneralSettings = () => {
   );
 
   const saveProfiles = useCallback(() => {
-    saveConfig('after-sales-profiles', JSON.stringify(profiles));
+    saveConfig('after-sales-profiles', profiles);
   }, [profiles, saveConfig]);
 
   const addProfile = useCallback(() => {
@@ -362,10 +475,7 @@ const GeneralSettings = () => {
       return;
     }
 
-    await saveConfig(
-      'order-print-devices',
-      JSON.stringify(orderPrintEnabled ? normalizedDevices : []),
-    );
+    await saveConfig('order-print-devices', orderPrintEnabled ? normalizedDevices : []);
   }, [orderPrintDevices, orderPrintEnabled, saveConfig]);
 
   const toggleOrderPaymentDevice = useCallback(deviceId => {
@@ -393,7 +503,7 @@ const GeneralSettings = () => {
 
     await saveConfig(
       ORDER_PAYMENT_DEVICES_CONFIG_KEY,
-      JSON.stringify(orderPaymentEnabled ? normalizedDevices : []),
+      orderPaymentEnabled ? normalizedDevices : [],
     );
   }, [orderPaymentDevices, orderPaymentEnabled, saveConfig]);
 
@@ -409,25 +519,17 @@ const GeneralSettings = () => {
   );
 
   const saveOperationalConfigs = useCallback(async () => {
-    const configsToSave = [
-      ['pos-default-status', String(posDefaultStatus || '').trim()],
-      ['pos-paid-status', String(posPaidStatus || '').trim()],
-      ['pos-cash-wallet', String(posCashWallet || '').trim()],
-      ['pos-withdrawl-wallet', String(posWithdrawWallet || '').trim()],
-      ['pos-cielo-wallet', String(posCieloWallet || '').trim()],
-      ['pos-infinite-pay-wallet', String(posInfinitePayWallet || '').trim()],
-      [
-        'cash-register-notifications',
-        JSON.stringify(normalizeNotificationTargets(cashRegisterNotifications)),
-      ],
-    ];
-
-    for (const [key, value] of configsToSave) {
-      const saved = await saveConfig(key, value);
-      if (!saved) {
-        break;
-      }
-    }
+    await saveConfigs({
+      'pos-default-status': String(posDefaultStatus || '').trim(),
+      'pos-paid-status': String(posPaidStatus || '').trim(),
+      'pos-cash-wallet': String(posCashWallet || '').trim(),
+      'pos-withdrawl-wallet': String(posWithdrawWallet || '').trim(),
+      'pos-cielo-wallet': String(posCieloWallet || '').trim(),
+      'pos-infinite-pay-wallet': String(posInfinitePayWallet || '').trim(),
+      'cash-register-notifications': normalizeNotificationTargets(
+        cashRegisterNotifications,
+      ),
+    });
   }, [
     cashRegisterNotifications,
     posCashWallet,
@@ -436,7 +538,7 @@ const GeneralSettings = () => {
     posInfinitePayWallet,
     posPaidStatus,
     posWithdrawWallet,
-    saveConfig,
+    saveConfigs,
   ]);
 
   return (
