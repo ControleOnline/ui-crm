@@ -15,6 +15,7 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 
 import css from '@controleonline/ui-orders/src/react/css/orders';
 import Formatter from '@controleonline/ui-common/src/utils/formatter';
+import StateStore from '@controleonline/ui-layout/src/react/components/StateStore';
 import {
   getCompanyPaymentDeviceOptions,
   ORDER_PAYMENT_DEVICES_CONFIG_KEY,
@@ -55,6 +56,20 @@ const normalizePrinterDeviceIds = value => {
   return normalizeDeviceIds(value);
 };
 
+const normalizeNotificationTargets = value => {
+  const parsed = parseJsonValue(value, []);
+  if (Array.isArray(parsed)) {
+    return parsed
+      .map(item => String(item || '').trim())
+      .filter(Boolean);
+  }
+
+  return String(value || '')
+    .split(/\r?\n|,/)
+    .map(item => item.trim())
+    .filter(Boolean);
+};
+
 const getPrinterLabel = printer =>
   printer?.alias || printer?.name || printer?.device || 'Device sem nome';
 
@@ -82,6 +97,20 @@ const GeneralSettings = () => {
   } = deviceConfigStore.getters;
   const deviceConfigActions = deviceConfigStore.actions;
 
+  const statusStore = useStore('status');
+  const {
+    items: statuses = [],
+    isLoading: isLoadingStatuses,
+  } = statusStore.getters;
+  const statusActions = statusStore.actions;
+
+  const walletStore = useStore('wallet');
+  const {
+    items: wallets = [],
+    isLoading: isLoadingWallets,
+  } = walletStore.getters;
+  const walletActions = walletStore.actions;
+
   const effectiveCompanyConfigs = useMemo(() => {
     if (companyConfigs && typeof companyConfigs === 'object') {
       return companyConfigs;
@@ -105,6 +134,13 @@ const GeneralSettings = () => {
   const [orderPrintDevices, setOrderPrintDevices] = useState([]);
   const [orderPaymentEnabled, setOrderPaymentEnabled] = useState(false);
   const [orderPaymentDevices, setOrderPaymentDevices] = useState([]);
+  const [posDefaultStatus, setPosDefaultStatus] = useState('');
+  const [posPaidStatus, setPosPaidStatus] = useState('');
+  const [posCashWallet, setPosCashWallet] = useState('');
+  const [posWithdrawWallet, setPosWithdrawWallet] = useState('');
+  const [posCieloWallet, setPosCieloWallet] = useState('');
+  const [posInfinitePayWallet, setPosInfinitePayWallet] = useState('');
+  const [cashRegisterNotifications, setCashRegisterNotifications] = useState('');
 
   const pickerMode = 'dropdown';
 
@@ -122,7 +158,15 @@ const GeneralSettings = () => {
     deviceConfigActions
       .getItems({people: '/people/' + currentCompany.id})
       .catch(() => {});
-  }, [currentCompany?.id, deviceConfigActions, printerActions]);
+    statusActions.getItems({itemsPerPage: 200}).catch(() => {});
+    walletActions.getItems({people: currentCompany.id, itemsPerPage: 200}).catch(() => {});
+  }, [
+    currentCompany?.id,
+    deviceConfigActions,
+    printerActions,
+    statusActions,
+    walletActions,
+  ]);
 
   useEffect(() => {
     setStrategy(
@@ -151,6 +195,33 @@ const GeneralSettings = () => {
     );
     setOrderPaymentDevices(nextOrderPaymentDevices);
     setOrderPaymentEnabled(nextOrderPaymentDevices.length > 0);
+    setPosDefaultStatus(
+      String(effectiveCompanyConfigs['pos-default-status'] || ''),
+    );
+    setPosPaidStatus(
+      String(effectiveCompanyConfigs['pos-paid-status'] || ''),
+    );
+    setPosCashWallet(
+      String(effectiveCompanyConfigs['pos-cash-wallet'] || ''),
+    );
+    setPosWithdrawWallet(
+      String(
+        effectiveCompanyConfigs['pos-withdrawl-wallet'] ||
+          effectiveCompanyConfigs['pos-withdrawal-wallet'] ||
+          '',
+      ),
+    );
+    setPosCieloWallet(
+      String(effectiveCompanyConfigs['pos-cielo-wallet'] || ''),
+    );
+    setPosInfinitePayWallet(
+      String(effectiveCompanyConfigs['pos-infinite-pay-wallet'] || ''),
+    );
+    setCashRegisterNotifications(
+      normalizeNotificationTargets(
+        effectiveCompanyConfigs['cash-register-notifications'],
+      ).join('\n'),
+    );
   }, [effectiveCompanyConfigs]);
 
   const syncConfigCache = useCallback(
@@ -312,9 +383,49 @@ const GeneralSettings = () => {
 
   const selectedPrinterCount = orderPrintDevices.length;
   const selectedPaymentDeviceCount = orderPaymentDevices.length;
+  const normalizedStatusOptions = useMemo(
+    () => (Array.isArray(statuses) ? statuses : []),
+    [statuses],
+  );
+  const normalizedWalletOptions = useMemo(
+    () => (Array.isArray(wallets) ? wallets : []),
+    [wallets],
+  );
+
+  const saveOperationalConfigs = useCallback(async () => {
+    const configsToSave = [
+      ['pos-default-status', String(posDefaultStatus || '').trim()],
+      ['pos-paid-status', String(posPaidStatus || '').trim()],
+      ['pos-cash-wallet', String(posCashWallet || '').trim()],
+      ['pos-withdrawl-wallet', String(posWithdrawWallet || '').trim()],
+      ['pos-cielo-wallet', String(posCieloWallet || '').trim()],
+      ['pos-infinite-pay-wallet', String(posInfinitePayWallet || '').trim()],
+      [
+        'cash-register-notifications',
+        JSON.stringify(normalizeNotificationTargets(cashRegisterNotifications)),
+      ],
+    ];
+
+    for (const [key, value] of configsToSave) {
+      const saved = await saveConfig(key, value);
+      if (!saved) {
+        break;
+      }
+    }
+  }, [
+    cashRegisterNotifications,
+    posCashWallet,
+    posCieloWallet,
+    posDefaultStatus,
+    posInfinitePayWallet,
+    posPaidStatus,
+    posWithdrawWallet,
+    saveConfig,
+  ]);
 
   return (
     <SafeAreaView style={styles.Settings.container}>
+      <StateStore stores={['configs', 'printer', 'device_config', 'status', 'wallet']} />
       <ScrollView contentContainerStyle={styles.Settings.scrollContent}>
         <View style={styles.Settings.mainContainer}>
           <Text style={localStyles.pageTitle}>Configurador geral</Text>
@@ -541,6 +652,160 @@ const GeneralSettings = () => {
               onPress={saveOrderPaymentDevices}>
               <Text style={localStyles.primaryButtonText}>
                 Salvar devices de pagamento
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={localStyles.sectionCard}>
+            <View style={localStyles.sectionHeader}>
+              <View style={[localStyles.sectionIconWrap, {backgroundColor: '#DCFCE7'}]}>
+                <Icon name="point-of-sale" size={20} color="#166534" />
+              </View>
+              <View style={localStyles.sectionHeaderCopy}>
+                <Text style={localStyles.sectionTitle}>Operacao e PDV</Text>
+                <Text style={localStyles.sectionDescription}>
+                  Status, carteiras e notificacoes usadas pelos fluxos de pedido,
+                  pagamento e fechamento de caixa.
+                </Text>
+              </View>
+            </View>
+
+            <View style={localStyles.fieldBlock}>
+              <Text style={localStyles.fieldLabel}>Status padrao do PDV</Text>
+              <Picker
+                selectedValue={posDefaultStatus}
+                mode={pickerMode}
+                onValueChange={value => setPosDefaultStatus(String(value || ''))}
+                style={styles.Settings.picker}>
+                <Picker.Item label="Selecione um status" value="" />
+                {normalizedStatusOptions.map(statusOption => (
+                  <Picker.Item
+                    key={statusOption.id}
+                    label={`${statusOption.context || 'geral'} • ${statusOption.status}`}
+                    value={String(statusOption.id)}
+                  />
+                ))}
+              </Picker>
+            </View>
+
+            <View style={localStyles.fieldBlock}>
+              <Text style={localStyles.fieldLabel}>Status pago</Text>
+              <Picker
+                selectedValue={posPaidStatus}
+                mode={pickerMode}
+                onValueChange={value => setPosPaidStatus(String(value || ''))}
+                style={styles.Settings.picker}>
+                <Picker.Item label="Selecione um status" value="" />
+                {normalizedStatusOptions.map(statusOption => (
+                  <Picker.Item
+                    key={`paid-${statusOption.id}`}
+                    label={`${statusOption.context || 'geral'} • ${statusOption.status}`}
+                    value={String(statusOption.id)}
+                  />
+                ))}
+              </Picker>
+            </View>
+
+            <View style={localStyles.fieldBlock}>
+              <Text style={localStyles.fieldLabel}>Carteira de dinheiro</Text>
+              <Picker
+                selectedValue={posCashWallet}
+                mode={pickerMode}
+                onValueChange={value => setPosCashWallet(String(value || ''))}
+                style={styles.Settings.picker}>
+                <Picker.Item label="Selecione uma carteira" value="" />
+                {normalizedWalletOptions.map(walletOption => (
+                  <Picker.Item
+                    key={`cash-${walletOption.id}`}
+                    label={walletOption.wallet}
+                    value={String(walletOption.id)}
+                  />
+                ))}
+              </Picker>
+            </View>
+
+            <View style={localStyles.fieldBlock}>
+              <Text style={localStyles.fieldLabel}>Carteira de sangria</Text>
+              <Picker
+                selectedValue={posWithdrawWallet}
+                mode={pickerMode}
+                onValueChange={value => setPosWithdrawWallet(String(value || ''))}
+                style={styles.Settings.picker}>
+                <Picker.Item label="Selecione uma carteira" value="" />
+                {normalizedWalletOptions.map(walletOption => (
+                  <Picker.Item
+                    key={`withdraw-${walletOption.id}`}
+                    label={walletOption.wallet}
+                    value={String(walletOption.id)}
+                  />
+                ))}
+              </Picker>
+            </View>
+
+            <View style={localStyles.fieldBlock}>
+              <Text style={localStyles.fieldLabel}>Carteira Cielo</Text>
+              <Picker
+                selectedValue={posCieloWallet}
+                mode={pickerMode}
+                onValueChange={value => setPosCieloWallet(String(value || ''))}
+                style={styles.Settings.picker}>
+                <Picker.Item label="Selecione uma carteira" value="" />
+                {normalizedWalletOptions.map(walletOption => (
+                  <Picker.Item
+                    key={`cielo-${walletOption.id}`}
+                    label={walletOption.wallet}
+                    value={String(walletOption.id)}
+                  />
+                ))}
+              </Picker>
+            </View>
+
+            <View style={localStyles.fieldBlock}>
+              <Text style={localStyles.fieldLabel}>Carteira Infinite Pay</Text>
+              <Picker
+                selectedValue={posInfinitePayWallet}
+                mode={pickerMode}
+                onValueChange={value => setPosInfinitePayWallet(String(value || ''))}
+                style={styles.Settings.picker}>
+                <Picker.Item label="Selecione uma carteira" value="" />
+                {normalizedWalletOptions.map(walletOption => (
+                  <Picker.Item
+                    key={`infinite-${walletOption.id}`}
+                    label={walletOption.wallet}
+                    value={String(walletOption.id)}
+                  />
+                ))}
+              </Picker>
+            </View>
+
+            <View style={localStyles.fieldBlock}>
+              <Text style={localStyles.fieldLabel}>
+                Notificacoes de fechamento de caixa
+              </Text>
+              <TextInput
+                style={[localStyles.input, localStyles.multilineInput]}
+                value={cashRegisterNotifications}
+                multiline
+                numberOfLines={4}
+                onChangeText={setCashRegisterNotifications}
+                placeholder="Um numero por linha ou separado por virgula"
+              />
+            </View>
+
+            {(isLoadingStatuses || isLoadingWallets) && (
+              <ActivityIndicator size="small" style={localStyles.sectionLoader} />
+            )}
+
+            <TouchableOpacity
+              style={[
+                globalStyles.button,
+                localStyles.primaryButton,
+                (!currentCompany?.id || isSaving) && localStyles.primaryButtonDisabled,
+              ]}
+              disabled={!currentCompany?.id || isSaving}
+              onPress={saveOperationalConfigs}>
+              <Text style={localStyles.primaryButtonText}>
+                Salvar configuracoes do PDV
               </Text>
             </TouchableOpacity>
           </View>
@@ -869,6 +1134,10 @@ const localStyles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
     marginTop: 6,
+  },
+  multilineInput: {
+    minHeight: 96,
+    textAlignVertical: 'top',
   },
   profileRow: {
     flexDirection: 'row',
