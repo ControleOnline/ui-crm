@@ -17,6 +17,7 @@ import css from '@controleonline/ui-orders/src/react/css/orders';
 import Formatter from '@controleonline/ui-common/src/utils/formatter';
 import StateStore from '@controleonline/ui-layout/src/react/components/StateStore';
 import {
+  filterDeviceConfigsByCompany,
   getCompanyPaymentDeviceOptions,
   ORDER_PAYMENT_DEVICES_CONFIG_KEY,
   normalizeDeviceIds,
@@ -144,9 +145,15 @@ const GeneralSettings = () => {
 
   const pickerMode = 'dropdown';
 
+  const scopedCompanyDeviceConfigs = useMemo(
+    () =>
+      filterDeviceConfigsByCompany(companyDeviceConfigs, currentCompany?.id),
+    [companyDeviceConfigs, currentCompany?.id],
+  );
+
   const paymentDevices = useMemo(
-    () => getCompanyPaymentDeviceOptions(companyDeviceConfigs),
-    [companyDeviceConfigs],
+    () => getCompanyPaymentDeviceOptions(scopedCompanyDeviceConfigs),
+    [scopedCompanyDeviceConfigs],
   );
 
   useEffect(() => {
@@ -235,29 +242,38 @@ const GeneralSettings = () => {
   );
 
   const saveConfig = useCallback(
-    async (key, value) => {
+    (key, value) => {
       if (!currentCompany?.id) {
         Alert.alert(
           'Empresa nao selecionada',
           'Selecione uma empresa para salvar as configuracoes.',
         );
-        return false;
+        return Promise.resolve(false);
       }
 
-      try {
-        await configActions.addConfigs({
-          configKey: key,
-          configValue: value,
-          people: '/people/' + currentCompany.id,
-          module: 4,
-          visibility: 'public',
-        });
-        syncConfigCache(key, value);
-        return true;
-      } catch (err) {
-        Alert.alert('Erro', err?.message || JSON.stringify(err));
-        return false;
-      }
+      return new Promise(resolve => {
+        configActions.addToQueue(() =>
+          configActions
+            .addConfigs({
+              configKey: key,
+              configValue: value,
+              people: '/people/' + currentCompany.id,
+              module: 4,
+              visibility: 'public',
+            })
+            .then(data => {
+              syncConfigCache(key, value);
+              resolve(true);
+              return data;
+            })
+            .catch(err => {
+              Alert.alert('Erro', err?.message || JSON.stringify(err));
+              resolve(false);
+              return null;
+            }),
+        );
+        configActions.initQueue();
+      });
     },
     [configActions, currentCompany?.id, syncConfigCache],
   );
