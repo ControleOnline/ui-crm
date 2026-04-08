@@ -15,6 +15,11 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 
 import css from '@controleonline/ui-orders/src/react/css/orders';
 import Formatter from '@controleonline/ui-common/src/utils/formatter';
+import {
+  getCompanyPaymentDeviceOptions,
+  ORDER_PAYMENT_DEVICES_CONFIG_KEY,
+  normalizeDeviceIds,
+} from '@controleonline/ui-common/src/react/utils/paymentDevices';
 import {useStore} from '@store';
 
 const DEFAULT_AFTER_SALES_PROFILES = [
@@ -47,14 +52,7 @@ const normalizeProfiles = value => {
 };
 
 const normalizePrinterDeviceIds = value => {
-  const parsed = parseJsonValue(value, []);
-  if (!Array.isArray(parsed)) {
-    return [];
-  }
-
-  return parsed
-    .map(item => String(item || '').trim())
-    .filter(Boolean);
+  return normalizeDeviceIds(value);
 };
 
 const getPrinterLabel = printer =>
@@ -77,6 +75,13 @@ const GeneralSettings = () => {
   } = printerStore.getters;
   const printerActions = printerStore.actions;
 
+  const deviceConfigStore = useStore('device_config');
+  const {
+    items: companyDeviceConfigs = [],
+    isLoading: isLoadingDeviceConfigs,
+  } = deviceConfigStore.getters;
+  const deviceConfigActions = deviceConfigStore.actions;
+
   const effectiveCompanyConfigs = useMemo(() => {
     if (companyConfigs && typeof companyConfigs === 'object') {
       return companyConfigs;
@@ -98,8 +103,15 @@ const GeneralSettings = () => {
 
   const [orderPrintEnabled, setOrderPrintEnabled] = useState(false);
   const [orderPrintDevices, setOrderPrintDevices] = useState([]);
+  const [orderPaymentEnabled, setOrderPaymentEnabled] = useState(false);
+  const [orderPaymentDevices, setOrderPaymentDevices] = useState([]);
 
   const pickerMode = 'dropdown';
+
+  const paymentDevices = useMemo(
+    () => getCompanyPaymentDeviceOptions(companyDeviceConfigs),
+    [companyDeviceConfigs],
+  );
 
   useEffect(() => {
     if (!currentCompany?.id) {
@@ -107,7 +119,10 @@ const GeneralSettings = () => {
     }
 
     printerActions.getPrinters({people: currentCompany.id}).catch(() => {});
-  }, [currentCompany?.id, printerActions]);
+    deviceConfigActions
+      .getItems({people: '/people/' + currentCompany.id})
+      .catch(() => {});
+  }, [currentCompany?.id, deviceConfigActions, printerActions]);
 
   useEffect(() => {
     setStrategy(
@@ -130,6 +145,12 @@ const GeneralSettings = () => {
     );
     setOrderPrintDevices(nextOrderPrintDevices);
     setOrderPrintEnabled(nextOrderPrintDevices.length > 0);
+
+    const nextOrderPaymentDevices = normalizeDeviceIds(
+      effectiveCompanyConfigs[ORDER_PAYMENT_DEVICES_CONFIG_KEY],
+    );
+    setOrderPaymentDevices(nextOrderPaymentDevices);
+    setOrderPaymentEnabled(nextOrderPaymentDevices.length > 0);
   }, [effectiveCompanyConfigs]);
 
   const syncConfigCache = useCallback(
@@ -260,7 +281,37 @@ const GeneralSettings = () => {
     );
   }, [orderPrintDevices, orderPrintEnabled, saveConfig]);
 
+  const toggleOrderPaymentDevice = useCallback(deviceId => {
+    setOrderPaymentDevices(current => {
+      if (current.includes(deviceId)) {
+        return current.filter(item => item !== deviceId);
+      }
+
+      return [...current, deviceId];
+    });
+  }, []);
+
+  const saveOrderPaymentDevices = useCallback(async () => {
+    const normalizedDevices = orderPaymentDevices
+      .map(item => String(item || '').trim())
+      .filter(Boolean);
+
+    if (orderPaymentEnabled && normalizedDevices.length === 0) {
+      Alert.alert(
+        'Pagamento remoto',
+        'Selecione pelo menos um device para ativar o pagamento remoto de pedidos.',
+      );
+      return;
+    }
+
+    await saveConfig(
+      ORDER_PAYMENT_DEVICES_CONFIG_KEY,
+      JSON.stringify(orderPaymentEnabled ? normalizedDevices : []),
+    );
+  }, [orderPaymentDevices, orderPaymentEnabled, saveConfig]);
+
   const selectedPrinterCount = orderPrintDevices.length;
+  const selectedPaymentDeviceCount = orderPaymentDevices.length;
 
   return (
     <SafeAreaView style={styles.Settings.container}>
@@ -378,6 +429,118 @@ const GeneralSettings = () => {
               onPress={saveOrderPrintDevices}>
               <Text style={localStyles.primaryButtonText}>
                 Salvar impressoras padrao
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={localStyles.sectionCard}>
+            <View style={localStyles.sectionHeader}>
+              <View style={[localStyles.sectionIconWrap, {backgroundColor: '#EDE9FE'}]}>
+                <Icon name="credit-card" size={20} color="#7C3AED" />
+              </View>
+              <View style={localStyles.sectionHeaderCopy}>
+                <Text style={localStyles.sectionTitle}>Pagamento remoto de pedidos</Text>
+                <Text style={localStyles.sectionDescription}>
+                  Define a ordem padrao dos devices que recebem pedidos para
+                  pagamento remoto. Quando um device nao tem destino proprio,
+                  o primeiro da lista vira o fallback padrao.
+                </Text>
+              </View>
+            </View>
+
+            <View style={localStyles.statusRow}>
+              <Text style={localStyles.statusLabel}>Pagamento padrao</Text>
+              <TouchableOpacity
+                style={[
+                  localStyles.statusChip,
+                  orderPaymentEnabled
+                    ? localStyles.statusChipEnabled
+                    : localStyles.statusChipDisabled,
+                ]}
+                activeOpacity={0.85}
+                onPress={() => setOrderPaymentEnabled(current => !current)}>
+                <Icon
+                  name={orderPaymentEnabled ? 'check-circle' : 'block'}
+                  size={16}
+                  color={orderPaymentEnabled ? '#166534' : '#991B1B'}
+                />
+                <Text
+                  style={[
+                    localStyles.statusChipText,
+                    {color: orderPaymentEnabled ? '#166534' : '#991B1B'},
+                  ]}>
+                  {orderPaymentEnabled ? 'Ativado' : 'Desativado'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <Text style={localStyles.helperText}>
+              {orderPaymentEnabled
+                ? `${selectedPaymentDeviceCount} device(s) configurado(s) para fallback remoto.`
+                : 'Quando desativado, devices sem gateway local nao recebem fallback remoto por empresa.'}
+            </Text>
+
+            {isLoadingDeviceConfigs ? (
+              <ActivityIndicator size="small" style={localStyles.sectionLoader} />
+            ) : paymentDevices.length === 0 ? (
+              <View style={localStyles.emptyBox}>
+                <Text style={localStyles.emptyTitle}>
+                  Nenhum device com pagamento remoto disponivel
+                </Text>
+                <Text style={localStyles.emptyText}>
+                  Configure ao menos um device da empresa com gateway Cielo ou
+                  Infinite Pay para usar o pagamento remoto.
+                </Text>
+              </View>
+            ) : (
+              <View style={localStyles.printerList}>
+                {paymentDevices.map(paymentDevice => {
+                  const deviceId = String(paymentDevice.deviceId || '').trim();
+                  const active =
+                    deviceId !== '' && orderPaymentDevices.includes(deviceId);
+
+                  return (
+                    <TouchableOpacity
+                      key={deviceId}
+                      style={[
+                        localStyles.printerItem,
+                        active && localStyles.printerItemActive,
+                      ]}
+                      activeOpacity={0.85}
+                      onPress={() => toggleOrderPaymentDevice(deviceId)}>
+                      <Icon
+                        name={
+                          active
+                            ? 'check-circle'
+                            : 'radio-button-unchecked'
+                        }
+                        size={20}
+                        color={active ? '#7C3AED' : '#94A3B8'}
+                      />
+                      <View style={localStyles.printerCopy}>
+                        <Text style={localStyles.printerName}>
+                          {paymentDevice.alias}
+                        </Text>
+                        <Text style={localStyles.printerDevice}>
+                          {paymentDevice.gatewayLabel} • {deviceId}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            )}
+
+            <TouchableOpacity
+              style={[
+                globalStyles.button,
+                localStyles.primaryButton,
+                (!currentCompany?.id || isSaving) && localStyles.primaryButtonDisabled,
+              ]}
+              disabled={!currentCompany?.id || isSaving}
+              onPress={saveOrderPaymentDevices}>
+              <Text style={localStyles.primaryButtonText}>
+                Salvar devices de pagamento
               </Text>
             </TouchableOpacity>
           </View>
