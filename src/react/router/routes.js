@@ -2,7 +2,7 @@ import Comissions from '@controleonline/ui-crm/src/react/pages/comissions';
 import CrmIndex from '@controleonline/ui-crm/src/react/pages/crm/index';
 import ProposalsPage from '../pages/proposals';
 import CrmConversation from '../pages/crm/conversation';
-import CRMSettings from '../pages/settings/CRMSettings';
+import GeneralSettings from '../pages/settings/GeneralSettings';
 import ProposalDetails from '../pages/proposals/ProposalDetails';
 
 const crmRoutes = [
@@ -29,13 +29,13 @@ const crmRoutes = [
     },
   },
   {
-    name: 'CRMSettings',
-    component: CRMSettings,
+    name: 'GeneralSettings',
+    component: GeneralSettings,
     options: {
       showBottomToolBar: true,
       headerShown: true,
       headerBackVisible: true,
-      title: 'Configurações',
+      title: 'Configurador geral',
     },
   },
   {
