@@ -819,7 +819,7 @@ export default function CrmIndex() {
       if (!taskStatusId) missingFields.push(global.t?.t('people', 'required', 'status'));
       if (!categoryId) missingFields.push(global.t?.t('people', 'required', 'category'));
       if (!criticalityId) missingFields.push(global.t?.t('people', 'required', 'criticality'));
-      if (!reasonId) missingFields.push(global.t?.t('people', 'required', 'reason'));
+      if (!reasonId) missingFields.push(global.t?.t('people', 'required', 'leadSource'));
       if (!dueDateDay || !dueDateMonth || !dueDateYear) {
         missingFields.push(global.t?.t('people', 'required', 'returnDate'));
       }
@@ -1416,18 +1416,14 @@ export default function CrmIndex() {
                       <View style={styles.personDetails}>
                         <Text
                           style={[
-                            styles.personName,
+                            styles.personAlias,
                             isSelected && styles.selectOptionTextActive,
                           ]}>
-                          {person.name}
+                          {person.alias}
                         </Text>
-                        {person.document && (
-                          <Text style={styles.personDocument}>
-                            {typeof person.document === 'string'
-                              ? person.document
-                              : 'Documento disponível???'}
-                          </Text>
-                        )}
+                        <Text style={styles.personName}>
+                          {person.peopleType === 'J' ? ' (PJ)' : ' (PF)'} {person.name}
+                        </Text>
                       </View>
                     </View>
                     {isSelected && (
@@ -1542,7 +1538,7 @@ export default function CrmIndex() {
           </View>
 
           <View style={styles.editSection}>
-            <Text style={styles.editLabel}>{global.t?.t('people', 'form', 'reason')}</Text>
+            <Text style={styles.editLabel}>{global.t?.t('people', 'form', 'leadSource')}</Text>
             <TouchableOpacity
               style={styles.selectButton}
               onPress={() => setReasonPickerVisible(true)}>
@@ -1719,7 +1715,7 @@ export default function CrmIndex() {
           </View>
 
           <View style={styles.editSection}>
-            <Text style={styles.editLabel}>{global.t?.t('people', 'form', 'reason')}</Text>
+            <Text style={styles.editLabel}>{global.t?.t('people', 'form', 'leadSource')}</Text>
             <TouchableOpacity
               style={styles.selectButton}
               onPress={() => setReasonPickerVisible(true)}>
@@ -2743,13 +2739,13 @@ const styles = StyleSheet.create({
   personDetails: {
     flex: 1,
   },
-  personName: {
+  personAlias: {
     fontSize: 15,
     fontWeight: '600',
     color: '#0F172A',
     marginBottom: 2,
   },
-  personDocument: {
+  personName: {
     fontSize: 12,
     color: '#94A3B8',
   },
