@@ -26,6 +26,10 @@ import {
   getPrinterLabel,
   getPrinterOptions,
 } from '@controleonline/ui-common/src/react/utils/printerDevices';
+import {
+  DEVICE_RUNTIME_FOOTER_TEXT_CONFIG_KEY,
+  normalizeRuntimeFooterText,
+} from '@controleonline/ui-common/src/react/utils/runtimeFooter';
 import {useStore} from '@store';
 
 const ORDER_PRINT_DEVICES_CONFIG_KEY = 'order-print-devices';
@@ -99,6 +103,11 @@ const normalizeNotificationTargets = value => {
     .map(item => item.trim())
     .filter(Boolean);
 };
+
+const normalizeEntityId = value =>
+  String(value || '')
+    .replace(/\D+/g, '')
+    .trim();
 
 const normalizeTextConfigValue = value => {
   if (value === null || value === undefined) {
@@ -198,7 +207,8 @@ const GeneralSettings = () => {
   const {styles, globalStyles} = css();
 
   const peopleStore = useStore('people');
-  const {currentCompany} = peopleStore.getters;
+  const {currentCompany, defaultCompany} = peopleStore.getters;
+  const peopleActions = peopleStore.actions;
 
   const configsStore = useStore('configs');
   const configsGetters = configsStore.getters;
@@ -269,6 +279,7 @@ const GeneralSettings = () => {
   const [orderPrintEnabled, setOrderPrintEnabled] = useState(false);
   const [orderPrintDevices, setOrderPrintDevices] = useState([]);
   const [orderPrintFooterText, setOrderPrintFooterText] = useState('');
+  const [deviceRuntimeFooterText, setDeviceRuntimeFooterText] = useState('');
   const [orderPaymentEnabled, setOrderPaymentEnabled] = useState(false);
   const [orderPaymentDevices, setOrderPaymentDevices] = useState([]);
   const [posDefaultStatus, setPosDefaultStatus] = useState('');
@@ -282,6 +293,21 @@ const GeneralSettings = () => {
   const [menuHiddenGroupIds, setMenuHiddenGroupIds] = useState([]);
 
   const pickerMode = 'dropdown';
+
+  const isMainCompanySelected = useMemo(() => {
+    const currentCompanyId = normalizeEntityId(
+      currentCompany?.id || currentCompany?.['@id'],
+    );
+    const defaultCompanyId = normalizeEntityId(
+      defaultCompany?.id || defaultCompany?.['@id'],
+    );
+
+    return (
+      currentCompanyId !== '' &&
+      defaultCompanyId !== '' &&
+      currentCompanyId === defaultCompanyId
+    );
+  }, [currentCompany, defaultCompany]);
 
   const scopedCompanyDeviceConfigs = useMemo(
     () =>
@@ -435,6 +461,14 @@ const GeneralSettings = () => {
     );
   }, [effectiveCompanyConfigs]);
 
+  useEffect(() => {
+    setDeviceRuntimeFooterText(
+      normalizeRuntimeFooterText(
+        defaultCompany?.configs?.[DEVICE_RUNTIME_FOOTER_TEXT_CONFIG_KEY],
+      ),
+    );
+  }, [defaultCompany?.configs]);
+
   const syncConfigCache = useCallback(
     entries => {
       const baseConfigs =
@@ -554,6 +588,65 @@ const GeneralSettings = () => {
     },
     [configActions, currentCompany?.id, syncConfigCache],
   );
+
+  const saveDeviceRuntimeFooter = useCallback(() => {
+    if (!defaultCompany?.id) {
+      Alert.alert(
+        'Empresa principal indisponivel',
+        'Nao foi possivel identificar a empresa principal para salvar o rodape.',
+      );
+      return Promise.resolve(false);
+    }
+
+    if (!isMainCompanySelected) {
+      Alert.alert(
+        'Empresa principal',
+        'Troque para a empresa principal para editar o rodape dos devices.',
+      );
+      return Promise.resolve(false);
+    }
+
+    const normalizedText = normalizeRuntimeFooterText(deviceRuntimeFooterText);
+
+    return new Promise(resolve => {
+      configActions.addToQueue(() =>
+        configActions
+          .addConfigs({
+            configKey: DEVICE_RUNTIME_FOOTER_TEXT_CONFIG_KEY,
+            configValue: toConfigRequestValue(normalizedText),
+            people: '/people/' + defaultCompany.id,
+            module: 4,
+            visibility: 'public',
+          })
+          .then(async data => {
+            setDeviceRuntimeFooterText(normalizedText);
+            syncConfigCache({
+              [DEVICE_RUNTIME_FOOTER_TEXT_CONFIG_KEY]: normalizedText,
+            });
+
+            try {
+              await peopleActions.defaultCompany();
+            } catch (e) {}
+
+            resolve(true);
+            return data;
+          })
+          .catch(err => {
+            Alert.alert('Erro', err?.message || JSON.stringify(err));
+            resolve(false);
+            return null;
+          }),
+      );
+      configActions.initQueue();
+    });
+  }, [
+    configActions,
+    defaultCompany?.id,
+    deviceRuntimeFooterText,
+    isMainCompanySelected,
+    peopleActions,
+    syncConfigCache,
+  ]);
 
   const saveProfiles = useCallback(() => {
     saveConfig('after-sales-profiles', profiles);
@@ -774,6 +867,62 @@ const GeneralSettings = () => {
           <Text style={localStyles.pageSubtitle}>
             {currentCompany?.name || currentCompany?.alias || 'Empresa ativa'}
           </Text>
+
+          <View style={localStyles.sectionCard}>
+            <View style={localStyles.sectionHeader}>
+              <View style={[localStyles.sectionIconWrap, {backgroundColor: '#E0F2FE'}]}>
+                <Icon name="dvr" size={20} color="#0369A1" />
+              </View>
+              <View style={localStyles.sectionHeaderCopy}>
+                <Text style={localStyles.sectionTitle}>Rodape dos devices</Text>
+                <Text style={localStyles.sectionDescription}>
+                  Exibe o nome do device e a versao do software em uma linha fina
+                  no rodape. Quando existir texto livre na empresa principal,
+                  ele entra na mesma linha ou alterna em telas pequenas.
+                </Text>
+              </View>
+            </View>
+
+            <Text style={localStyles.helperText}>
+              {isMainCompanySelected
+                ? 'Esse texto livre e salvo na empresa principal e compartilhado com todos os devices.'
+                : 'Esse rodape pertence a empresa principal. Troque para ela para editar.'}
+            </Text>
+
+            <View style={localStyles.fieldBlock}>
+              <Text style={localStyles.fieldLabel}>Texto livre</Text>
+              <TextInput
+                style={[
+                  localStyles.input,
+                  !isMainCompanySelected && localStyles.inputDisabled,
+                ]}
+                value={deviceRuntimeFooterText}
+                onChangeText={setDeviceRuntimeFooterText}
+                editable={isMainCompanySelected && !!defaultCompany?.id}
+                placeholder="Ex.: www.seusite.com.br • (11) 99999-9999"
+              />
+              <Text style={localStyles.helperText}>
+                No rodape pequeno, o app alterna entre nome do device / versao
+                e esse texto.
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              style={[
+                globalStyles.button,
+                localStyles.primaryButton,
+                (!defaultCompany?.id ||
+                  !isMainCompanySelected ||
+                  isSaving) &&
+                  localStyles.primaryButtonDisabled,
+              ]}
+              disabled={!defaultCompany?.id || !isMainCompanySelected || isSaving}
+              onPress={saveDeviceRuntimeFooter}>
+              <Text style={localStyles.primaryButtonText}>
+                Salvar rodape dos devices
+              </Text>
+            </TouchableOpacity>
+          </View>
 
           <View style={localStyles.sectionCard}>
             <View style={localStyles.sectionHeader}>
@@ -1705,6 +1854,10 @@ const localStyles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
     marginTop: 6,
+  },
+  inputDisabled: {
+    backgroundColor: '#F1F5F9',
+    color: '#64748B',
   },
   multilineInput: {
     minHeight: 96,
