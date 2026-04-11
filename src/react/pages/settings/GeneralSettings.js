@@ -22,6 +22,10 @@ import {
   ORDER_PAYMENT_DEVICES_CONFIG_KEY,
   normalizeDeviceIds,
 } from '@controleonline/ui-common/src/react/utils/paymentDevices';
+import {
+  getPrinterLabel,
+  getPrinterOptions,
+} from '@controleonline/ui-common/src/react/utils/printerDevices';
 import {useStore} from '@store';
 
 const ORDER_PRINT_DEVICES_CONFIG_KEY = 'order-print-devices';
@@ -120,9 +124,6 @@ const normalizeTextConfigValue = value => {
 
   return String(value);
 };
-
-const getPrinterLabel = printer =>
-  printer?.alias || printer?.name || printer?.device || 'Device sem nome';
 
 const parseDeviceConfigs = value => {
   const parsed = parseJsonValue(value, {});
@@ -291,6 +292,15 @@ const GeneralSettings = () => {
   const paymentDevices = useMemo(
     () => getCompanyPaymentDeviceOptions(scopedCompanyDeviceConfigs),
     [scopedCompanyDeviceConfigs],
+  );
+  const printerOptions = useMemo(
+    () =>
+      getPrinterOptions({
+        printers,
+        deviceConfigs: scopedCompanyDeviceConfigs,
+        companyId: currentCompany?.id,
+      }),
+    [currentCompany?.id, printers, scopedCompanyDeviceConfigs],
   );
   const displayPreparationDevices = useMemo(
     () =>
@@ -814,7 +824,7 @@ const GeneralSettings = () => {
 
             {isLoadingPrinters ? (
               <ActivityIndicator size="small" style={localStyles.sectionLoader} />
-            ) : printers.length === 0 ? (
+            ) : printerOptions.length === 0 ? (
               <View style={localStyles.emptyBox}>
                 <Text style={localStyles.emptyTitle}>
                   Nenhum device com impressao disponivel
@@ -826,7 +836,7 @@ const GeneralSettings = () => {
               </View>
             ) : (
               <View style={localStyles.printerList}>
-                {printers.map(printer => {
+                {printerOptions.map(printer => {
                   const deviceId = String(printer?.device || '').trim();
                   const active =
                     deviceId !== '' && orderPrintDevices.includes(deviceId);
