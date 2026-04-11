@@ -26,6 +26,9 @@ import {useStore} from '@store';
 
 const ORDER_PRINT_DEVICES_CONFIG_KEY = 'order-print-devices';
 const ORDER_PRINT_FOOTER_TEXT_CONFIG_KEY = 'order-print-footer-text';
+const DISPLAY_DEVICE_TYPE = 'DISPLAY';
+const DISPLAY_DEVICE_LINK_CONFIG_KEY = 'display-id';
+const DISPLAY_DEVICE_PRINTER_CONFIG_KEY = 'printer';
 const MENU_CATALOG_HIDDEN_CATEGORY_IDS_CONFIG_KEY =
   'menu-catalog-hidden-category-ids';
 const MENU_CATALOG_HIDDEN_GROUP_IDS_CONFIG_KEY =
@@ -120,6 +123,11 @@ const normalizeTextConfigValue = value => {
 
 const getPrinterLabel = printer =>
   printer?.alias || printer?.name || printer?.device || 'Device sem nome';
+
+const parseDeviceConfigs = value => {
+  const parsed = parseJsonValue(value, {});
+  return parsed && typeof parsed === 'object' ? parsed : {};
+};
 
 const getMenuGroupOptionLabel = group => {
   const groupName = String(group?.productGroup || '').trim();
@@ -282,6 +290,30 @@ const GeneralSettings = () => {
 
   const paymentDevices = useMemo(
     () => getCompanyPaymentDeviceOptions(scopedCompanyDeviceConfigs),
+    [scopedCompanyDeviceConfigs],
+  );
+  const displayPreparationDevices = useMemo(
+    () =>
+      scopedCompanyDeviceConfigs.filter(deviceConfig => {
+        const deviceType = String(deviceConfig?.device?.type || '')
+          .trim()
+          .toUpperCase();
+        if (deviceType !== DISPLAY_DEVICE_TYPE) {
+          return false;
+        }
+
+        const configs = parseDeviceConfigs(deviceConfig?.configs);
+        const linkedDisplayId = String(
+          configs?.[DISPLAY_DEVICE_LINK_CONFIG_KEY] || '',
+        )
+          .replace(/\D+/g, '')
+          .trim();
+        const printerId = String(
+          configs?.[DISPLAY_DEVICE_PRINTER_CONFIG_KEY] || '',
+        ).trim();
+
+        return linkedDisplayId !== '' && printerId !== '';
+      }),
     [scopedCompanyDeviceConfigs],
   );
 
@@ -639,6 +671,7 @@ const GeneralSettings = () => {
 
   const selectedPrinterCount = orderPrintDevices.length;
   const selectedPaymentDeviceCount = orderPaymentDevices.length;
+  const configuredDisplayPreparationCount = displayPreparationDevices.length;
   const normalizedStatusOptions = useMemo(
     () => (Array.isArray(statuses) ? statuses : []),
     [statuses],
@@ -738,11 +771,11 @@ const GeneralSettings = () => {
                 <Icon name="print" size={20} color="#2563EB" />
               </View>
               <View style={localStyles.sectionHeaderCopy}>
-                <Text style={localStyles.sectionTitle}>Impressao de pedidos</Text>
+                <Text style={localStyles.sectionTitle}>Impressao de conferencia</Text>
                 <Text style={localStyles.sectionDescription}>
-                  Define quais devices da empresa recebem impressao remota via
-                  socket e qual texto livre sai no rodape usando as configs
-                  `order-print-devices` e `order-print-footer-text`.
+                  Define quais devices da empresa recebem a copia completa do
+                  pedido para conferencia e qual texto livre sai no rodape usando
+                  as configs `order-print-devices` e `order-print-footer-text`.
                 </Text>
               </View>
             </View>
@@ -858,6 +891,78 @@ const GeneralSettings = () => {
                 Salvar configuracoes de impressao
               </Text>
             </TouchableOpacity>
+          </View>
+
+          <View style={localStyles.sectionCard}>
+            <View style={localStyles.sectionHeader}>
+              <View style={[localStyles.sectionIconWrap, {backgroundColor: '#FEF3C7'}]}>
+                <Icon name="receipt-long" size={20} color="#B45309" />
+              </View>
+              <View style={localStyles.sectionHeaderCopy}>
+                <Text style={localStyles.sectionTitle}>Impressao de preparo por fila</Text>
+                <Text style={localStyles.sectionDescription}>
+                  A copia de preparo e gerada automaticamente por fila nos
+                  devices do tipo DISPLAY. Cada DISPLAY precisa estar vinculado
+                  a um display e a uma impressora no detalhe do device para que
+                  o backend envie a copia correta.
+                </Text>
+              </View>
+            </View>
+
+            <Text style={localStyles.helperText}>
+              {configuredDisplayPreparationCount > 0
+                ? `${configuredDisplayPreparationCount} device(s) DISPLAY prontos para imprimir filas automaticamente.`
+                : 'Nenhum DISPLAY com display vinculado e impressora configurada ainda.'}
+            </Text>
+
+            {configuredDisplayPreparationCount > 0 ? (
+              <View style={localStyles.printerList}>
+                {displayPreparationDevices.map(deviceConfig => {
+                  const configs = parseDeviceConfigs(deviceConfig?.configs);
+                  const printerId = String(
+                    configs?.[DISPLAY_DEVICE_PRINTER_CONFIG_KEY] || '',
+                  ).trim();
+                  const displayId = String(
+                    configs?.[DISPLAY_DEVICE_LINK_CONFIG_KEY] || '',
+                  )
+                    .replace(/\D+/g, '')
+                    .trim();
+                  const alias =
+                    deviceConfig?.device?.alias ||
+                    deviceConfig?.device?.device ||
+                    `Device #${deviceConfig?.id || '--'}`;
+
+                  return (
+                    <View
+                      key={`display-print-${deviceConfig?.id || alias}`}
+                      style={[localStyles.printerItem, localStyles.printerItemActive]}>
+                      <Icon
+                        name="check-circle"
+                        size={20}
+                        color="#B45309"
+                      />
+                      <View style={localStyles.printerCopy}>
+                        <Text style={localStyles.printerName}>{alias}</Text>
+                        <Text style={localStyles.printerDevice}>
+                          {`Display #${displayId || '--'} • Impressora ${printerId || '--'}`}
+                        </Text>
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+            ) : (
+              <View style={localStyles.emptyBox}>
+                <Text style={localStyles.emptyTitle}>
+                  Nenhum DISPLAY preparado para a fila
+                </Text>
+                <Text style={localStyles.emptyText}>
+                  Abra o detalhe do device DISPLAY, selecione o display vinculado
+                  e a impressora da fila. Sem isso, a impressao automatica por
+                  preparo nao e disparada.
+                </Text>
+              </View>
+            )}
           </View>
 
           <View style={localStyles.sectionCard}>
