@@ -26,6 +26,10 @@ import {useStore} from '@store';
 
 const ORDER_PRINT_DEVICES_CONFIG_KEY = 'order-print-devices';
 const ORDER_PRINT_FOOTER_TEXT_CONFIG_KEY = 'order-print-footer-text';
+const MENU_CATALOG_HIDDEN_CATEGORY_IDS_CONFIG_KEY =
+  'menu-catalog-hidden-category-ids';
+const MENU_CATALOG_HIDDEN_GROUP_IDS_CONFIG_KEY =
+  'menu-catalog-hidden-group-ids';
 
 const DEFAULT_AFTER_SALES_PROFILES = [
   {maxRevenue: 10000, days: 30},
@@ -58,6 +62,21 @@ const normalizeProfiles = value => {
 
 const normalizePrinterDeviceIds = value => {
   return normalizeDeviceIds(value);
+};
+
+const normalizeIdList = value => {
+  const parsed = parseJsonValue(value, []);
+  const source = Array.isArray(parsed)
+    ? parsed
+    : String(value || '').split(/\r?\n|,/);
+
+  return Array.from(
+    new Set(
+      source
+        .map(item => String(item || '').replace(/\D+/g, '').trim())
+        .filter(Boolean),
+    ),
+  );
 };
 
 const normalizeNotificationTargets = value => {
@@ -101,6 +120,31 @@ const normalizeTextConfigValue = value => {
 
 const getPrinterLabel = printer =>
   printer?.alias || printer?.name || printer?.device || 'Device sem nome';
+
+const getMenuGroupOptionLabel = group => {
+  const groupName = String(group?.productGroup || '').trim();
+  const parentValue = group?.parentProduct;
+
+  if (parentValue && typeof parentValue === 'object') {
+    const parentName = String(parentValue?.product || '').trim();
+    if (parentName) {
+      return `${groupName} • ${parentName}`;
+    }
+  }
+
+  if (typeof parentValue === 'string') {
+    const parentId = parentValue.replace(/\D+/g, '');
+    if (groupName && parentId) {
+      return `${groupName} • Produto #${parentId}`;
+    }
+  }
+
+  if (groupName) {
+    return `${groupName} • #${group?.id || ''}`.trim();
+  }
+
+  return `Grupo #${group?.id || ''}`;
+};
 
 const toConfigRequestValue = value => {
   if (value === undefined) {
@@ -173,6 +217,20 @@ const GeneralSettings = () => {
   } = statusStore.getters;
   const statusActions = statusStore.actions;
 
+  const categoriesStore = useStore('categories');
+  const {
+    items: menuCategories = [],
+    isLoading: isLoadingMenuCategories,
+  } = categoriesStore.getters;
+  const categoryActions = categoriesStore.actions;
+
+  const productGroupStore = useStore('product_group');
+  const {
+    items: menuGroups = [],
+    isLoading: isLoadingMenuGroups,
+  } = productGroupStore.getters;
+  const productGroupActions = productGroupStore.actions;
+
   const walletStore = useStore('wallet');
   const {
     items: wallets = [],
@@ -211,6 +269,8 @@ const GeneralSettings = () => {
   const [posCieloWallet, setPosCieloWallet] = useState('');
   const [posInfinitePayWallet, setPosInfinitePayWallet] = useState('');
   const [cashRegisterNotifications, setCashRegisterNotifications] = useState('');
+  const [menuHiddenCategoryIds, setMenuHiddenCategoryIds] = useState([]);
+  const [menuHiddenGroupIds, setMenuHiddenGroupIds] = useState([]);
 
   const pickerMode = 'dropdown';
 
@@ -236,10 +296,28 @@ const GeneralSettings = () => {
       .catch(() => {});
     statusActions.getItems({itemsPerPage: 200}).catch(() => {});
     walletActions.getItems({people: currentCompany.id, itemsPerPage: 200}).catch(() => {});
+    categoryActions
+      .getItems({
+        context: 'products',
+        company: currentCompany.id,
+        itemsPerPage: 200,
+        'order[name]': 'ASC',
+      })
+      .catch(() => {});
+    productGroupActions
+      .getItems({
+        'parentProduct.company': '/people/' + currentCompany.id,
+        itemsPerPage: 400,
+        'order[groupOrder]': 'ASC',
+        'order[productGroup]': 'ASC',
+      })
+      .catch(() => {});
   }, [
+    categoryActions,
     currentCompany?.id,
     deviceConfigActions,
     printerActions,
+    productGroupActions,
     statusActions,
     walletActions,
   ]);
@@ -302,6 +380,16 @@ const GeneralSettings = () => {
       normalizeNotificationTargets(
         effectiveCompanyConfigs['cash-register-notifications'],
       ).join('\n'),
+    );
+    setMenuHiddenCategoryIds(
+      normalizeIdList(
+        effectiveCompanyConfigs[MENU_CATALOG_HIDDEN_CATEGORY_IDS_CONFIG_KEY],
+      ),
+    );
+    setMenuHiddenGroupIds(
+      normalizeIdList(
+        effectiveCompanyConfigs[MENU_CATALOG_HIDDEN_GROUP_IDS_CONFIG_KEY],
+      ),
     );
   }, [effectiveCompanyConfigs]);
 
@@ -559,6 +647,14 @@ const GeneralSettings = () => {
     () => (Array.isArray(wallets) ? wallets : []),
     [wallets],
   );
+  const normalizedMenuCategories = useMemo(
+    () => (Array.isArray(menuCategories) ? menuCategories : []),
+    [menuCategories],
+  );
+  const normalizedMenuGroups = useMemo(
+    () => (Array.isArray(menuGroups) ? menuGroups : []),
+    [menuGroups],
+  );
 
   const saveOperationalConfigs = useCallback(async () => {
     await saveConfigs({
@@ -583,9 +679,52 @@ const GeneralSettings = () => {
     saveConfigs,
   ]);
 
+  const toggleMenuHiddenCategory = useCallback(categoryId => {
+    const normalizedId = String(categoryId || '').replace(/\D+/g, '').trim();
+    if (!normalizedId) {
+      return;
+    }
+
+    setMenuHiddenCategoryIds(current =>
+      current.includes(normalizedId)
+        ? current.filter(item => item !== normalizedId)
+        : [...current, normalizedId],
+    );
+  }, []);
+
+  const toggleMenuHiddenGroup = useCallback(groupId => {
+    const normalizedId = String(groupId || '').replace(/\D+/g, '').trim();
+    if (!normalizedId) {
+      return;
+    }
+
+    setMenuHiddenGroupIds(current =>
+      current.includes(normalizedId)
+        ? current.filter(item => item !== normalizedId)
+        : [...current, normalizedId],
+    );
+  }, []);
+
+  const saveMenuCatalogConfigs = useCallback(async () => {
+    await saveConfigs({
+      [MENU_CATALOG_HIDDEN_CATEGORY_IDS_CONFIG_KEY]: menuHiddenCategoryIds,
+      [MENU_CATALOG_HIDDEN_GROUP_IDS_CONFIG_KEY]: menuHiddenGroupIds,
+    });
+  }, [menuHiddenCategoryIds, menuHiddenGroupIds, saveConfigs]);
+
   return (
     <SafeAreaView style={styles.Settings.container}>
-      <StateStore stores={['configs', 'printer', 'device_config', 'status', 'wallet']} />
+      <StateStore
+        stores={[
+          'configs',
+          'printer',
+          'device_config',
+          'status',
+          'wallet',
+          'categories',
+          'product_group',
+        ]}
+      />
       <ScrollView contentContainerStyle={styles.Settings.scrollContent}>
         <View style={styles.Settings.mainContainer}>
           <Text style={localStyles.pageTitle}>Configurador geral</Text>
@@ -717,6 +856,146 @@ const GeneralSettings = () => {
               onPress={saveOrderPrintDevices}>
               <Text style={localStyles.primaryButtonText}>
                 Salvar configuracoes de impressao
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={localStyles.sectionCard}>
+            <View style={localStyles.sectionHeader}>
+              <View style={[localStyles.sectionIconWrap, {backgroundColor: '#FEF3C7'}]}>
+                <Icon name="restaurant-menu" size={20} color="#B45309" />
+              </View>
+              <View style={localStyles.sectionHeaderCopy}>
+                <Text style={localStyles.sectionTitle}>Cardapio em PDF</Text>
+                <Text style={localStyles.sectionDescription}>
+                  Define quais categorias e grupos de customizacao ficam
+                  ocultos no arquivo de cardapio baixado pelo modulo de produtos.
+                </Text>
+              </View>
+            </View>
+
+            <Text style={localStyles.helperText}>
+              {menuHiddenCategoryIds.length > 0 || menuHiddenGroupIds.length > 0
+                ? `${menuHiddenCategoryIds.length} categoria(s) e ${menuHiddenGroupIds.length} grupo(s) oculto(s) no PDF.`
+                : 'Nenhum filtro aplicado. O PDF usa todas as categorias e grupos visiveis da empresa.'}
+            </Text>
+
+            <View style={localStyles.fieldBlock}>
+              <Text style={localStyles.fieldLabel}>Categorias ocultas</Text>
+              <Text style={localStyles.helperText}>
+                Toque nas categorias que nao devem aparecer no cardapio gerado.
+              </Text>
+
+              {isLoadingMenuCategories ? (
+                <ActivityIndicator size="small" style={localStyles.sectionLoader} />
+              ) : normalizedMenuCategories.length === 0 ? (
+                <View style={localStyles.emptyBox}>
+                  <Text style={localStyles.emptyTitle}>
+                    Nenhuma categoria encontrada
+                  </Text>
+                  <Text style={localStyles.emptyText}>
+                    Cadastre categorias de produtos para controlar a visibilidade
+                    delas no PDF do cardapio.
+                  </Text>
+                </View>
+              ) : (
+                <View style={localStyles.printerList}>
+                  {normalizedMenuCategories.map(categoryOption => {
+                    const categoryId = String(categoryOption?.id || '').trim();
+                    const hidden = menuHiddenCategoryIds.includes(categoryId);
+
+                    return (
+                      <TouchableOpacity
+                        key={`menu-category-${categoryId}`}
+                        style={[
+                          localStyles.printerItem,
+                          hidden && localStyles.printerItemActive,
+                        ]}
+                        activeOpacity={0.85}
+                        onPress={() => toggleMenuHiddenCategory(categoryId)}>
+                        <Icon
+                          name={hidden ? 'visibility-off' : 'category'}
+                          size={20}
+                          color={hidden ? '#B45309' : '#94A3B8'}
+                        />
+                        <View style={localStyles.printerCopy}>
+                          <Text style={localStyles.printerName}>
+                            {categoryOption?.name || `Categoria #${categoryId}`}
+                          </Text>
+                          <Text style={localStyles.printerDevice}>
+                            {hidden ? 'Oculta no PDF' : 'Visivel no PDF'}
+                          </Text>
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              )}
+            </View>
+
+            <View style={localStyles.fieldBlock}>
+              <Text style={localStyles.fieldLabel}>Grupos ocultos</Text>
+              <Text style={localStyles.helperText}>
+                Esses grupos deixam de aparecer dentro dos produtos customizaveis
+                no cardapio em PDF.
+              </Text>
+
+              {isLoadingMenuGroups ? (
+                <ActivityIndicator size="small" style={localStyles.sectionLoader} />
+              ) : normalizedMenuGroups.length === 0 ? (
+                <View style={localStyles.emptyBox}>
+                  <Text style={localStyles.emptyTitle}>
+                    Nenhum grupo de customizacao encontrado
+                  </Text>
+                  <Text style={localStyles.emptyText}>
+                    Os grupos sao lidos dos produtos customizaveis da empresa.
+                  </Text>
+                </View>
+              ) : (
+                <View style={localStyles.printerList}>
+                  {normalizedMenuGroups.map(groupOption => {
+                    const groupId = String(groupOption?.id || '').trim();
+                    const hidden = menuHiddenGroupIds.includes(groupId);
+
+                    return (
+                      <TouchableOpacity
+                        key={`menu-group-${groupId}`}
+                        style={[
+                          localStyles.printerItem,
+                          hidden && localStyles.printerItemActive,
+                        ]}
+                        activeOpacity={0.85}
+                        onPress={() => toggleMenuHiddenGroup(groupId)}>
+                        <Icon
+                          name={hidden ? 'visibility-off' : 'tune'}
+                          size={20}
+                          color={hidden ? '#B45309' : '#94A3B8'}
+                        />
+                        <View style={localStyles.printerCopy}>
+                          <Text style={localStyles.printerName}>
+                            {getMenuGroupOptionLabel(groupOption)}
+                          </Text>
+                          <Text style={localStyles.printerDevice}>
+                            {hidden ? 'Oculto no PDF' : 'Visivel no PDF'}
+                          </Text>
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              )}
+            </View>
+
+            <TouchableOpacity
+              style={[
+                globalStyles.button,
+                localStyles.primaryButton,
+                (!currentCompany?.id || isSaving) && localStyles.primaryButtonDisabled,
+              ]}
+              disabled={!currentCompany?.id || isSaving}
+              onPress={saveMenuCatalogConfigs}>
+              <Text style={localStyles.primaryButtonText}>
+                Salvar filtros do cardapio
               </Text>
             </TouchableOpacity>
           </View>
