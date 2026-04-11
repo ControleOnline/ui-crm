@@ -24,6 +24,9 @@ import {
 } from '@controleonline/ui-common/src/react/utils/paymentDevices';
 import {useStore} from '@store';
 
+const ORDER_PRINT_DEVICES_CONFIG_KEY = 'order-print-devices';
+const ORDER_PRINT_FOOTER_TEXT_CONFIG_KEY = 'order-print-footer-text';
+
 const DEFAULT_AFTER_SALES_PROFILES = [
   {maxRevenue: 10000, days: 30},
   {maxRevenue: 1000, days: 60},
@@ -69,6 +72,31 @@ const normalizeNotificationTargets = value => {
     .split(/\r?\n|,/)
     .map(item => item.trim())
     .filter(Boolean);
+};
+
+const normalizeTextConfigValue = value => {
+  if (value === null || value === undefined) {
+    return '';
+  }
+
+  if (typeof value === 'string') {
+    if (value.trim() === '') {
+      return '';
+    }
+
+    try {
+      const parsed = JSON.parse(value);
+      if (typeof parsed === 'string') {
+        return parsed;
+      }
+    } catch (e) {
+      return value;
+    }
+
+    return value;
+  }
+
+  return String(value);
 };
 
 const getPrinterLabel = printer =>
@@ -173,6 +201,7 @@ const GeneralSettings = () => {
 
   const [orderPrintEnabled, setOrderPrintEnabled] = useState(false);
   const [orderPrintDevices, setOrderPrintDevices] = useState([]);
+  const [orderPrintFooterText, setOrderPrintFooterText] = useState('');
   const [orderPaymentEnabled, setOrderPaymentEnabled] = useState(false);
   const [orderPaymentDevices, setOrderPaymentDevices] = useState([]);
   const [posDefaultStatus, setPosDefaultStatus] = useState('');
@@ -232,10 +261,15 @@ const GeneralSettings = () => {
     );
 
     const nextOrderPrintDevices = normalizePrinterDeviceIds(
-      effectiveCompanyConfigs['order-print-devices'],
+      effectiveCompanyConfigs[ORDER_PRINT_DEVICES_CONFIG_KEY],
     );
     setOrderPrintDevices(nextOrderPrintDevices);
     setOrderPrintEnabled(nextOrderPrintDevices.length > 0);
+    setOrderPrintFooterText(
+      normalizeTextConfigValue(
+        effectiveCompanyConfigs[ORDER_PRINT_FOOTER_TEXT_CONFIG_KEY],
+      ),
+    );
 
     const nextOrderPaymentDevices = normalizeDeviceIds(
       effectiveCompanyConfigs[ORDER_PAYMENT_DEVICES_CONFIG_KEY],
@@ -475,8 +509,16 @@ const GeneralSettings = () => {
       return;
     }
 
-    await saveConfig('order-print-devices', orderPrintEnabled ? normalizedDevices : []);
-  }, [orderPrintDevices, orderPrintEnabled, saveConfig]);
+    await saveConfigs({
+      [ORDER_PRINT_DEVICES_CONFIG_KEY]: orderPrintEnabled ? normalizedDevices : [],
+      [ORDER_PRINT_FOOTER_TEXT_CONFIG_KEY]: orderPrintFooterText,
+    });
+  }, [
+    orderPrintDevices,
+    orderPrintEnabled,
+    orderPrintFooterText,
+    saveConfigs,
+  ]);
 
   const toggleOrderPaymentDevice = useCallback(deviceId => {
     setOrderPaymentDevices(current => {
@@ -560,7 +602,8 @@ const GeneralSettings = () => {
                 <Text style={localStyles.sectionTitle}>Impressao de pedidos</Text>
                 <Text style={localStyles.sectionDescription}>
                   Define quais devices da empresa recebem impressao remota via
-                  socket usando a config `order-print-devices`.
+                  socket e qual texto livre sai no rodape usando as configs
+                  `order-print-devices` e `order-print-footer-text`.
                 </Text>
               </View>
             </View>
@@ -648,6 +691,22 @@ const GeneralSettings = () => {
               </View>
             )}
 
+            <View style={localStyles.fieldBlock}>
+              <Text style={localStyles.fieldLabel}>Texto livre do rodape</Text>
+              <TextInput
+                style={[localStyles.input, localStyles.multilineInput]}
+                value={orderPrintFooterText}
+                multiline
+                numberOfLines={4}
+                onChangeText={setOrderPrintFooterText}
+                placeholder="Mensagem exibida no rodape da impressao"
+              />
+              <Text style={localStyles.helperText}>
+                Esse conteudo e salvo na config da empresa e sai no rodape de
+                todas as impressoes de pedido.
+              </Text>
+            </View>
+
             <TouchableOpacity
               style={[
                 globalStyles.button,
@@ -657,7 +716,7 @@ const GeneralSettings = () => {
               disabled={!currentCompany?.id || isSaving}
               onPress={saveOrderPrintDevices}>
               <Text style={localStyles.primaryButtonText}>
-                Salvar impressoras padrao
+                Salvar configuracoes de impressao
               </Text>
             </TouchableOpacity>
           </View>
