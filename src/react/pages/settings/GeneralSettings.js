@@ -10,6 +10,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
+import {useFocusEffect} from '@react-navigation/native';
 import {Picker} from '@react-native-picker/picker';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
@@ -294,20 +295,20 @@ const GeneralSettings = () => {
 
   const pickerMode = 'dropdown';
 
-  const isMainCompanySelected = useMemo(() => {
-    const currentCompanyId = normalizeEntityId(
-      currentCompany?.id || currentCompany?.['@id'],
-    );
-    const defaultCompanyId = normalizeEntityId(
-      defaultCompany?.id || defaultCompany?.['@id'],
-    );
-
-    return (
-      currentCompanyId !== '' &&
-      defaultCompanyId !== '' &&
-      currentCompanyId === defaultCompanyId
-    );
-  }, [currentCompany, defaultCompany]);
+  const selectedCompanyId = useMemo(
+    () => normalizeEntityId(currentCompany?.id || currentCompany?.['@id']),
+    [currentCompany?.['@id'], currentCompany?.id],
+  );
+  const defaultCompanyId = useMemo(
+    () => normalizeEntityId(defaultCompany?.id || defaultCompany?.['@id']),
+    [defaultCompany?.['@id'], defaultCompany?.id],
+  );
+  const isMainCompanySelected =
+    selectedCompanyId !== '' &&
+    defaultCompanyId !== '' &&
+    selectedCompanyId === defaultCompanyId;
+  const defaultCompanyLabel =
+    defaultCompany?.alias || defaultCompany?.name || 'empresa principal';
 
   const scopedCompanyDeviceConfigs = useMemo(
     () =>
@@ -351,6 +352,12 @@ const GeneralSettings = () => {
         return linkedDisplayId !== '' && printerId !== '';
       }),
     [scopedCompanyDeviceConfigs],
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      peopleActions.defaultCompany().catch(() => {});
+    }, [peopleActions]),
   );
 
   useEffect(() => {
@@ -601,7 +608,7 @@ const GeneralSettings = () => {
     if (!isMainCompanySelected) {
       Alert.alert(
         'Empresa principal',
-        'Troque para a empresa principal para editar o rodape dos devices.',
+        'Abra as configuracoes da empresa principal para editar o rodape dos devices.',
       );
       return Promise.resolve(false);
     }
@@ -620,9 +627,6 @@ const GeneralSettings = () => {
           })
           .then(async data => {
             setDeviceRuntimeFooterText(normalizedText);
-            syncConfigCache({
-              [DEVICE_RUNTIME_FOOTER_TEXT_CONFIG_KEY]: normalizedText,
-            });
 
             try {
               await peopleActions.defaultCompany();
@@ -645,7 +649,6 @@ const GeneralSettings = () => {
     deviceRuntimeFooterText,
     isMainCompanySelected,
     peopleActions,
-    syncConfigCache,
   ]);
 
   const saveProfiles = useCallback(() => {
@@ -868,61 +871,56 @@ const GeneralSettings = () => {
             {currentCompany?.name || currentCompany?.alias || 'Empresa ativa'}
           </Text>
 
-          <View style={localStyles.sectionCard}>
-            <View style={localStyles.sectionHeader}>
-              <View style={[localStyles.sectionIconWrap, {backgroundColor: '#E0F2FE'}]}>
-                <Icon name="dvr" size={20} color="#0369A1" />
+          {isMainCompanySelected && (
+            <View style={localStyles.sectionCard}>
+              <View style={localStyles.sectionHeader}>
+                <View style={[localStyles.sectionIconWrap, {backgroundColor: '#E0F2FE'}]}>
+                  <Icon name="dvr" size={20} color="#0369A1" />
+                </View>
+                <View style={localStyles.sectionHeaderCopy}>
+                  <Text style={localStyles.sectionTitle}>Rodape dos devices</Text>
+                  <Text style={localStyles.sectionDescription}>
+                    Exibe o nome do device e a versao do software em uma linha fina
+                    no rodape. Quando existir texto livre na empresa principal,
+                    ele entra na mesma linha ou alterna em telas pequenas.
+                  </Text>
+                </View>
               </View>
-              <View style={localStyles.sectionHeaderCopy}>
-                <Text style={localStyles.sectionTitle}>Rodape dos devices</Text>
-                <Text style={localStyles.sectionDescription}>
-                  Exibe o nome do device e a versao do software em uma linha fina
-                  no rodape. Quando existir texto livre na empresa principal,
-                  ele entra na mesma linha ou alterna em telas pequenas.
+
+              <Text style={localStyles.helperText}>
+                {`Esse texto livre e salvo na empresa principal (${defaultCompanyLabel}) e compartilhado com todos os devices.`}
+              </Text>
+
+              <View style={localStyles.fieldBlock}>
+                <Text style={localStyles.fieldLabel}>Texto livre</Text>
+                <TextInput
+                  style={localStyles.input}
+                  value={deviceRuntimeFooterText}
+                  onChangeText={setDeviceRuntimeFooterText}
+                  editable={!!defaultCompany?.id}
+                  placeholder="Ex.: www.seusite.com.br • (11) 99999-9999"
+                />
+                <Text style={localStyles.helperText}>
+                  No rodape pequeno, o app alterna entre nome do device / versao
+                  e esse texto.
                 </Text>
               </View>
-            </View>
 
-            <Text style={localStyles.helperText}>
-              {isMainCompanySelected
-                ? 'Esse texto livre e salvo na empresa principal e compartilhado com todos os devices.'
-                : 'Esse rodape pertence a empresa principal. Troque para ela para editar.'}
-            </Text>
-
-            <View style={localStyles.fieldBlock}>
-              <Text style={localStyles.fieldLabel}>Texto livre</Text>
-              <TextInput
+              <TouchableOpacity
                 style={[
-                  localStyles.input,
-                  !isMainCompanySelected && localStyles.inputDisabled,
+                  globalStyles.button,
+                  localStyles.primaryButton,
+                  (!defaultCompany?.id || isSaving) &&
+                    localStyles.primaryButtonDisabled,
                 ]}
-                value={deviceRuntimeFooterText}
-                onChangeText={setDeviceRuntimeFooterText}
-                editable={isMainCompanySelected && !!defaultCompany?.id}
-                placeholder="Ex.: www.seusite.com.br • (11) 99999-9999"
-              />
-              <Text style={localStyles.helperText}>
-                No rodape pequeno, o app alterna entre nome do device / versao
-                e esse texto.
-              </Text>
+                disabled={!defaultCompany?.id || isSaving}
+                onPress={saveDeviceRuntimeFooter}>
+                <Text style={localStyles.primaryButtonText}>
+                  Salvar rodape dos devices
+                </Text>
+              </TouchableOpacity>
             </View>
-
-            <TouchableOpacity
-              style={[
-                globalStyles.button,
-                localStyles.primaryButton,
-                (!defaultCompany?.id ||
-                  !isMainCompanySelected ||
-                  isSaving) &&
-                  localStyles.primaryButtonDisabled,
-              ]}
-              disabled={!defaultCompany?.id || !isMainCompanySelected || isSaving}
-              onPress={saveDeviceRuntimeFooter}>
-              <Text style={localStyles.primaryButtonText}>
-                Salvar rodape dos devices
-              </Text>
-            </TouchableOpacity>
-          </View>
+          )}
 
           <View style={localStyles.sectionCard}>
             <View style={localStyles.sectionHeader}>

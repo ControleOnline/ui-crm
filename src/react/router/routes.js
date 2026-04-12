@@ -32,9 +32,11 @@ const crmRoutes = [
     name: 'GeneralSettings',
     component: GeneralSettings,
     options: {
+      showCompanyFilter: true,
       showBottomToolBar: true,
       headerShown: true,
       headerBackVisible: true,
+      companyFilterMode: 'icon',
       title: 'Configurador geral',
     },
   },
