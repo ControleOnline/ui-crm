@@ -332,7 +332,7 @@ const GeneralSettings = () => {
   const displayPreparationDevices = useMemo(
     () =>
       scopedCompanyDeviceConfigs.filter(deviceConfig => {
-        const deviceType = String(deviceConfig?.device?.type || '')
+        const deviceType = String(deviceConfig?.type || deviceConfig?.device?.type || '')
           .trim()
           .toUpperCase();
         if (deviceType !== DISPLAY_DEVICE_TYPE) {
