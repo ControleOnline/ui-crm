@@ -24,6 +24,8 @@ import {
   normalizeDeviceIds,
 } from '@controleonline/ui-common/src/react/utils/paymentDevices';
 import {
+  getDeviceTypeLabel,
+  getPrinterOptionValue,
   getPrinterLabel,
   getPrinterOptions,
 } from '@controleonline/ui-common/src/react/utils/printerDevices';
@@ -985,18 +987,19 @@ const GeneralSettings = () => {
               <View style={localStyles.printerList}>
                 {printerOptions.map(printer => {
                   const deviceId = String(printer?.device || '').trim();
+                  const printerValue = getPrinterOptionValue(printer);
                   const active =
-                    deviceId !== '' && orderPrintDevices.includes(deviceId);
+                    printerValue !== '' && orderPrintDevices.includes(printerValue);
 
                   return (
                     <TouchableOpacity
-                      key={deviceId}
+                      key={printerValue || deviceId}
                       style={[
                         localStyles.printerItem,
                         active && localStyles.printerItemActive,
                       ]}
                       activeOpacity={0.85}
-                      onPress={() => toggleOrderPrintDevice(deviceId)}>
+                      onPress={() => toggleOrderPrintDevice(printerValue)}>
                       <Icon
                         name={
                           active
@@ -1011,7 +1014,7 @@ const GeneralSettings = () => {
                           {getPrinterLabel(printer)}
                         </Text>
                         <Text style={localStyles.printerDevice}>
-                          {deviceId}
+                          {`${getDeviceTypeLabel(printer?.type)} • ${deviceId}`}
                         </Text>
                       </View>
                     </TouchableOpacity>
