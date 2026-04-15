@@ -19,6 +19,7 @@ import IconAdd from 'react-native-vector-icons/MaterialIcons';
 import MaterialIcon from 'react-native-vector-icons/MaterialIcons';
 import CreateProposalsModal from './CreateProposalsModal';
 import Formatter from '@controleonline/ui-common/src/utils/formatter';
+import { getPeopleDisplayName } from '@controleonline/ui-common/src/react/utils/peopleDisplay';
 
 const ProposalsPage = () => {
   const peopleStore = useStore('people');
@@ -28,10 +29,6 @@ const ProposalsPage = () => {
   const contractGetters = contractStore.getters;
   const contractActions = contractStore.actions;
   const { items: contracts, totalItems, isLoading, error } = contractGetters;
-  const statusStore = useStore('status');
-  const statusGetters = statusStore.getters;
-  const statusActions = statusStore.actions;
-  const { items: statusItems = [] } = statusGetters;
   const navigation = useNavigation();
   const [createModalVisible, setCreateModalVisible] = useState(false);
   const [search, setSearch] = useState('');
@@ -62,9 +59,7 @@ const ProposalsPage = () => {
       return '';
     }
 
-    return normalizeText(
-      person?.name || person?.alias || person?.nickname || person?.realname,
-    );
+    return normalizeText(getPeopleDisplayName(person));
   };
 
   const getResolvedPeopleName = person => {
@@ -285,8 +280,7 @@ const ProposalsPage = () => {
   useFocusEffect(
     useCallback(() => {
       fetchContracts(searchQuery, currentPage);
-      statusActions.getItems({context: 'proposal'});
-    }, [fetchContracts, searchQuery, currentPage, statusActions]),
+    }, [fetchContracts, searchQuery, currentPage]),
   );
 
   useEffect(() => {
@@ -400,33 +394,29 @@ const ProposalsPage = () => {
     [normalizeStatusKey],
   );
 
-  const statusFilterOptions = React.useMemo(() => {
-    const seen = new Set();
-
-    return (Array.isArray(statusItems) ? statusItems : [])
-      .map(item => {
-        const key = getStatusFilterKey(item);
-        if (!key || seen.has(key)) {
-          return null;
-        }
-        seen.add(key);
-
-        const rawStatus = item?.realStatus || item?.status;
-        return {
-          key,
-          label: getStatusLabel(rawStatus),
-          color: item?.color || getStatusColor(rawStatus),
-          normalizedStatus: normalizeStatusKey(rawStatus),
-        };
-      })
-      .filter(Boolean);
-  }, [
-    getStatusColor,
-    getStatusFilterKey,
-    getStatusLabel,
-    normalizeStatusKey,
-    statusItems,
-  ]);
+  const statusFilterOptions = React.useMemo(
+    () => [
+      {
+        key: 'realStatus:open',
+        label: global.t?.t('contract','status', 'open') || 'Em aberto',
+        color: getStatusColor('open'),
+        normalizedStatus: 'open',
+      },
+      {
+        key: 'realStatus:pending',
+        label: global.t?.t('contract','status', 'pending') || 'Pendente',
+        color: getStatusColor('pending'),
+        normalizedStatus: 'pending',
+      },
+      {
+        key: 'realStatus:closed',
+        label: global.t?.t('contract','status', 'closed') || 'Fechado',
+        color: getStatusColor('closed'),
+        normalizedStatus: 'closed',
+      },
+    ],
+    [getStatusColor],
+  );
 
   const contractMatchesStatusFilter = useCallback(
     (contract, filterKey) => {

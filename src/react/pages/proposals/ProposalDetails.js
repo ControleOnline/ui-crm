@@ -14,9 +14,9 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { useStores } from '@store';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import RenderHTML from 'react-native-render-html';
-import AnimatedModal from '@controleonline/ui-crm/src/react/components/AnimatedModal';
 import { colors } from '@controleonline/../../src/styles/colors';
 import { useMessage } from '@controleonline/ui-common/src/react/components/MessageService';
+import LinkedOrderProductsTab from '@controleonline/ui-common/src/react/components/LinkedOrderProductsTab';
 
 const { width } = Dimensions.get('window');
 
@@ -69,7 +69,7 @@ const PropostaTab = ({ contract, fileContent, fileLoading, fileError, canEdit, h
   );
 };
 
-const ContractDetails = () => {
+const ProposalDetails = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const { contractId } = route.params;
@@ -77,13 +77,9 @@ const ContractDetails = () => {
   const { showSuccess, showError } = useMessage();
 
   const contractStore = useStores((s) => s.contract);
-  const peopleStore = useStores((s) => s.people);
 
   const { item: contract, isLoading } = contractStore.getters;
   const contractActions = contractStore.actions;
-  const peopleActions = peopleStore.actions;
-
-  const { items: people, currentCompany } = peopleStore.getters;
 
   const [fileContent, setFileContent] = useState('');
   const [fileLoading, setFileLoading] = useState(false);
@@ -130,11 +126,7 @@ const ContractDetails = () => {
 
     loadData();
 
-    peopleActions.getItems({
-      company: currentCompany ? `/people/${currentCompany.id}` : undefined,
-      link_type: 'client',
-    });
-  }, [contractId, currentCompany?.id]);
+  }, [contractId]);
 
   const handleSendPropostal = async () => {
     try {
@@ -216,6 +208,11 @@ const ContractDetails = () => {
           onPress={() => handleTabPress(0)}>
           <Text style={[styles.tabLabel, activeTab === 0 && styles.tabLabelActive]}>Proposta</Text>
         </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tabItem, activeTab === 1 && styles.tabActive]}
+          onPress={() => handleTabPress(1)}>
+          <Text style={[styles.tabLabel, activeTab === 1 && styles.tabLabelActive]}>Produtos</Text>
+        </TouchableOpacity>
       </View>
 
       <ScrollView
@@ -235,6 +232,15 @@ const ContractDetails = () => {
             fileError={fileError}
             canEdit={canEdit}
             handleSendPropostal={handleSendPropostal}
+          />
+        </View>
+        <View style={{ width, flex: 1 }}>
+          <LinkedOrderProductsTab
+            contract={contract}
+            canEdit={canEdit}
+            emptyTitle="Nenhum produto vinculado a esta proposta."
+            emptySubtitle="Adicione os produtos negociados para poder ajustar a proposta ao longo da conversa com o cliente."
+            searchPlaceholder="Buscar produto para adicionar a proposta..."
           />
         </View>
       </ScrollView>
@@ -391,4 +397,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ContractDetails;
+export default ProposalDetails;

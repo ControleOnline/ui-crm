@@ -1,66 +1,166 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
-  Text,
-  View,
-  TouchableOpacity,
-  ScrollView,
   ActivityIndicator,
-  TextInput,
-  Modal,
-  StyleSheet,
   Keyboard,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useStore } from '@store';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import AnimatedModal from '@controleonline/ui-crm/src/react/components/AnimatedModal';
 import useToastMessage from '../../hooks/useToastMessage';
+import Formatter from '@controleonline/ui-common/src/utils/formatter';
+import { buildOwnedClientsParams, getPeopleDisplayName } from '@controleonline/ui-common/src/react/utils/peopleDisplay';
+import {
+  addProductsToOrder,
+  createLinkedOrder,
+  normalizeEntityId,
+  searchCompanyProducts,
+} from '@controleonline/ui-common/src/react/utils/commercialDocumentOrders';
+
+const MONTHS = [
+  'Janeiro',
+  'Fevereiro',
+  'Marco',
+  'Abril',
+  'Maio',
+  'Junho',
+  'Julho',
+  'Agosto',
+  'Setembro',
+  'Outubro',
+  'Novembro',
+  'Dezembro',
+];
+
+const MONTHS_SHORT = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+
+const formatApiError = error => {
+  if (!error) return 'Nao foi possivel criar a proposta.';
+  if (typeof error === 'string') return error;
+  if (Array.isArray(error?.message)) {
+    return error.message
+      .map(item => item?.message || item?.title || String(item))
+      .filter(Boolean)
+      .join('\n');
+  }
+
+  return error?.message || error?.description || error?.errmsg || 'Nao foi possivel criar a proposta.';
+};
 
 const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
-  const {showError} = useToastMessage();
+  const { showError, showSuccess } = useToastMessage();
   const contractStore = useStore('contract');
   const contractActions = contractStore.actions;
   const peopleStore = useStore('people');
   const peopleGetters = peopleStore.getters;
   const peopleActions = peopleStore.actions;
-  const statusStore = useStore('status');
-  const statusGetters = statusStore.getters;
-  const statusActions = statusStore.actions;
   const modelsStore = useStore('models');
   const modelsActions = modelsStore.actions;
 
-  const { items: people, currentCompany } = peopleGetters;
+  const { currentCompany } = peopleGetters;
+  const people = useMemo(
+    () => (Array.isArray(peopleGetters?.items) ? peopleGetters.items : []),
+    [peopleGetters?.items],
+  );
 
   const [isLoading, setIsLoading] = useState(false);
-  const [contractModels, setContractModels] = useState([]);
   const [loadingModels, setLoadingModels] = useState(false);
-
+  const [contractModels, setContractModels] = useState([]);
   const [selectedModel, setSelectedModel] = useState('');
-  const [selectedProvider, setSelectedProvider] = useState('');
+  const [selectedClient, setSelectedClient] = useState('');
   const [startDay, setStartDay] = useState('');
   const [startMonth, setStartMonth] = useState('');
   const [startYear, setStartYear] = useState('');
-
   const [modelPickerVisible, setModelPickerVisible] = useState(false);
-  const [providerPickerVisible, setProviderPickerVisible] = useState(false);
+  const [clientPickerVisible, setClientPickerVisible] = useState(false);
   const [dayPickerVisible, setDayPickerVisible] = useState(false);
   const [monthPickerVisible, setMonthPickerVisible] = useState(false);
+  const [productQuery, setProductQuery] = useState('');
+  const [productResults, setProductResults] = useState([]);
+  const [productSearchLoading, setProductSearchLoading] = useState(false);
+  const [selectedProducts, setSelectedProducts] = useState([]);
 
   useEffect(() => {
     if (visible) {
       loadInitialData();
     }
-  }, [visible]);
+  }, [visible, currentCompany?.id]);
+
+  useEffect(() => {
+    if (!visible || !currentCompany?.id) {
+      setProductResults([]);
+      setProductSearchLoading(false);
+      return undefined;
+    }
+
+    let cancelled = false;
+    const timeoutId = setTimeout(async () => {
+      setProductSearchLoading(true);
+      try {
+        const results = await searchCompanyProducts({
+          companyId: currentCompany.id,
+          query: productQuery,
+          itemsPerPage: 8,
+        });
+
+        if (!cancelled) {
+          setProductResults(results);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setProductResults([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setProductSearchLoading(false);
+        }
+      }
+    }, String(productQuery || '').trim() ? 250 : 0);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timeoutId);
+    };
+  }, [visible, currentCompany?.id, productQuery]);
+
+  const selectedProductIds = useMemo(
+    () => new Set(selectedProducts.map(product => normalizeEntityId(product))),
+    [selectedProducts],
+  );
+
+  const selectedClientName = useMemo(
+    () => getPeopleDisplayName(people.find(person => person['@id'] === selectedClient)) || '',
+    [people, selectedClient],
+  );
+
+  const selectedModelName = useMemo(
+    () => contractModels.find(model => model['@id'] === selectedModel)?.model || '',
+    [contractModels, selectedModel],
+  );
 
   const loadInitialData = async () => {
     try {
-      await peopleActions.getItems({
-        'link.company': '/people/' + currentCompany.id,
-        'link.linkType': 'client',
+      if (!currentCompany?.id) {
+        return;
+      }
+
+      const clientParams = buildOwnedClientsParams({
+        currentCompanyId: currentCompany.id,
+        itemsPerPage: 100,
       });
-      await statusActions.getItems({ context: 'proposal' });
-      await loadContractModels();
+
+      await Promise.all([
+        clientParams ? peopleActions.getItems(clientParams) : Promise.resolve([]),
+        loadContractModels(),
+      ]);
     } catch (error) {
-      console.error(error);
+      showError(formatApiError(error));
     }
   };
 
@@ -72,7 +172,7 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
         return;
       }
 
-      const currentCompanyId = String(currentCompany.id).replace(/\D/g, '');
+      const currentCompanyId = normalizeEntityId(currentCompany.id);
       const companyIri = `/people/${currentCompanyId}`;
       const response = await modelsActions.getItems({
         context: 'proposal',
@@ -82,13 +182,12 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
 
       const filteredModels = Array.isArray(response)
         ? response.filter(model => {
-            const modelCompanyId = String(
+            const modelCompanyId = normalizeEntityId(
               model?.people?.['@id'] ||
                 model?.people ||
                 model?.company?.['@id'] ||
-                model?.company ||
-                '',
-            ).replace(/\D/g, '');
+                model?.company,
+            );
 
             return !modelCompanyId || modelCompanyId === currentCompanyId;
           })
@@ -96,6 +195,7 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
 
       setContractModels(filteredModels);
     } catch (error) {
+      setContractModels([]);
     } finally {
       setLoadingModels(false);
     }
@@ -106,11 +206,7 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
     const normalizedMonth = String(month || '').replace(/\D/g, '');
     const normalizedDay = String(day || '').replace(/\D/g, '');
 
-    if (
-      normalizedYear.length !== 4 ||
-      !normalizedMonth ||
-      !normalizedDay
-    ) {
+    if (normalizedYear.length !== 4 || !normalizedMonth || !normalizedDay) {
       return null;
     }
 
@@ -130,15 +226,31 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
     return `${normalizedYear}-${normalizedMonth.padStart(2, '0')}-${normalizedDay.padStart(2, '0')}`;
   };
 
+  const toggleSelectedProduct = product => {
+    const productId = normalizeEntityId(product);
+    if (!productId) {
+      return;
+    }
+
+    setSelectedProducts(currentItems => {
+      if (currentItems.some(item => normalizeEntityId(item) === productId)) {
+        return currentItems.filter(item => normalizeEntityId(item) !== productId);
+      }
+
+      return [...currentItems, product];
+    });
+  };
+
   const handleSubmit = async () => {
     const startDate = formatDate(startYear, startMonth, startDay);
-    if (!selectedModel) {
-      showError(global.t?.t('contract','error', 'requiredFields'));
+
+    if (!selectedModel || !selectedClient) {
+      showError('Selecione o modelo e o responsavel da empresa cliente.');
       return;
     }
 
     if (!startDate) {
-      showError(global.t?.t('contract','error', 'invalidStartDate'));
+      showError('Informe uma data inicial valida.');
       return;
     }
 
@@ -147,14 +259,39 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
       const contractData = {
         contractModel: selectedModel,
         provider: `/people/${currentCompany.id}`,
+        client: selectedClient,
         startDate,
       };
-      await contractActions.save(contractData);
-      onSuccess && onSuccess();
+
+      const createdProposal = await contractActions.save(contractData);
+      const createdOrder = await createLinkedOrder({
+        contractRef: createdProposal?.['@id'],
+        provider: `/people/${currentCompany.id}`,
+        client: selectedClient,
+        payer: selectedClient,
+        app: 'CRM',
+        orderType: 'sale',
+      });
+
+      if (selectedProducts.length > 0) {
+        await addProductsToOrder({
+          orderId: createdOrder?.id || createdOrder?.['@id'],
+          products: selectedProducts.map(product => ({
+            product,
+            quantity: 1,
+          })),
+        });
+      }
+
+      showSuccess(
+        selectedProducts.length > 0
+          ? 'Proposta criada com os produtos selecionados.'
+          : 'Proposta criada. Voce podera adicionar produtos depois.',
+      );
+      onSuccess?.();
       handleClose();
     } catch (error) {
-      console.error(error);
-      showError(global.t?.t('contract','error', 'createFailed'));
+      showError(formatApiError(error));
     } finally {
       setIsLoading(false);
     }
@@ -162,25 +299,30 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
 
   const resetForm = () => {
     setSelectedModel('');
-    setSelectedProvider('');
+    setSelectedClient('');
     setStartDay('');
     setStartMonth('');
     setStartYear('');
+    setProductQuery('');
+    setProductResults([]);
+    setSelectedProducts([]);
   };
 
   const handleClose = () => {
     resetForm();
-    onClose();
+    onClose?.();
   };
 
   const renderModelSelectModal = () => (
-    <Modal animationType="slide" transparent visible={modelPickerVisible} onRequestClose={() => setModelPickerVisible(false)}>
+    <Modal
+      animationType="slide"
+      transparent
+      visible={modelPickerVisible}
+      onRequestClose={() => setModelPickerVisible(false)}>
       <View style={styles.pickerModalOverlay}>
         <View style={styles.pickerModalContent}>
           <View style={styles.pickerModalHeader}>
-            <Text style={styles.pickerModalTitle}>
-              {global.t?.t('contract','title', 'selectModel')}
-            </Text>
+            <Text style={styles.pickerModalTitle}>Selecionar modelo da proposta</Text>
             <TouchableOpacity onPress={() => setModelPickerVisible(false)}>
               <Icon name="close" size={24} color="#666666" />
             </TouchableOpacity>
@@ -189,9 +331,7 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
             {loadingModels ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="small" color="#2529a1" />
-                <Text style={styles.loadingText}>
-                  {global.t?.t('contract','state', 'loadingModels')}
-                </Text>
+                <Text style={styles.loadingText}>Carregando modelos...</Text>
               </View>
             ) : contractModels.length > 0 ? (
               contractModels.map(model => (
@@ -202,23 +342,23 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
                     setSelectedModel(model['@id']);
                     setModelPickerVisible(false);
                   }}>
-                  <View style={styles.modelInfo}>
+                  <View style={styles.optionInfo}>
                     <View style={styles.iconContainer}>
                       <Icon name="description" size={20} color="#2529a1" />
                     </View>
-                    <Text style={[styles.modelName, selectedModel === model['@id'] && styles.selectOptionTextActive]}>
+                    <Text style={[styles.optionName, selectedModel === model['@id'] && styles.selectOptionTextActive]}>
                       {model.model}
                     </Text>
                   </View>
-                  {selectedModel === model['@id'] && <Icon name="check-circle" size={24} color="#4CAF50" />}
+                  {selectedModel === model['@id'] && (
+                    <Icon name="check-circle" size={24} color="#4CAF50" />
+                  )}
                 </TouchableOpacity>
               ))
             ) : (
               <View style={styles.emptyState}>
                 <Icon name="description" size={48} color="#CCCCCC" />
-                <Text style={styles.emptyText}>
-                  {global.t?.t('contract','state', 'noModelFound')}
-                </Text>
+                <Text style={styles.emptyText}>Nenhum modelo encontrado.</Text>
               </View>
             )}
           </ScrollView>
@@ -227,45 +367,47 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
     </Modal>
   );
 
-  const renderProviderSelectModal = () => (
-    <Modal animationType="slide" transparent visible={providerPickerVisible} onRequestClose={() => setProviderPickerVisible(false)}>
+  const renderClientSelectModal = () => (
+    <Modal
+      animationType="slide"
+      transparent
+      visible={clientPickerVisible}
+      onRequestClose={() => setClientPickerVisible(false)}>
       <View style={styles.pickerModalOverlay}>
         <View style={styles.pickerModalContent}>
           <View style={styles.pickerModalHeader}>
-            <Text style={styles.pickerModalTitle}>
-              {global.t?.t('contract','title', 'selectProvider')}
-            </Text>
-            <TouchableOpacity onPress={() => setProviderPickerVisible(false)}>
+            <Text style={styles.pickerModalTitle}>Selecionar responsavel do cliente</Text>
+            <TouchableOpacity onPress={() => setClientPickerVisible(false)}>
               <Icon name="close" size={24} color="#666666" />
             </TouchableOpacity>
           </View>
           <ScrollView style={styles.pickerModalBody}>
-            {people && people.length > 0 ? (
+            {people.length > 0 ? (
               people.map(person => (
                 <TouchableOpacity
                   key={person['@id']}
-                  style={[styles.selectOption, selectedProvider === person['@id'] && styles.selectOptionActive]}
+                  style={[styles.selectOption, selectedClient === person['@id'] && styles.selectOptionActive]}
                   onPress={() => {
-                    setSelectedProvider(person['@id']);
-                    setProviderPickerVisible(false);
+                    setSelectedClient(person['@id']);
+                    setClientPickerVisible(false);
                   }}>
-                  <View style={styles.personInfo}>
+                  <View style={styles.optionInfo}>
                     <View style={styles.iconContainer}>
                       <Icon name="person" size={20} color="#2529a1" />
                     </View>
-                    <Text style={[styles.personName, selectedProvider === person['@id'] && styles.selectOptionTextActive]}>
-                      {person.name}
+                    <Text style={[styles.optionName, selectedClient === person['@id'] && styles.selectOptionTextActive]}>
+                      {getPeopleDisplayName(person)}
                     </Text>
                   </View>
-                  {selectedProvider === person['@id'] && <Icon name="check-circle" size={24} color="#4CAF50" />}
+                  {selectedClient === person['@id'] && (
+                    <Icon name="check-circle" size={24} color="#4CAF50" />
+                  )}
                 </TouchableOpacity>
               ))
             ) : (
               <View style={styles.emptyState}>
-                <Icon name="person-outline" size={48} color="#CCCCCC" />
-                <Text style={styles.emptyText}>
-                  {global.t?.t('contract','state', 'noPeopleFound')}
-                </Text>
+                <Icon name="business" size={48} color="#CCCCCC" />
+                <Text style={styles.emptyText}>Nenhum cliente encontrado.</Text>
               </View>
             )}
           </ScrollView>
@@ -275,27 +417,31 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
   );
 
   const renderDayPicker = () => (
-    <Modal transparent visible={dayPickerVisible} animationType="slide" onRequestClose={() => setDayPickerVisible(false)}>
+    <Modal
+      transparent
+      visible={dayPickerVisible}
+      animationType="slide"
+      onRequestClose={() => setDayPickerVisible(false)}>
       <View style={styles.pickerModalOverlay}>
         <View style={styles.pickerModalContent}>
           <View style={styles.pickerModalHeader}>
-            <Text style={styles.pickerModalTitle}>
-              {global.t?.t('contract','title', 'selectDay')}
-            </Text>
+            <Text style={styles.pickerModalTitle}>Selecionar dia</Text>
             <TouchableOpacity onPress={() => setDayPickerVisible(false)}>
-              <Icon name="close" size={24} color="#666" />
+              <Icon name="close" size={24} color="#666666" />
             </TouchableOpacity>
           </View>
           <ScrollView style={styles.pickerModalBody}>
-            {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
+            {Array.from({ length: 31 }, (_, index) => index + 1).map(day => (
               <TouchableOpacity
                 key={day}
-                style={[styles.selectOption, startDay === day.toString() && styles.selectOptionActive]}
+                style={[styles.selectOption, startDay === String(day) && styles.selectOptionActive]}
                 onPress={() => {
-                  setStartDay(day.toString());
+                  setStartDay(String(day));
                   setDayPickerVisible(false);
                 }}>
-                <Text style={[styles.modelName, startDay === day.toString() && styles.selectOptionTextActive]}>{day}</Text>
+                <Text style={[styles.optionName, startDay === String(day) && styles.selectOptionTextActive]}>
+                  {day}
+                </Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -304,59 +450,48 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
     </Modal>
   );
 
-  const renderMonthPicker = () => {
-    const months = [
-      global.t?.t('contract','month', 'january'),
-      global.t?.t('contract','month', 'february'),
-      global.t?.t('contract','month', 'march'),
-      global.t?.t('contract','month', 'april'),
-      global.t?.t('contract','month', 'may'),
-      global.t?.t('contract','month', 'june'),
-      global.t?.t('contract','month', 'july'),
-      global.t?.t('contract','month', 'august'),
-      global.t?.t('contract','month', 'september'),
-      global.t?.t('contract','month', 'october'),
-      global.t?.t('contract','month', 'november'),
-      global.t?.t('contract','month', 'december'),
-    ];
-    return (
-      <Modal transparent visible={monthPickerVisible} animationType="slide" onRequestClose={() => setMonthPickerVisible(false)}>
-        <View style={styles.pickerModalOverlay}>
-          <View style={styles.pickerModalContent}>
-            <View style={styles.pickerModalHeader}>
-              <Text style={styles.pickerModalTitle}>
-                {global.t?.t('contract','title', 'selectMonth')}
-              </Text>
-              <TouchableOpacity onPress={() => setMonthPickerVisible(false)}>
-                <Icon name="close" size={24} color="#666" />
-              </TouchableOpacity>
-            </View>
-            <ScrollView style={styles.pickerModalBody}>
-              {months.map((month, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={[styles.selectOption, startMonth === (index + 1).toString() && styles.selectOptionActive]}
-                  onPress={() => {
-                    setStartMonth((index + 1).toString());
-                    setMonthPickerVisible(false);
-                  }}>
-                  <Text style={[styles.modelName, startMonth === (index + 1).toString() && styles.selectOptionTextActive]}>{month}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
+  const renderMonthPicker = () => (
+    <Modal
+      transparent
+      visible={monthPickerVisible}
+      animationType="slide"
+      onRequestClose={() => setMonthPickerVisible(false)}>
+      <View style={styles.pickerModalOverlay}>
+        <View style={styles.pickerModalContent}>
+          <View style={styles.pickerModalHeader}>
+            <Text style={styles.pickerModalTitle}>Selecionar mes</Text>
+            <TouchableOpacity onPress={() => setMonthPickerVisible(false)}>
+              <Icon name="close" size={24} color="#666666" />
+            </TouchableOpacity>
           </View>
+          <ScrollView style={styles.pickerModalBody}>
+            {MONTHS.map((month, index) => (
+              <TouchableOpacity
+                key={month}
+                style={[styles.selectOption, startMonth === String(index + 1) && styles.selectOptionActive]}
+                onPress={() => {
+                  setStartMonth(String(index + 1));
+                  setMonthPickerVisible(false);
+                }}>
+                <Text style={[styles.optionName, startMonth === String(index + 1) && styles.selectOptionTextActive]}>
+                  {month}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
         </View>
-      </Modal>
-    );
-  };
+      </View>
+    </Modal>
+  );
 
   return (
-    <AnimatedModal visible={visible} onRequestClose={handleClose} style={{ justifyContent: 'flex-end' }}>
+    <AnimatedModal
+      visible={visible}
+      onRequestClose={handleClose}
+      style={{ justifyContent: 'flex-end' }}>
       <View style={styles.modalContainer}>
         <View style={styles.modalHeader}>
-          <Text style={styles.modalTitle}>
-            {global.t?.t('contract','title', 'createProposal')}
-          </Text>
+          <Text style={styles.modalTitle}>Criar nova proposta</Text>
           <TouchableOpacity onPress={handleClose} style={styles.headerCloseButton}>
             <Icon name="close" size={20} color="#64748B" />
           </TouchableOpacity>
@@ -369,15 +504,13 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
           keyboardDismissMode="on-drag">
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>
-              {global.t?.t('contract','label', 'proposalModel')} <Text style={styles.required}>*</Text>
+              Modelo da proposta <Text style={styles.required}>*</Text>
             </Text>
             <TouchableOpacity style={styles.selectInput} onPress={() => setModelPickerVisible(true)}>
               <View style={styles.selectInputContent}>
                 <Icon name="description" size={20} color="#2529a1" style={{ marginRight: 8 }} />
                 <Text style={[styles.selectInputText, { color: selectedModel ? '#1A1A1A' : '#999999' }]}>
-                  {selectedModel
-                    ? contractModels.find(m => m['@id'] === selectedModel)?.model
-                    : global.t?.t('contract','placeholder', 'selectModel')}
+                  {selectedModelName || 'Selecionar modelo'}
                 </Text>
               </View>
               <Icon name="keyboard-arrow-down" size={24} color="#666666" />
@@ -386,35 +519,35 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
 
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>
-              {global.t?.t('contract','label', 'startDate')} <Text style={styles.required}>*</Text>
+              Responsavel / cliente <Text style={styles.required}>*</Text>
+            </Text>
+            <TouchableOpacity style={styles.selectInput} onPress={() => setClientPickerVisible(true)}>
+              <View style={styles.selectInputContent}>
+                <Icon name="business-center" size={20} color="#2529a1" style={{ marginRight: 8 }} />
+                <Text style={[styles.selectInputText, { color: selectedClient ? '#1A1A1A' : '#999999' }]}>
+                  {selectedClientName || 'Selecionar responsavel'}
+                </Text>
+              </View>
+              <Icon name="keyboard-arrow-down" size={24} color="#666666" />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>
+              Data de inicio <Text style={styles.required}>*</Text>
             </Text>
             <View style={styles.dateContainer}>
               <TouchableOpacity style={styles.selectInputDate} onPress={() => setDayPickerVisible(true)}>
-                <Text style={[styles.selectInputText, !startDay && { color: '#999' }]}>
-                  {startDay || global.t?.t('contract','placeholder', 'day')}
+                <Text style={[styles.selectInputText, !startDay && styles.placeholderText]}>
+                  {startDay || 'Dia'}
                 </Text>
-                <Icon name="arrow-drop-down" size={20} color="#666" />
+                <Icon name="arrow-drop-down" size={20} color="#666666" />
               </TouchableOpacity>
               <TouchableOpacity style={styles.selectInputDate} onPress={() => setMonthPickerVisible(true)}>
-                <Text style={[styles.selectInputText, !startMonth && { color: '#999' }]}>
-                  {startMonth
-                    ? [
-                        global.t?.t('contract','monthShort', 'jan'),
-                        global.t?.t('contract','monthShort', 'feb'),
-                        global.t?.t('contract','monthShort', 'mar'),
-                        global.t?.t('contract','monthShort', 'apr'),
-                        global.t?.t('contract','monthShort', 'may'),
-                        global.t?.t('contract','monthShort', 'jun'),
-                        global.t?.t('contract','monthShort', 'jul'),
-                        global.t?.t('contract','monthShort', 'aug'),
-                        global.t?.t('contract','monthShort', 'sep'),
-                        global.t?.t('contract','monthShort', 'oct'),
-                        global.t?.t('contract','monthShort', 'nov'),
-                        global.t?.t('contract','monthShort', 'dec'),
-                      ][parseInt(startMonth) - 1]
-                    : global.t?.t('contract','placeholder', 'month')}
+                <Text style={[styles.selectInputText, !startMonth && styles.placeholderText]}>
+                  {startMonth ? MONTHS_SHORT[parseInt(startMonth, 10) - 1] : 'Mes'}
                 </Text>
-                <Icon name="arrow-drop-down" size={20} color="#666" />
+                <Icon name="arrow-drop-down" size={20} color="#666666" />
               </TouchableOpacity>
               <TextInput
                 style={styles.yearInput}
@@ -422,11 +555,94 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
                 onChangeText={text =>
                   setStartYear(String(text || '').replace(/\D/g, '').slice(0, 4))
                 }
-                placeholder="2024"
+                placeholder="2026"
                 placeholderTextColor="#999999"
                 keyboardType="numeric"
                 maxLength={4}
               />
+            </View>
+          </View>
+
+          <View style={styles.inputGroup}>
+            <View style={styles.productsHeader}>
+              <View>
+                <Text style={styles.inputLabel}>Produtos da proposta</Text>
+                <Text style={styles.helperText}>
+                  Escolha os produtos que serao encaminhados agora. Voce podera ajustar depois na proposta.
+                </Text>
+              </View>
+              <View style={styles.selectedCountBadge}>
+                <Text style={styles.selectedCountText}>{selectedProducts.length}</Text>
+              </View>
+            </View>
+
+            <View style={styles.searchBox}>
+              <Icon name="search" size={18} color="#64748B" />
+              <TextInput
+                style={styles.searchInput}
+                value={productQuery}
+                onChangeText={setProductQuery}
+                placeholder="Buscar produto da empresa..."
+                placeholderTextColor="#94A3B8"
+              />
+              {productSearchLoading && <ActivityIndicator size="small" color="#2529a1" />}
+            </View>
+
+            {selectedProducts.length > 0 && (
+              <View style={styles.selectedProductsWrap}>
+                {selectedProducts.map(product => {
+                  const productId = normalizeEntityId(product);
+                  return (
+                    <View key={product?.['@id'] || productId} style={styles.selectedProductChip}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.selectedProductTitle} numberOfLines={1}>
+                          {product?.product || 'Produto'}
+                        </Text>
+                        <Text style={styles.selectedProductMeta} numberOfLines={1}>
+                          {product?.sku ? `SKU ${product.sku}` : Formatter.formatMoney(Number(product?.price || 0))}
+                        </Text>
+                      </View>
+                      <TouchableOpacity onPress={() => toggleSelectedProduct(product)}>
+                        <Icon name="close" size={18} color="#64748B" />
+                      </TouchableOpacity>
+                    </View>
+                  );
+                })}
+              </View>
+            )}
+
+            <View style={styles.productResultsWrap}>
+              {productResults.map(product => {
+                const productId = normalizeEntityId(product);
+                const isSelected = selectedProductIds.has(productId);
+
+                return (
+                  <TouchableOpacity
+                    key={product?.['@id'] || productId}
+                    style={[styles.productRow, isSelected && styles.productRowSelected]}
+                    onPress={() => toggleSelectedProduct(product)}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.productName} numberOfLines={1}>
+                        {product?.product || 'Produto'}
+                      </Text>
+                      <Text style={styles.productMeta} numberOfLines={1}>
+                        {[product?.sku ? `SKU ${product.sku}` : null, Formatter.formatMoney(Number(product?.price || 0))]
+                          .filter(Boolean)
+                          .join(' • ')}
+                      </Text>
+                    </View>
+                    <Icon
+                      name={isSelected ? 'check-circle' : 'add-circle-outline'}
+                      size={22}
+                      color={isSelected ? '#4CAF50' : '#2529a1'}
+                    />
+                  </TouchableOpacity>
+                );
+              })}
+
+              {!productSearchLoading && productResults.length === 0 && (
+                <Text style={styles.noProductsText}>Nenhum produto disponivel para esta busca.</Text>
+              )}
             </View>
           </View>
         </ScrollView>
@@ -438,30 +654,30 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
               Keyboard.dismiss();
               handleClose();
             }}>
-            <Text style={styles.cancelButtonText}>{global.t?.t('contract','action', 'cancel')}</Text>
+            <Text style={styles.cancelButtonText}>Cancelar</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[
               styles.createButton,
-              (!selectedModel || !formatDate(startYear, startMonth, startDay)) &&
+              (!selectedModel || !selectedClient || !formatDate(startYear, startMonth, startDay)) &&
                 styles.createButtonDisabled,
             ]}
             onPress={() => {
               Keyboard.dismiss();
               handleSubmit();
             }}
-            disabled={
-              isLoading || !selectedModel || !formatDate(startYear, startMonth, startDay)
-            }>
-            {isLoading ? <ActivityIndicator size="small" color="#FFFFFF" /> : (
-              <Text style={styles.createButtonText}>{global.t?.t('contract','action', 'save')}</Text>
+            disabled={isLoading || !selectedModel || !selectedClient || !formatDate(startYear, startMonth, startDay)}>
+            {isLoading ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Text style={styles.createButtonText}>Salvar proposta</Text>
             )}
           </TouchableOpacity>
         </View>
       </View>
 
       {renderModelSelectModal()}
-      {renderProviderSelectModal()}
+      {renderClientSelectModal()}
       {renderDayPicker()}
       {renderMonthPicker()}
     </AnimatedModal>
@@ -470,10 +686,10 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
 
 const styles = StyleSheet.create({
   modalContainer: {
-    backgroundColor: '#fff',
+    backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    maxHeight: '90%',
+    maxHeight: '92%',
     width: '100%',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -4 },
@@ -515,6 +731,11 @@ const styles = StyleSheet.create({
     color: '#212529',
     marginBottom: 8,
   },
+  helperText: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: '#64748B',
+  },
   required: {
     color: '#FF4444',
   },
@@ -523,17 +744,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     borderWidth: 1,
-    borderColor: '#e9ecef',
+    borderColor: '#E9ECEF',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#F8F9FA',
   },
-  selectInputContent: { flexDirection: 'row', alignItems: 'center', flex: 1 },
-  selectInputText: { fontSize: 16, flex: 1, color: '#1A1A1A' },
+  selectInputContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  selectInputText: {
+    fontSize: 16,
+    flex: 1,
+    color: '#1A1A1A',
+  },
+  placeholderText: {
+    color: '#999999',
+  },
   dateContainer: {
     flexDirection: 'row',
-    gap: 8,
   },
   selectInputDate: {
     flex: 1,
@@ -541,47 +772,236 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     borderWidth: 1,
-    borderColor: '#e9ecef',
+    borderColor: '#E9ECEF',
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 12,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#F8F9FA',
+    marginRight: 8,
   },
   yearInput: {
     flex: 1,
     borderWidth: 1,
-    borderColor: '#e9ecef',
+    borderColor: '#E9ECEF',
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 12,
     fontSize: 16,
     color: '#1A1A1A',
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#F8F9FA',
     textAlign: 'center',
   },
-  modalFooter: { flexDirection: 'row', padding: 20, gap: 12, borderTopWidth: 1, borderTopColor: '#e9ecef' },
-  cancelButton: { flex: 1, paddingVertical: 14, borderRadius: 12, borderWidth: 1, borderColor: '#6c757d', alignItems: 'center' },
-  cancelButtonText: { fontSize: 16, fontWeight: '600', color: '#6c757d' },
-  createButton: { flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: '#007bff', alignItems: 'center', justifyContent: 'center' },
-  createButtonDisabled: { backgroundColor: '#6c757d' },
-  createButtonText: { fontSize: 16, fontWeight: '600', color: '#FFFFFF' },
-  pickerModalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  pickerModalContent: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 20, borderTopRightRadius: 20, width: '100%', maxHeight: '50%', elevation: 10 },
-  pickerModalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#E9ECEF' },
-  pickerModalTitle: { fontSize: 18, fontWeight: '600', color: '#1A1A1A' },
-  pickerModalBody: { maxHeight: '100%' },
-  selectOption: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#F1F3F4' },
-  selectOptionActive: { backgroundColor: '#F8F9FF' },
-  selectOptionTextActive: { color: '#2529a1', fontWeight: '600' },
-  modelInfo: { flexDirection: 'row', alignItems: 'center', flex: 1 },
-  personInfo: { flexDirection: 'row', alignItems: 'center', flex: 1 },
-  iconContainer: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#F8F9FF', alignItems: 'center', justifyContent: 'center', marginRight: 12 },
-  modelName: { fontSize: 16, color: '#1A1A1A' },
-  personName: { fontSize: 16, color: '#1A1A1A' },
-  emptyState: { alignItems: 'center', paddingVertical: 40 },
-  emptyText: { fontSize: 16, color: '#999999', marginTop: 12 },
-  loadingContainer: { alignItems: 'center', paddingVertical: 40 },
-  loadingText: { fontSize: 16, color: '#666666', marginTop: 12 },
+  productsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 10,
+  },
+  selectedCountBadge: {
+    minWidth: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#2529a1',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 12,
+  },
+  selectedCountText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  searchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    backgroundColor: '#F8FAFC',
+  },
+  searchInput: {
+    flex: 1,
+    minHeight: 48,
+    fontSize: 15,
+    color: '#0F172A',
+    paddingHorizontal: 8,
+  },
+  selectedProductsWrap: {
+    marginTop: 12,
+  },
+  selectedProductChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#DCE4FF',
+    borderRadius: 12,
+    backgroundColor: '#F8F9FF',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 8,
+  },
+  selectedProductTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#0F172A',
+  },
+  selectedProductMeta: {
+    marginTop: 2,
+    fontSize: 12,
+    color: '#64748B',
+  },
+  productResultsWrap: {
+    marginTop: 12,
+  },
+  productRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    backgroundColor: '#FFFFFF',
+    marginBottom: 8,
+  },
+  productRowSelected: {
+    borderColor: '#4CAF50',
+    backgroundColor: '#F5FFF7',
+  },
+  productName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#0F172A',
+  },
+  productMeta: {
+    marginTop: 2,
+    fontSize: 12,
+    color: '#64748B',
+  },
+  noProductsText: {
+    paddingVertical: 8,
+    fontSize: 13,
+    color: '#94A3B8',
+    textAlign: 'center',
+  },
+  modalFooter: {
+    flexDirection: 'row',
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#E9ECEF',
+  },
+  cancelButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#6C757D',
+    alignItems: 'center',
+    marginRight: 6,
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#6C757D',
+  },
+  createButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: '#007BFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 6,
+  },
+  createButtonDisabled: {
+    backgroundColor: '#94A3B8',
+  },
+  createButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  pickerModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  pickerModalContent: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    width: '100%',
+    maxHeight: '55%',
+    elevation: 10,
+  },
+  pickerModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E9ECEF',
+  },
+  pickerModalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1A1A1A',
+  },
+  pickerModalBody: {
+    maxHeight: '100%',
+  },
+  selectOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F3F4',
+  },
+  selectOptionActive: {
+    backgroundColor: '#F8F9FF',
+  },
+  selectOptionTextActive: {
+    color: '#2529a1',
+    fontWeight: '600',
+  },
+  optionInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  iconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F8F9FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  optionName: {
+    fontSize: 16,
+    color: '#1A1A1A',
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#999999',
+    marginTop: 12,
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#666666',
+    marginTop: 12,
+  },
 });
 
 export default CreateProposalsModal;
