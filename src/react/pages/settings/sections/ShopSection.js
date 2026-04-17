@@ -2,6 +2,7 @@ import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {
   ActivityIndicator,
   Alert,
+  ScrollView,
   Text,
   TextInput,
   TouchableOpacity,
@@ -10,16 +11,26 @@ import {
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
 import css from '@controleonline/ui-orders/src/react/css/orders';
+import AnimatedModal from '@controleonline/ui-crm/src/react/components/AnimatedModal';
 import {useStore} from '@store';
 import {searchCompanyProducts} from '@controleonline/ui-common/src/react/utils/commercialDocumentOrders';
+import {buildAddressOptionSummary} from '@controleonline/ui-common/src/react/utils/entityDisplay';
+import {
+  fetchShopFranchiseDirectory,
+  resolveFranchiseCompanyLabel,
+} from '@controleonline/ui-common/src/react/utils/shopFranchises';
 import {
   getEnabledShopHomeOptions,
   normalizeBooleanConfig,
+  normalizeShopEntityId,
+  normalizeShopEntityIds,
   normalizeShopLoyaltyRequiredSales,
   normalizeShopPrimaryEntry,
   normalizeShopProductId,
   normalizeShopProductIds,
   SHOP_BOTTOM_BAR_ENABLED_CONFIG_KEY,
+  SHOP_FRANCHISE_VISIBLE_ADDRESS_IDS_CONFIG_KEY,
+  SHOP_FRANCHISE_VISIBLE_COMPANY_IDS_CONFIG_KEY,
   SHOP_FRANCHISE_LOCATOR_ENABLED_CONFIG_KEY,
   SHOP_HOME_OPTION_FRANCHISE_LOCATOR,
   SHOP_HOME_OPTION_SALES,
@@ -38,14 +49,12 @@ import {useGeneralSettingsConfig} from '../GeneralSettings.shared';
 const SHOP_HOME_OPTIONS = [
   {
     key: SHOP_HOME_OPTION_SALES,
-    icon: 'storefront',
     label: 'Pagina de vendas',
     description:
       'Libera a vitrine principal do shop para navegacao por categorias e produtos.',
   },
   {
     key: SHOP_HOME_OPTION_FRANCHISE_LOCATOR,
-    icon: 'place',
     label: 'Localizador de franquias',
     description:
       'Libera a entrada do shop focada em encontrar unidades ou franquias.',
@@ -74,6 +83,67 @@ const resolveProductMeta = product => {
   return [sku ? `SKU ${sku}` : null, price > 0 ? priceLabel : null]
     .filter(Boolean)
     .join(' • ');
+};
+
+const resolveCompanyLabel = company =>
+  resolveFranchiseCompanyLabel(company) || 'Franquia';
+
+const resolveCompanyMeta = company => {
+  const documentLabel = Array.isArray(company?.document)
+    ? String(company?.document?.[0]?.document || '').trim()
+    : String(company?.document?.document || company?.document || '').trim();
+
+  return documentLabel || 'Empresa vinculada como franquia';
+};
+
+const resolveAddressLabel = address => {
+  const summary = buildAddressOptionSummary(address);
+  return summary.primary || address?.nickname || 'Endereco';
+};
+
+const resolveAddressMeta = address => {
+  const summary = buildAddressOptionSummary(address);
+  const companyLabel = resolveCompanyLabel(address?.linkedCompany);
+
+  return [
+    companyLabel && companyLabel !== 'Franquia' ? companyLabel : null,
+    summary.secondary,
+    address?.searchFor,
+    address?.openingHours,
+  ]
+    .filter(Boolean)
+    .join(' • ');
+};
+
+const buildNormalizedSearchText = (...values) =>
+  values
+    .flatMap(value => {
+      if (Array.isArray(value)) {
+        return value;
+      }
+
+      return [value];
+    })
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+
+const filterSelectableItems = ({
+  items = [],
+  query = '',
+  resolveSearchText,
+}) => {
+  const normalizedQuery = String(query || '').trim().toLowerCase();
+
+  if (!normalizedQuery) {
+    return items;
+  }
+
+  return items.filter(item =>
+    String(resolveSearchText?.(item) || '')
+      .toLowerCase()
+      .includes(normalizedQuery),
+  );
 };
 
 const ConfigToggleRow = ({description, label, value, onToggle}) => (
@@ -107,7 +177,67 @@ const ConfigToggleRow = ({description, label, value, onToggle}) => (
   </View>
 );
 
-const useShopProductSearch = currentCompanyId => {
+const useShopProductBrowser = ({companyId, visible}) => {
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (!visible || !companyId) {
+      setResults([]);
+      setIsLoading(false);
+      return undefined;
+    }
+
+    const trimmedQuery = String(query || '').trim();
+    let cancelled = false;
+
+    const timeoutId = setTimeout(async () => {
+      setIsLoading(true);
+      try {
+        const items = await searchCompanyProducts({
+          companyId,
+          query: trimmedQuery,
+          itemsPerPage: trimmedQuery ? 80 : 60,
+        });
+
+        if (!cancelled) {
+          setResults(Array.isArray(items) ? items : []);
+        }
+      } catch {
+        if (!cancelled) {
+          setResults([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    }, trimmedQuery ? 250 : 0);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timeoutId);
+    };
+  }, [companyId, query, visible]);
+
+  useEffect(() => {
+    if (!visible) {
+      setQuery('');
+      setResults([]);
+      setIsLoading(false);
+    }
+  }, [visible]);
+
+  return {
+    isLoading,
+    query,
+    results,
+    setQuery,
+  };
+};
+
+const useShopProductSearch = companyId => {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -115,7 +245,7 @@ const useShopProductSearch = currentCompanyId => {
   useEffect(() => {
     const trimmedQuery = String(query || '').trim();
 
-    if (!currentCompanyId || !trimmedQuery) {
+    if (!companyId || !trimmedQuery) {
       setResults([]);
       setIsLoading(false);
       return undefined;
@@ -126,7 +256,7 @@ const useShopProductSearch = currentCompanyId => {
       setIsLoading(true);
       try {
         const items = await searchCompanyProducts({
-          companyId: currentCompanyId,
+          companyId,
           query: trimmedQuery,
           itemsPerPage: 8,
         });
@@ -149,7 +279,7 @@ const useShopProductSearch = currentCompanyId => {
       cancelled = true;
       clearTimeout(timeoutId);
     };
-  }, [currentCompanyId, query]);
+  }, [companyId, query]);
 
   return {
     isLoading,
@@ -157,6 +287,184 @@ const useShopProductSearch = currentCompanyId => {
     results,
     setQuery,
   };
+};
+
+const useLocalSelectionBrowser = ({items, visible, resolveSearchText}) => {
+  const [query, setQuery] = useState('');
+
+  useEffect(() => {
+    if (!visible) {
+      setQuery('');
+    }
+  }, [visible]);
+
+  const results = useMemo(
+    () =>
+      filterSelectableItems({
+        items,
+        query,
+        resolveSearchText,
+      }),
+    [items, query, resolveSearchText],
+  );
+
+  return {
+    isLoading: false,
+    query,
+    results,
+    setQuery,
+  };
+};
+
+const SelectionModal = ({
+  visible,
+  title,
+  helperText,
+  browser,
+  globalStyles,
+  onClose,
+  onSelect,
+  selectedIds,
+  selectedItemId,
+  multiSelect = false,
+  emptyIconName = 'inventory-2',
+  emptyTitle = 'Nenhum item encontrado',
+  emptyText = 'A lista ainda nao trouxe itens para selecionar.',
+  resolveItemId = normalizeShopEntityId,
+  resolveItemLabel = item => String(item?.name || item?.label || 'Item'),
+  resolveItemMeta = () => 'Toque para selecionar',
+  searchPlaceholder = 'Pesquisar item...',
+  selectionMeta,
+}) => {
+  const normalizedSelectedIds = selectedIds || new Set();
+  const normalizedSelectedItemId = String(selectedItemId || '').trim();
+
+  return (
+    <AnimatedModal visible={visible} onRequestClose={onClose}>
+      <View style={localStyles.selectionModal}>
+        <View style={localStyles.selectionModalHeader}>
+          <View style={localStyles.selectionModalHeaderCopy}>
+            <Text style={localStyles.selectionModalTitle}>{title}</Text>
+            {!!helperText && (
+              <Text style={localStyles.selectionModalSubtitle}>
+                {helperText}
+              </Text>
+            )}
+          </View>
+          <TouchableOpacity
+            onPress={onClose}
+            style={localStyles.selectionModalClose}
+            activeOpacity={0.85}>
+            <Icon name="close" size={20} color="#64748B" />
+          </TouchableOpacity>
+        </View>
+
+        <View style={localStyles.selectionSearchWrap}>
+          <Icon
+            name="search"
+            size={18}
+            color="#94A3B8"
+            style={localStyles.selectionSearchIcon}
+          />
+          <TextInput
+            value={browser.query}
+            onChangeText={browser.setQuery}
+            placeholder={searchPlaceholder}
+            placeholderTextColor="#94A3B8"
+            style={localStyles.selectionSearchInput}
+            autoFocus={visible}
+            returnKeyType="search"
+          />
+          {!!browser.query && (
+            <TouchableOpacity
+              onPress={() => browser.setQuery('')}
+              activeOpacity={0.85}>
+              <Icon name="cancel" size={18} color="#94A3B8" />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        <ScrollView
+          style={localStyles.selectionModalList}
+          contentContainerStyle={localStyles.selectionModalListContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}>
+          {browser.isLoading ? (
+            <View style={localStyles.searchEmptyState}>
+              <ActivityIndicator size="small" color="#64748B" />
+              <Text style={localStyles.searchEmptyStateText}>
+                Carregando itens...
+              </Text>
+            </View>
+          ) : browser.results.length === 0 ? (
+            <View style={localStyles.searchEmptyState}>
+              <Icon name={emptyIconName} size={36} color="#CBD5E1" />
+              <Text style={localStyles.searchEmptyStateTitle}>
+                {emptyTitle}
+              </Text>
+              <Text style={localStyles.searchEmptyStateText}>
+                {String(browser.query || '').trim()
+                  ? emptyText
+                  : 'Nenhum item disponivel apareceu para selecao.'}
+              </Text>
+            </View>
+          ) : (
+            browser.results.map(item => {
+              const itemId = resolveItemId(item);
+              const selected = multiSelect
+                ? normalizedSelectedIds.has(itemId)
+                : itemId === normalizedSelectedItemId;
+
+              return (
+                <TouchableOpacity
+                  key={`shop-picker-${itemId}`}
+                  style={[
+                    localStyles.selectionModalItem,
+                    selected && localStyles.selectionModalItemActive,
+                  ]}
+                  activeOpacity={0.85}
+                  onPress={() => onSelect(item)}>
+                  <Icon
+                    name={
+                      selected
+                        ? multiSelect
+                          ? 'check-circle'
+                          : 'radio-button-checked'
+                        : multiSelect
+                          ? 'add-circle-outline'
+                          : 'radio-button-unchecked'
+                    }
+                    size={20}
+                    color={selected ? '#0F766E' : '#94A3B8'}
+                  />
+                  <View style={localStyles.selectionModalItemCopy}>
+                    <Text style={localStyles.selectionModalItemTitle}>
+                      {resolveItemLabel(item)}
+                    </Text>
+                    <Text style={localStyles.selectionModalItemMeta}>
+                      {(selected
+                        ? selectionMeta?.(item, {selected, multiSelect})
+                        : null) ||
+                        resolveItemMeta(item) ||
+                        'Toque para selecionar'}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            })
+          )}
+        </ScrollView>
+
+        {multiSelect && (
+          <TouchableOpacity
+            style={[globalStyles.button, localStyles.primaryButton]}
+            onPress={onClose}>
+            <Text style={localStyles.primaryButtonText}>Concluir selecao</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    </AnimatedModal>
+  );
 };
 
 const ShopSection = () => {
@@ -174,6 +482,21 @@ const ShopSection = () => {
   const [franchiseLocatorEnabled, setFranchiseLocatorEnabled] = useState(false);
   const [bottomBarEnabled, setBottomBarEnabled] = useState(false);
   const [primaryEntry, setPrimaryEntry] = useState('');
+  const [visibleFranchiseCompanyIds, setVisibleFranchiseCompanyIds] = useState(
+    [],
+  );
+  const [visibleFranchiseAddressIds, setVisibleFranchiseAddressIds] = useState(
+    [],
+  );
+  const [franchiseCompanySearch, setFranchiseCompanySearch] = useState('');
+  const [franchiseAddressSearch, setFranchiseAddressSearch] = useState('');
+  const [franchiseDirectory, setFranchiseDirectory] = useState([]);
+  const [isLoadingFranchiseDirectory, setIsLoadingFranchiseDirectory] =
+    useState(false);
+  const [franchiseCompanySelectorVisible, setFranchiseCompanySelectorVisible] =
+    useState(false);
+  const [franchiseAddressSelectorVisible, setFranchiseAddressSelectorVisible] =
+    useState(false);
 
   const [loyaltyCouponsEnabled, setLoyaltyCouponsEnabled] = useState(false);
   const [loyaltyRequiredSales, setLoyaltyRequiredSales] = useState('');
@@ -185,9 +508,66 @@ const ShopSection = () => {
   const [isHydratingLoyaltyProducts, setIsHydratingLoyaltyProducts] =
     useState(false);
   const [isHydratingGiftProduct, setIsHydratingGiftProduct] = useState(false);
+  const [loyaltySelectorVisible, setLoyaltySelectorVisible] = useState(false);
+  const [giftSelectorVisible, setGiftSelectorVisible] = useState(false);
 
+  const loyaltyBrowser = useShopProductBrowser({
+    companyId: currentCompany?.id,
+    visible: loyaltySelectorVisible,
+  });
+  const giftBrowser = useShopProductBrowser({
+    companyId: currentCompany?.id,
+    visible: giftSelectorVisible,
+  });
   const loyaltySearch = useShopProductSearch(currentCompany?.id);
   const giftSearch = useShopProductSearch(currentCompany?.id);
+  const availableFranchiseCompanies = useMemo(
+    () => franchiseDirectory.filter(Boolean),
+    [franchiseDirectory],
+  );
+  const availableFranchiseAddresses = useMemo(
+    () =>
+      franchiseDirectory.flatMap(company =>
+        (company?.shopAddresses || []).map(address => ({
+          ...address,
+          linkedCompany: {
+            id: company?.id,
+            alias: company?.alias,
+            name: company?.name,
+          },
+        })),
+      ),
+    [franchiseDirectory],
+  );
+  const searchableFranchiseAddresses = useMemo(() => {
+    if (visibleFranchiseCompanyIds.length === 0) {
+      return availableFranchiseAddresses;
+    }
+
+    return availableFranchiseAddresses.filter(address =>
+      visibleFranchiseCompanyIds.includes(
+        normalizeShopEntityId(address?.linkedCompany),
+      ),
+    );
+  }, [availableFranchiseAddresses, visibleFranchiseCompanyIds]);
+  const franchiseCompanyBrowser = useLocalSelectionBrowser({
+    items: availableFranchiseCompanies,
+    visible: franchiseCompanySelectorVisible,
+    resolveSearchText: company =>
+      buildNormalizedSearchText(
+        resolveCompanyLabel(company),
+        resolveCompanyMeta(company),
+      ),
+  });
+  const franchiseAddressBrowser = useLocalSelectionBrowser({
+    items: searchableFranchiseAddresses,
+    visible: franchiseAddressSelectorVisible,
+    resolveSearchText: address =>
+      buildNormalizedSearchText(
+        resolveAddressLabel(address),
+        resolveAddressMeta(address),
+      ),
+  });
 
   useEffect(() => {
     const nextSalesPageEnabled = normalizeBooleanConfig(
@@ -211,6 +591,16 @@ const ShopSection = () => {
           salesPageEnabled: nextSalesPageEnabled,
           franchiseLocatorEnabled: nextFranchiseLocatorEnabled,
         },
+      ),
+    );
+    setVisibleFranchiseCompanyIds(
+      normalizeShopEntityIds(
+        effectiveCompanyConfigs[SHOP_FRANCHISE_VISIBLE_COMPANY_IDS_CONFIG_KEY],
+      ),
+    );
+    setVisibleFranchiseAddressIds(
+      normalizeShopEntityIds(
+        effectiveCompanyConfigs[SHOP_FRANCHISE_VISIBLE_ADDRESS_IDS_CONFIG_KEY],
       ),
     );
     setLoyaltyCouponsEnabled(
@@ -245,6 +635,40 @@ const ShopSection = () => {
       }),
     );
   }, [franchiseLocatorEnabled, salesPageEnabled]);
+
+  useEffect(() => {
+    if (!currentCompany?.id) {
+      setFranchiseDirectory([]);
+      setIsLoadingFranchiseDirectory(false);
+      return;
+    }
+
+    let cancelled = false;
+    setIsLoadingFranchiseDirectory(true);
+
+    fetchShopFranchiseDirectory({
+      companyId: currentCompany.id,
+    })
+      .then(items => {
+        if (!cancelled) {
+          setFranchiseDirectory(Array.isArray(items) ? items : []);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setFranchiseDirectory([]);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsLoadingFranchiseDirectory(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentCompany?.id]);
 
   useEffect(() => {
     if (loyaltyProductIds.length === 0) {
@@ -350,12 +774,87 @@ const ShopSection = () => {
       ),
     [enabledHomeOptions],
   );
+  const franchiseCompaniesById = useMemo(
+    () =>
+      availableFranchiseCompanies.reduce((accumulator, company) => {
+        const companyId = normalizeShopEntityId(company);
+        if (companyId) {
+          accumulator[companyId] = company;
+        }
+        return accumulator;
+      }, {}),
+    [availableFranchiseCompanies],
+  );
+  const franchiseAddressesById = useMemo(
+    () =>
+      availableFranchiseAddresses.reduce((accumulator, address) => {
+        const addressId = normalizeShopEntityId(address);
+        if (addressId) {
+          accumulator[addressId] = address;
+        }
+        return accumulator;
+      }, {}),
+    [availableFranchiseAddresses],
+  );
+  const selectedFranchiseCompanies = useMemo(
+    () =>
+      visibleFranchiseCompanyIds
+        .map(companyId => franchiseCompaniesById[companyId])
+        .filter(Boolean),
+    [franchiseCompaniesById, visibleFranchiseCompanyIds],
+  );
+  const selectedFranchiseAddresses = useMemo(
+    () =>
+      visibleFranchiseAddressIds
+        .map(addressId => franchiseAddressesById[addressId])
+        .filter(Boolean),
+    [franchiseAddressesById, visibleFranchiseAddressIds],
+  );
+  const visibleFranchiseCompanyResults = useMemo(
+    () =>
+      filterSelectableItems({
+        items: availableFranchiseCompanies.filter(
+          company =>
+            !visibleFranchiseCompanyIds.includes(normalizeShopEntityId(company)),
+        ),
+        query: franchiseCompanySearch,
+        resolveSearchText: company =>
+          buildNormalizedSearchText(
+            resolveCompanyLabel(company),
+            resolveCompanyMeta(company),
+          ),
+      }),
+    [
+      availableFranchiseCompanies,
+      franchiseCompanySearch,
+      visibleFranchiseCompanyIds,
+    ],
+  );
+  const visibleFranchiseAddressResults = useMemo(
+    () =>
+      filterSelectableItems({
+        items: searchableFranchiseAddresses.filter(
+          address =>
+            !visibleFranchiseAddressIds.includes(normalizeShopEntityId(address)),
+        ),
+        query: franchiseAddressSearch,
+        resolveSearchText: address =>
+          buildNormalizedSearchText(
+            resolveAddressLabel(address),
+            resolveAddressMeta(address),
+          ),
+      }),
+    [
+      franchiseAddressSearch,
+      searchableFranchiseAddresses,
+      visibleFranchiseAddressIds,
+    ],
+  );
 
   const loyaltySelectedIds = useMemo(
     () => new Set(loyaltyProductIds),
     [loyaltyProductIds],
   );
-
   const visibleLoyaltyResults = useMemo(
     () =>
       loyaltySearch.results.filter(
@@ -363,7 +862,6 @@ const ShopSection = () => {
       ),
     [loyaltySearch.results, loyaltySelectedIds],
   );
-
   const visibleGiftResults = useMemo(
     () =>
       giftSearch.results.filter(
@@ -373,6 +871,25 @@ const ShopSection = () => {
       ),
     [giftSearch.results, selectedGiftProduct],
   );
+
+  useEffect(() => {
+    if (visibleFranchiseCompanyIds.length === 0) {
+      return;
+    }
+
+    setVisibleFranchiseAddressIds(currentIds =>
+      currentIds.filter(addressId => {
+        const address = franchiseAddressesById[addressId];
+        if (!address) {
+          return false;
+        }
+
+        return visibleFranchiseCompanyIds.includes(
+          normalizeShopEntityId(address?.linkedCompany),
+        );
+      }),
+    );
+  }, [franchiseAddressesById, visibleFranchiseCompanyIds]);
 
   const toggleLoyaltyProduct = useCallback(product => {
     const productId = normalizeShopProductId(product);
@@ -390,8 +907,34 @@ const ShopSection = () => {
   const selectGiftProduct = useCallback(product => {
     const productId = normalizeShopProductId(product);
     setLoyaltyGiftProductId(productId);
-    giftSearch.setQuery('');
-  }, [giftSearch]);
+    setGiftSelectorVisible(false);
+  }, []);
+
+  const toggleFranchiseCompany = useCallback(company => {
+    const companyId = normalizeShopEntityId(company);
+    if (!companyId) {
+      return;
+    }
+
+    setVisibleFranchiseCompanyIds(currentIds =>
+      currentIds.includes(companyId)
+        ? currentIds.filter(item => item !== companyId)
+        : [...currentIds, companyId],
+    );
+  }, []);
+
+  const toggleFranchiseAddress = useCallback(address => {
+    const addressId = normalizeShopEntityId(address);
+    if (!addressId) {
+      return;
+    }
+
+    setVisibleFranchiseAddressIds(currentIds =>
+      currentIds.includes(addressId)
+        ? currentIds.filter(item => item !== addressId)
+        : [...currentIds, addressId],
+    );
+  }, []);
 
   const saveHomeSettings = useCallback(async () => {
     await saveConfigs({
@@ -402,6 +945,8 @@ const ShopSection = () => {
         franchiseLocatorEnabled,
       }),
       [SHOP_BOTTOM_BAR_ENABLED_CONFIG_KEY]: bottomBarEnabled,
+      [SHOP_FRANCHISE_VISIBLE_COMPANY_IDS_CONFIG_KEY]: visibleFranchiseCompanyIds,
+      [SHOP_FRANCHISE_VISIBLE_ADDRESS_IDS_CONFIG_KEY]: visibleFranchiseAddressIds,
     });
   }, [
     bottomBarEnabled,
@@ -409,6 +954,8 @@ const ShopSection = () => {
     primaryEntry,
     salesPageEnabled,
     saveConfigs,
+    visibleFranchiseAddressIds,
+    visibleFranchiseCompanyIds,
   ]);
 
   const saveLoyaltySettings = useCallback(async () => {
@@ -540,6 +1087,233 @@ const ShopSection = () => {
           )}
         </View>
 
+        <View style={localStyles.fieldBlock}>
+          <Text style={localStyles.fieldLabel}>
+            Franquias exibidas no localizador
+          </Text>
+          <Text style={localStyles.helperText}>
+            Selecione quais empresas vinculadas como franquia podem aparecer no
+            mapa do shop.
+          </Text>
+          <View style={localStyles.selectorRow}>
+            <TextInput
+              value={franchiseCompanySearch}
+              onChangeText={setFranchiseCompanySearch}
+              placeholder="Buscar franquia..."
+              placeholderTextColor="#94A3B8"
+              style={[localStyles.input, localStyles.selectorInput]}
+            />
+            <TouchableOpacity
+              style={localStyles.selectorListButton}
+              activeOpacity={0.85}
+              onPress={() => setFranchiseCompanySelectorVisible(true)}>
+              <Icon name="view-list" size={18} color="#FFFFFF" />
+              <Text style={localStyles.selectorListButtonText}>Lista</Text>
+            </TouchableOpacity>
+          </View>
+
+          {isLoadingFranchiseDirectory ? (
+            <ActivityIndicator size="small" style={localStyles.sectionLoader} />
+          ) : String(franchiseCompanySearch || '').trim() &&
+            visibleFranchiseCompanyResults.length === 0 ? (
+            <View style={localStyles.emptyBox}>
+              <Text style={localStyles.emptyTitle}>
+                Nenhuma franquia encontrada
+              </Text>
+              <Text style={localStyles.emptyText}>
+                Tente outro termo ou abra a lista completa ao lado.
+              </Text>
+            </View>
+          ) : (
+            visibleFranchiseCompanyResults.length > 0 && (
+              <View style={localStyles.printerList}>
+                {visibleFranchiseCompanyResults.map(company => {
+                  const companyId = normalizeShopEntityId(company);
+
+                  return (
+                    <TouchableOpacity
+                      key={`shop-franchise-company-search-${companyId}`}
+                      style={localStyles.printerItem}
+                      activeOpacity={0.85}
+                      onPress={() => {
+                        toggleFranchiseCompany(company);
+                        setFranchiseCompanySearch('');
+                      }}>
+                      <Icon name="storefront" size={20} color="#0F766E" />
+                      <View style={localStyles.printerCopy}>
+                        <Text style={localStyles.printerName}>
+                          {resolveCompanyLabel(company)}
+                        </Text>
+                        <Text style={localStyles.printerDevice}>
+                          {resolveCompanyMeta(company) || 'Toque para liberar'}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            )
+          )}
+
+          <Text style={localStyles.helperText}>
+            {visibleFranchiseCompanyIds.length > 0
+              ? `${visibleFranchiseCompanyIds.length} franquia(s) liberada(s) para o localizador.`
+              : 'Nenhuma franquia liberada ainda.'}
+          </Text>
+
+          {selectedFranchiseCompanies.length === 0 ? (
+            <View style={localStyles.emptyBox}>
+              <Text style={localStyles.emptyTitle}>
+                Lista de franquias vazia
+              </Text>
+              <Text style={localStyles.emptyText}>
+                As empresas selecionadas aparecerao aqui para remocao rapida.
+              </Text>
+            </View>
+          ) : (
+            <View style={localStyles.printerList}>
+              {selectedFranchiseCompanies.map(company => {
+                const companyId = normalizeShopEntityId(company);
+
+                return (
+                  <TouchableOpacity
+                    key={`shop-franchise-company-selected-${companyId}`}
+                    style={[
+                      localStyles.printerItem,
+                      localStyles.printerItemActive,
+                    ]}
+                    activeOpacity={0.85}
+                    onPress={() => toggleFranchiseCompany(company)}>
+                    <Icon name="remove-circle-outline" size={20} color="#B45309" />
+                    <View style={localStyles.printerCopy}>
+                      <Text style={localStyles.printerName}>
+                        {resolveCompanyLabel(company)}
+                      </Text>
+                      <Text style={localStyles.printerDevice}>
+                        {resolveCompanyMeta(company) || 'Toque para remover'}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
+        </View>
+
+        <View style={localStyles.fieldBlock}>
+          <Text style={localStyles.fieldLabel}>
+            Enderecos exibidos no localizador
+          </Text>
+          <Text style={localStyles.helperText}>
+            Marque quais enderecos das franquias podem aparecer no mapa. O
+            endereco so entra no shop se a empresa acima tambem estiver
+            selecionada.
+          </Text>
+          <View style={localStyles.selectorRow}>
+            <TextInput
+              value={franchiseAddressSearch}
+              onChangeText={setFranchiseAddressSearch}
+              placeholder="Buscar endereco..."
+              placeholderTextColor="#94A3B8"
+              style={[localStyles.input, localStyles.selectorInput]}
+            />
+            <TouchableOpacity
+              style={localStyles.selectorListButton}
+              activeOpacity={0.85}
+              onPress={() => setFranchiseAddressSelectorVisible(true)}>
+              <Icon name="map" size={18} color="#FFFFFF" />
+              <Text style={localStyles.selectorListButtonText}>Lista</Text>
+            </TouchableOpacity>
+          </View>
+
+          {isLoadingFranchiseDirectory ? (
+            <ActivityIndicator size="small" style={localStyles.sectionLoader} />
+          ) : String(franchiseAddressSearch || '').trim() &&
+            visibleFranchiseAddressResults.length === 0 ? (
+            <View style={localStyles.emptyBox}>
+              <Text style={localStyles.emptyTitle}>
+                Nenhum endereco encontrado
+              </Text>
+              <Text style={localStyles.emptyText}>
+                Ajuste a busca ou abra a lista completa ao lado.
+              </Text>
+            </View>
+          ) : (
+            visibleFranchiseAddressResults.length > 0 && (
+              <View style={localStyles.printerList}>
+                {visibleFranchiseAddressResults.map(address => {
+                  const addressId = normalizeShopEntityId(address);
+
+                  return (
+                    <TouchableOpacity
+                      key={`shop-franchise-address-search-${addressId}`}
+                      style={localStyles.printerItem}
+                      activeOpacity={0.85}
+                      onPress={() => {
+                        toggleFranchiseAddress(address);
+                        setFranchiseAddressSearch('');
+                      }}>
+                      <Icon name="place" size={20} color="#0F766E" />
+                      <View style={localStyles.printerCopy}>
+                        <Text style={localStyles.printerName}>
+                          {resolveAddressLabel(address)}
+                        </Text>
+                        <Text style={localStyles.printerDevice}>
+                          {resolveAddressMeta(address) || 'Toque para liberar'}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            )
+          )}
+
+          <Text style={localStyles.helperText}>
+            {visibleFranchiseAddressIds.length > 0
+              ? `${visibleFranchiseAddressIds.length} endereco(s) liberado(s) para o mapa.`
+              : 'Nenhum endereco liberado ainda.'}
+          </Text>
+
+          {selectedFranchiseAddresses.length === 0 ? (
+            <View style={localStyles.emptyBox}>
+              <Text style={localStyles.emptyTitle}>
+                Lista de enderecos vazia
+              </Text>
+              <Text style={localStyles.emptyText}>
+                Os enderecos escolhidos aparecerao aqui para remocao rapida.
+              </Text>
+            </View>
+          ) : (
+            <View style={localStyles.printerList}>
+              {selectedFranchiseAddresses.map(address => {
+                const addressId = normalizeShopEntityId(address);
+
+                return (
+                  <TouchableOpacity
+                    key={`shop-franchise-address-selected-${addressId}`}
+                    style={[
+                      localStyles.printerItem,
+                      localStyles.printerItemActive,
+                    ]}
+                    activeOpacity={0.85}
+                    onPress={() => toggleFranchiseAddress(address)}>
+                    <Icon name="remove-circle-outline" size={20} color="#B45309" />
+                    <View style={localStyles.printerCopy}>
+                      <Text style={localStyles.printerName}>
+                        {resolveAddressLabel(address)}
+                      </Text>
+                      <Text style={localStyles.printerDevice}>
+                        {resolveAddressMeta(address) || 'Toque para remover'}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
+        </View>
+
         <TouchableOpacity
           style={[
             globalStyles.button,
@@ -592,15 +1366,25 @@ const ShopSection = () => {
         <View style={localStyles.fieldBlock}>
           <Text style={localStyles.fieldLabel}>Produtos participantes</Text>
           <Text style={localStyles.helperText}>
-            Busque e selecione os produtos que contam para a fidelidade.
+            Abra a lista de produtos da empresa e marque os itens que contam
+            para a fidelidade.
           </Text>
-          <TextInput
-            value={loyaltySearch.query}
-            onChangeText={loyaltySearch.setQuery}
-            placeholder="Buscar produto participante..."
-            placeholderTextColor="#94A3B8"
-            style={localStyles.input}
-          />
+          <View style={localStyles.selectorRow}>
+            <TextInput
+              value={loyaltySearch.query}
+              onChangeText={loyaltySearch.setQuery}
+              placeholder="Buscar produto participante..."
+              placeholderTextColor="#94A3B8"
+              style={[localStyles.input, localStyles.selectorInput]}
+            />
+            <TouchableOpacity
+              style={localStyles.selectorListButton}
+              activeOpacity={0.85}
+              onPress={() => setLoyaltySelectorVisible(true)}>
+              <Icon name="view-list" size={18} color="#FFFFFF" />
+              <Text style={localStyles.selectorListButtonText}>Lista</Text>
+            </TouchableOpacity>
+          </View>
 
           {loyaltySearch.isLoading ? (
             <ActivityIndicator size="small" style={localStyles.sectionLoader} />
@@ -611,7 +1395,7 @@ const ShopSection = () => {
                 Nenhum produto encontrado
               </Text>
               <Text style={localStyles.emptyText}>
-                Tente outro termo para localizar os produtos participantes.
+                Tente outro termo ou abra a lista completa ao lado.
               </Text>
             </View>
           ) : (
@@ -699,15 +1483,25 @@ const ShopSection = () => {
         <View style={localStyles.fieldBlock}>
           <Text style={localStyles.fieldLabel}>Produto brinde</Text>
           <Text style={localStyles.helperText}>
-            Busque o produto que sera entregue quando a meta for atingida.
+            Abra a lista de produtos da empresa e escolha o item que sera
+            entregue quando a meta for atingida.
           </Text>
-          <TextInput
-            value={giftSearch.query}
-            onChangeText={giftSearch.setQuery}
-            placeholder="Buscar produto brinde..."
-            placeholderTextColor="#94A3B8"
-            style={localStyles.input}
-          />
+          <View style={localStyles.selectorRow}>
+            <TextInput
+              value={giftSearch.query}
+              onChangeText={giftSearch.setQuery}
+              placeholder="Buscar produto brinde..."
+              placeholderTextColor="#94A3B8"
+              style={[localStyles.input, localStyles.selectorInput]}
+            />
+            <TouchableOpacity
+              style={localStyles.selectorListButton}
+              activeOpacity={0.85}
+              onPress={() => setGiftSelectorVisible(true)}>
+              <Icon name="view-list" size={18} color="#FFFFFF" />
+              <Text style={localStyles.selectorListButtonText}>Lista</Text>
+            </TouchableOpacity>
+          </View>
 
           {giftSearch.isLoading ? (
             <ActivityIndicator size="small" style={localStyles.sectionLoader} />
@@ -718,7 +1512,7 @@ const ShopSection = () => {
                 Nenhum produto encontrado
               </Text>
               <Text style={localStyles.emptyText}>
-                Tente outro termo para localizar o produto brinde.
+                Tente outro termo ou abra a lista completa ao lado.
               </Text>
             </View>
           ) : (
@@ -732,7 +1526,10 @@ const ShopSection = () => {
                       key={`shop-gift-search-${productId}`}
                       style={localStyles.printerItem}
                       activeOpacity={0.85}
-                      onPress={() => selectGiftProduct(product)}>
+                      onPress={() => {
+                        selectGiftProduct(product);
+                        giftSearch.setQuery('');
+                      }}>
                       <Icon name="redeem" size={20} color="#B45309" />
                       <View style={localStyles.printerCopy}>
                         <Text style={localStyles.printerName}>
@@ -795,6 +1592,107 @@ const ShopSection = () => {
           </Text>
         </TouchableOpacity>
       </GeneralSettingsSection>
+
+      <SelectionModal
+        visible={franchiseCompanySelectorVisible}
+        title="Selecionar franquias visiveis"
+        helperText="Toque nas empresas vinculadas para controlar quais franquias podem aparecer no localizador do shop."
+        browser={franchiseCompanyBrowser}
+        globalStyles={globalStyles}
+        onClose={() => setFranchiseCompanySelectorVisible(false)}
+        onSelect={toggleFranchiseCompany}
+        selectedIds={new Set(visibleFranchiseCompanyIds)}
+        multiSelect
+        emptyIconName="storefront"
+        emptyTitle="Nenhuma franquia encontrada"
+        emptyText="Tente outro termo para localizar uma empresa vinculada."
+        resolveItemId={normalizeShopEntityId}
+        resolveItemLabel={resolveCompanyLabel}
+        resolveItemMeta={company =>
+          resolveCompanyMeta(company) || 'Toque para selecionar'
+        }
+        searchPlaceholder="Pesquisar franquia..."
+        selectionMeta={(company, {selected}) =>
+          selected
+            ? 'Franquia liberada para o localizador'
+            : resolveCompanyMeta(company)
+        }
+      />
+
+      <SelectionModal
+        visible={franchiseAddressSelectorVisible}
+        title="Selecionar enderecos visiveis"
+        helperText="Toque nos enderecos para definir quais pontos das franquias entram no mapa do shop."
+        browser={franchiseAddressBrowser}
+        globalStyles={globalStyles}
+        onClose={() => setFranchiseAddressSelectorVisible(false)}
+        onSelect={toggleFranchiseAddress}
+        selectedIds={new Set(visibleFranchiseAddressIds)}
+        multiSelect
+        emptyIconName="place"
+        emptyTitle="Nenhum endereco encontrado"
+        emptyText="Tente outro termo para localizar um endereco liberavel."
+        resolveItemId={normalizeShopEntityId}
+        resolveItemLabel={resolveAddressLabel}
+        resolveItemMeta={address =>
+          resolveAddressMeta(address) || 'Toque para selecionar'
+        }
+        searchPlaceholder="Pesquisar endereco..."
+        selectionMeta={(address, {selected}) =>
+          selected
+            ? 'Endereco liberado para o mapa'
+            : resolveAddressMeta(address)
+        }
+      />
+
+      <SelectionModal
+        visible={loyaltySelectorVisible}
+        title="Selecionar produtos participantes"
+        helperText="Toque nos produtos para adicionar ou remover da regra de fidelidade."
+        browser={loyaltyBrowser}
+        globalStyles={globalStyles}
+        onClose={() => setLoyaltySelectorVisible(false)}
+        onSelect={toggleLoyaltyProduct}
+        selectedIds={loyaltySelectedIds}
+        multiSelect
+        emptyIconName="inventory-2"
+        emptyTitle="Nenhum produto encontrado"
+        emptyText="Tente outro termo para localizar um produto existente."
+        resolveItemId={normalizeShopProductId}
+        resolveItemLabel={resolveProductLabel}
+        resolveItemMeta={product =>
+          resolveProductMeta(product) || 'Toque para selecionar'
+        }
+        searchPlaceholder="Pesquisar produto..."
+        selectionMeta={(product, {selected, multiSelect}) =>
+          selected
+            ? multiSelect
+              ? 'Selecionado para participar da fidelidade'
+              : 'Selecionado'
+            : resolveProductMeta(product)
+        }
+      />
+
+      <SelectionModal
+        visible={giftSelectorVisible}
+        title="Selecionar produto brinde"
+        helperText="Toque em um produto existente para defini-lo como brinde."
+        browser={giftBrowser}
+        globalStyles={globalStyles}
+        onClose={() => setGiftSelectorVisible(false)}
+        onSelect={selectGiftProduct}
+        selectedItemId={loyaltyGiftProductId}
+        emptyIconName="inventory-2"
+        emptyTitle="Nenhum produto encontrado"
+        emptyText="Tente outro termo para localizar um produto existente."
+        resolveItemId={normalizeShopProductId}
+        resolveItemLabel={resolveProductLabel}
+        resolveItemMeta={product =>
+          resolveProductMeta(product) || 'Toque para selecionar'
+        }
+        searchPlaceholder="Pesquisar produto..."
+        selectionMeta={() => 'Selecionado como brinde'}
+      />
     </>
   );
 };
