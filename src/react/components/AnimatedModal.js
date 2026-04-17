@@ -1,17 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import {
-  Keyboard,
-  KeyboardAvoidingView,
-  Modal,
-  Text,
-  View,
-  Animated,
-  Dimensions,
-  Platform,
-  StyleSheet,
-} from 'react-native';
+import { Keyboard, KeyboardAvoidingView, Modal, Text, Animated, Dimensions, Platform, StyleSheet } from 'react-native';
 import {GestureHandlerRootView} from 'react-native-gesture-handler';
 import {toast, Toasts} from '@backpackapp-io/react-native-toast';
+import styles from './AnimatedModal.styles';
 import {
   TOAST_EXTRA_INSETS,
   TOAST_MODAL_COUNT_KEY,
@@ -156,21 +147,3 @@ export default function AnimatedModal({ visible, onRequestClose, children, style
     </Modal>
   );
 }
-
-const styles = StyleSheet.create({
-  gestureRoot: {
-    flex: 1,
-  },
-  overlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  overlayBg: {
-    backgroundColor: 'rgba(15, 23, 42, 0.4)',
-  },
-  content: {
-    width: '100%',
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-});
