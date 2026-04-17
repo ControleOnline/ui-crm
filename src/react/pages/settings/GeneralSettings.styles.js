@@ -11,7 +11,44 @@ const localStyles = StyleSheet.create({
     fontSize: 14,
     color: '#64748B',
     marginTop: 6,
-    marginBottom: 20,
+    marginBottom: 18,
+  },
+  tabBar: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  tabBarContent: {
+    flexDirection: 'row',
+  },
+  tabItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 2.5,
+    borderBottomColor: 'transparent',
+  },
+  tabItemActive: {
+    backgroundColor: '#F8FAFC',
+  },
+  tabLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#94A3B8',
+  },
+  tabLabelActive: {
+    fontWeight: '700',
+  },
+  tabHelper: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: '#64748B',
+    marginTop: 10,
+    marginBottom: 18,
   },
   sectionCard: {
     backgroundColor: '#FFFFFF',
