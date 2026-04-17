@@ -91,6 +91,22 @@ const localStyles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 8,
   },
+  settingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 14,
+  },
+  settingCopy: {
+    flex: 1,
+    marginRight: 12,
+  },
+  settingDescription: {
+    fontSize: 12,
+    lineHeight: 18,
+    color: '#64748B',
+    marginTop: 4,
+  },
   statusLabel: {
     fontSize: 14,
     fontWeight: '600',

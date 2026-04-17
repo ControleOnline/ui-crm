@@ -16,6 +16,7 @@ import MenuCatalogSection from './sections/MenuCatalogSection';
 import OrderPaymentSection from './sections/OrderPaymentSection';
 import OperationsSection from './sections/OperationsSection';
 import CrmSection from './sections/CrmSection';
+import ShopSection from './sections/ShopSection';
 
 const SETTINGS_TABS = [
   {
@@ -73,6 +74,14 @@ const SETTINGS_TABS = [
     color: '#7C3AED',
     stores: ['configs'],
     Component: CrmSection,
+  },
+  {
+    key: 'shop',
+    label: 'Shop',
+    icon: 'shopping-bag',
+    color: '#0F766E',
+    stores: ['configs', 'products'],
+    Component: ShopSection,
   },
 ];
 
