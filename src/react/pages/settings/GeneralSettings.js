@@ -1,4 +1,4 @@
-import React, {useCallback, useMemo, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {ScrollView, Text, TouchableOpacity, View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useFocusEffect} from '@react-navigation/native';
@@ -87,8 +87,17 @@ const SETTINGS_TABS = [
 
 const GeneralSettings = () => {
   const {styles} = css();
-  const {currentCompany, peopleActions} = useGeneralSettingsConfig();
+  const {currentCompany, isMainCompanySelected, peopleActions} =
+    useGeneralSettingsConfig();
   const [activeTab, setActiveTab] = useState(SETTINGS_TABS[0].key);
+
+  const availableTabs = useMemo(
+    () =>
+      SETTINGS_TABS.filter(
+        tab => tab.key !== 'shop' || isMainCompanySelected,
+      ),
+    [isMainCompanySelected],
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -96,10 +105,18 @@ const GeneralSettings = () => {
     }, [peopleActions]),
   );
 
+  useEffect(() => {
+    if (!availableTabs.some(tab => tab.key === activeTab)) {
+      setActiveTab(availableTabs[0]?.key || SETTINGS_TABS[0].key);
+    }
+  }, [activeTab, availableTabs]);
+
   const activeTabConfig = useMemo(
     () =>
-      SETTINGS_TABS.find(tab => tab.key === activeTab) || SETTINGS_TABS[0],
-    [activeTab],
+      availableTabs.find(tab => tab.key === activeTab) ||
+      availableTabs[0] ||
+      SETTINGS_TABS[0],
+    [activeTab, availableTabs],
   );
   const ActiveTabComponent = activeTabConfig.Component;
   const activeStores = useMemo(
@@ -122,7 +139,7 @@ const GeneralSettings = () => {
             showsHorizontalScrollIndicator={false}
             style={localStyles.tabBar}
             contentContainerStyle={localStyles.tabBarContent}>
-            {SETTINGS_TABS.map(tab => {
+            {availableTabs.map(tab => {
               const active = tab.key === activeTab;
 
               return (

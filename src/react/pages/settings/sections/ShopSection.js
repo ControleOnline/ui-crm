@@ -101,12 +101,10 @@ const resolveAddressLabel = address => {
   return summary.primary || address?.nickname || 'Endereco';
 };
 
-const resolveAddressMeta = address => {
+const resolveAddressDetail = address => {
   const summary = buildAddressOptionSummary(address);
-  const companyLabel = resolveCompanyLabel(address?.linkedCompany);
 
   return [
-    companyLabel && companyLabel !== 'Franquia' ? companyLabel : null,
     summary.secondary,
     address?.searchFor,
     address?.openingHours,
@@ -471,7 +469,9 @@ const ShopSection = () => {
   const {globalStyles} = css();
   const {
     currentCompany,
+    defaultCompanyLabel,
     effectiveCompanyConfigs,
+    isMainCompanySelected,
     isSaving,
     saveConfigs,
   } = useGeneralSettingsConfig();
@@ -489,13 +489,10 @@ const ShopSection = () => {
     [],
   );
   const [franchiseCompanySearch, setFranchiseCompanySearch] = useState('');
-  const [franchiseAddressSearch, setFranchiseAddressSearch] = useState('');
   const [franchiseDirectory, setFranchiseDirectory] = useState([]);
   const [isLoadingFranchiseDirectory, setIsLoadingFranchiseDirectory] =
     useState(false);
   const [franchiseCompanySelectorVisible, setFranchiseCompanySelectorVisible] =
-    useState(false);
-  const [franchiseAddressSelectorVisible, setFranchiseAddressSelectorVisible] =
     useState(false);
 
   const [loyaltyCouponsEnabled, setLoyaltyCouponsEnabled] = useState(false);
@@ -539,17 +536,6 @@ const ShopSection = () => {
       ),
     [franchiseDirectory],
   );
-  const searchableFranchiseAddresses = useMemo(() => {
-    if (visibleFranchiseCompanyIds.length === 0) {
-      return availableFranchiseAddresses;
-    }
-
-    return availableFranchiseAddresses.filter(address =>
-      visibleFranchiseCompanyIds.includes(
-        normalizeShopEntityId(address?.linkedCompany),
-      ),
-    );
-  }, [availableFranchiseAddresses, visibleFranchiseCompanyIds]);
   const franchiseCompanyBrowser = useLocalSelectionBrowser({
     items: availableFranchiseCompanies,
     visible: franchiseCompanySelectorVisible,
@@ -557,15 +543,6 @@ const ShopSection = () => {
       buildNormalizedSearchText(
         resolveCompanyLabel(company),
         resolveCompanyMeta(company),
-      ),
-  });
-  const franchiseAddressBrowser = useLocalSelectionBrowser({
-    items: searchableFranchiseAddresses,
-    visible: franchiseAddressSelectorVisible,
-    resolveSearchText: address =>
-      buildNormalizedSearchText(
-        resolveAddressLabel(address),
-        resolveAddressMeta(address),
       ),
   });
 
@@ -803,12 +780,29 @@ const ShopSection = () => {
         .filter(Boolean),
     [franchiseCompaniesById, visibleFranchiseCompanyIds],
   );
-  const selectedFranchiseAddresses = useMemo(
+  const selectedFranchiseAddressGroups = useMemo(
     () =>
-      visibleFranchiseAddressIds
-        .map(addressId => franchiseAddressesById[addressId])
-        .filter(Boolean),
-    [franchiseAddressesById, visibleFranchiseAddressIds],
+      selectedFranchiseCompanies.map(company => {
+        const linkedCompany = {
+          id: company?.id,
+          alias: company?.alias,
+          name: company?.name,
+        };
+        const addresses = (company?.shopAddresses || []).map(address => ({
+          ...address,
+          linkedCompany,
+        }));
+        const selectedCount = addresses.filter(address =>
+          visibleFranchiseAddressIds.includes(normalizeShopEntityId(address)),
+        ).length;
+
+        return {
+          addresses,
+          company,
+          selectedCount,
+        };
+      }),
+    [selectedFranchiseCompanies, visibleFranchiseAddressIds],
   );
   const visibleFranchiseCompanyResults = useMemo(
     () =>
@@ -830,27 +824,6 @@ const ShopSection = () => {
       visibleFranchiseCompanyIds,
     ],
   );
-  const visibleFranchiseAddressResults = useMemo(
-    () =>
-      filterSelectableItems({
-        items: searchableFranchiseAddresses.filter(
-          address =>
-            !visibleFranchiseAddressIds.includes(normalizeShopEntityId(address)),
-        ),
-        query: franchiseAddressSearch,
-        resolveSearchText: address =>
-          buildNormalizedSearchText(
-            resolveAddressLabel(address),
-            resolveAddressMeta(address),
-          ),
-      }),
-    [
-      franchiseAddressSearch,
-      searchableFranchiseAddresses,
-      visibleFranchiseAddressIds,
-    ],
-  );
-
   const loyaltySelectedIds = useMemo(
     () => new Set(loyaltyProductIds),
     [loyaltyProductIds],
@@ -873,10 +846,6 @@ const ShopSection = () => {
   );
 
   useEffect(() => {
-    if (visibleFranchiseCompanyIds.length === 0) {
-      return;
-    }
-
     setVisibleFranchiseAddressIds(currentIds =>
       currentIds.filter(addressId => {
         const address = franchiseAddressesById[addressId];
@@ -1000,6 +969,26 @@ const ShopSection = () => {
     loyaltyRequiredSales,
     saveConfigs,
   ]);
+
+  if (!isMainCompanySelected) {
+    return (
+      <GeneralSettingsSection
+        description="Centraliza a configuracao da home do shop e das franquias visiveis no localizador."
+        icon="shopping-bag"
+        iconBackgroundColor="#CCFBF1"
+        iconColor="#0F766E"
+        title="Home do shop">
+        <View style={localStyles.emptyBox}>
+          <Text style={localStyles.emptyTitle}>
+            Configuracao disponivel apenas na empresa principal
+          </Text>
+          <Text style={localStyles.emptyText}>
+            {`Abra a empresa principal (${defaultCompanyLabel}) para editar a home do shop e o localizador de franquias.`}
+          </Text>
+        </View>
+      </GeneralSettingsSection>
+    );
+  }
 
   return (
     <>
@@ -1205,68 +1194,101 @@ const ShopSection = () => {
             Enderecos exibidos no localizador
           </Text>
           <Text style={localStyles.helperText}>
-            Marque quais enderecos das franquias podem aparecer no mapa. O
-            endereco so entra no shop se a empresa acima tambem estiver
-            selecionada.
+            Abaixo de cada franquia selecionada, marque quais enderecos entram
+            no mapa. Ao remover a franquia acima, os enderecos dela saem junto.
           </Text>
-          <View style={localStyles.selectorRow}>
-            <TextInput
-              value={franchiseAddressSearch}
-              onChangeText={setFranchiseAddressSearch}
-              placeholder="Buscar endereco..."
-              placeholderTextColor="#94A3B8"
-              style={[localStyles.input, localStyles.selectorInput]}
-            />
-            <TouchableOpacity
-              style={localStyles.selectorListButton}
-              activeOpacity={0.85}
-              onPress={() => setFranchiseAddressSelectorVisible(true)}>
-              <Icon name="map" size={18} color="#FFFFFF" />
-              <Text style={localStyles.selectorListButtonText}>Lista</Text>
-            </TouchableOpacity>
-          </View>
 
-          {isLoadingFranchiseDirectory ? (
-            <ActivityIndicator size="small" style={localStyles.sectionLoader} />
-          ) : String(franchiseAddressSearch || '').trim() &&
-            visibleFranchiseAddressResults.length === 0 ? (
+          {visibleFranchiseCompanyIds.length === 0 ? (
             <View style={localStyles.emptyBox}>
               <Text style={localStyles.emptyTitle}>
-                Nenhum endereco encontrado
+                Selecione franquias primeiro
               </Text>
               <Text style={localStyles.emptyText}>
-                Ajuste a busca ou abra a lista completa ao lado.
+                Os enderecos aparecem agrupados logo abaixo de cada franquia
+                liberada acima.
               </Text>
             </View>
+          ) : isLoadingFranchiseDirectory ? (
+            <ActivityIndicator size="small" style={localStyles.sectionLoader} />
           ) : (
-            visibleFranchiseAddressResults.length > 0 && (
-              <View style={localStyles.printerList}>
-                {visibleFranchiseAddressResults.map(address => {
-                  const addressId = normalizeShopEntityId(address);
+            <View style={localStyles.franchiseAddressGroupList}>
+              {selectedFranchiseAddressGroups.map(({company, addresses, selectedCount}) => {
+                const companyId = normalizeShopEntityId(company);
 
-                  return (
-                    <TouchableOpacity
-                      key={`shop-franchise-address-search-${addressId}`}
-                      style={localStyles.printerItem}
-                      activeOpacity={0.85}
-                      onPress={() => {
-                        toggleFranchiseAddress(address);
-                        setFranchiseAddressSearch('');
-                      }}>
-                      <Icon name="place" size={20} color="#0F766E" />
-                      <View style={localStyles.printerCopy}>
+                return (
+                  <View
+                    key={`shop-franchise-address-group-${companyId}`}
+                    style={localStyles.franchiseAddressGroup}>
+                    <View style={localStyles.franchiseAddressGroupHeader}>
+                      <View style={localStyles.franchiseAddressGroupBadge}>
+                        <Icon name="storefront" size={18} color="#0F766E" />
+                      </View>
+                      <View style={localStyles.franchiseAddressGroupCopy}>
                         <Text style={localStyles.printerName}>
-                          {resolveAddressLabel(address)}
+                          {resolveCompanyLabel(company)}
                         </Text>
                         <Text style={localStyles.printerDevice}>
-                          {resolveAddressMeta(address) || 'Toque para liberar'}
+                          {addresses.length > 0
+                            ? `${selectedCount} de ${addresses.length} endereco(s) liberado(s).`
+                            : 'Nenhum endereco disponivel para essa franquia.'}
                         </Text>
                       </View>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            )
+                    </View>
+
+                    {addresses.length === 0 ? (
+                      <View style={localStyles.emptyBox}>
+                        <Text style={localStyles.emptyTitle}>
+                          Nenhum endereco cadastrado
+                        </Text>
+                        <Text style={localStyles.emptyText}>
+                          Essa franquia ainda nao trouxe enderecos para liberar
+                          no localizador.
+                        </Text>
+                      </View>
+                    ) : (
+                      <View style={localStyles.franchiseAddressOptionList}>
+                        {addresses.map(address => {
+                          const addressId = normalizeShopEntityId(address);
+                          const selected =
+                            visibleFranchiseAddressIds.includes(addressId);
+
+                          return (
+                            <TouchableOpacity
+                              key={`shop-franchise-address-inline-${companyId}-${addressId}`}
+                              style={[
+                                localStyles.franchiseAddressOption,
+                                selected &&
+                                  localStyles.franchiseAddressOptionActive,
+                              ]}
+                              activeOpacity={0.85}
+                              onPress={() => toggleFranchiseAddress(address)}>
+                              <Icon
+                                name={
+                                  selected
+                                    ? 'check-circle'
+                                    : 'radio-button-unchecked'
+                                }
+                                size={20}
+                                color={selected ? '#0F766E' : '#94A3B8'}
+                              />
+                              <View style={localStyles.franchiseAddressOptionCopy}>
+                                <Text style={localStyles.printerName}>
+                                  {resolveAddressLabel(address)}
+                                </Text>
+                                <Text style={localStyles.printerDevice}>
+                                  {resolveAddressDetail(address) ||
+                                    'Toque para liberar no mapa'}
+                                </Text>
+                              </View>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+                    )}
+                  </View>
+                );
+              })}
+            </View>
           )}
 
           <Text style={localStyles.helperText}>
@@ -1274,44 +1296,6 @@ const ShopSection = () => {
               ? `${visibleFranchiseAddressIds.length} endereco(s) liberado(s) para o mapa.`
               : 'Nenhum endereco liberado ainda.'}
           </Text>
-
-          {selectedFranchiseAddresses.length === 0 ? (
-            <View style={localStyles.emptyBox}>
-              <Text style={localStyles.emptyTitle}>
-                Lista de enderecos vazia
-              </Text>
-              <Text style={localStyles.emptyText}>
-                Os enderecos escolhidos aparecerao aqui para remocao rapida.
-              </Text>
-            </View>
-          ) : (
-            <View style={localStyles.printerList}>
-              {selectedFranchiseAddresses.map(address => {
-                const addressId = normalizeShopEntityId(address);
-
-                return (
-                  <TouchableOpacity
-                    key={`shop-franchise-address-selected-${addressId}`}
-                    style={[
-                      localStyles.printerItem,
-                      localStyles.printerItemActive,
-                    ]}
-                    activeOpacity={0.85}
-                    onPress={() => toggleFranchiseAddress(address)}>
-                    <Icon name="remove-circle-outline" size={20} color="#B45309" />
-                    <View style={localStyles.printerCopy}>
-                      <Text style={localStyles.printerName}>
-                        {resolveAddressLabel(address)}
-                      </Text>
-                      <Text style={localStyles.printerDevice}>
-                        {resolveAddressMeta(address) || 'Toque para remover'}
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          )}
         </View>
 
         <TouchableOpacity
@@ -1616,32 +1600,6 @@ const ShopSection = () => {
           selected
             ? 'Franquia liberada para o localizador'
             : resolveCompanyMeta(company)
-        }
-      />
-
-      <SelectionModal
-        visible={franchiseAddressSelectorVisible}
-        title="Selecionar enderecos visiveis"
-        helperText="Toque nos enderecos para definir quais pontos das franquias entram no mapa do shop."
-        browser={franchiseAddressBrowser}
-        globalStyles={globalStyles}
-        onClose={() => setFranchiseAddressSelectorVisible(false)}
-        onSelect={toggleFranchiseAddress}
-        selectedIds={new Set(visibleFranchiseAddressIds)}
-        multiSelect
-        emptyIconName="place"
-        emptyTitle="Nenhum endereco encontrado"
-        emptyText="Tente outro termo para localizar um endereco liberavel."
-        resolveItemId={normalizeShopEntityId}
-        resolveItemLabel={resolveAddressLabel}
-        resolveItemMeta={address =>
-          resolveAddressMeta(address) || 'Toque para selecionar'
-        }
-        searchPlaceholder="Pesquisar endereco..."
-        selectionMeta={(address, {selected}) =>
-          selected
-            ? 'Endereco liberado para o mapa'
-            : resolveAddressMeta(address)
         }
       />
 

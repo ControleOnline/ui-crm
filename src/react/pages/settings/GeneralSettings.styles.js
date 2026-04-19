@@ -187,6 +187,56 @@ const localStyles = StyleSheet.create({
     color: '#64748B',
     marginTop: 2,
   },
+  franchiseAddressGroupList: {
+    gap: 12,
+  },
+  franchiseAddressGroup: {
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
+    padding: 14,
+  },
+  franchiseAddressGroupHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  franchiseAddressGroupBadge: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ECFEFF',
+    borderWidth: 1,
+    borderColor: '#A5F3FC',
+  },
+  franchiseAddressGroupCopy: {
+    flex: 1,
+    marginLeft: 10,
+  },
+  franchiseAddressOptionList: {
+    gap: 8,
+  },
+  franchiseAddressOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#F8FAFC',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  franchiseAddressOptionActive: {
+    borderColor: '#99F6E4',
+    backgroundColor: '#F0FDFA',
+  },
+  franchiseAddressOptionCopy: {
+    flex: 1,
+    marginLeft: 12,
+  },
   primaryButton: {
     marginTop: 16,
     justifyContent: 'center',
