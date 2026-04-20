@@ -16,6 +16,7 @@ import {
 
 import localStyles from '../GeneralSettings.styles';
 import GeneralSettingsSection from '../GeneralSettingsSection';
+import LoginSection from './LoginSection';
 import {toConfigRequestValue, toConfigCacheValue, useGeneralSettingsConfig} from '../GeneralSettings.shared';
 
 const buildConfigUpdater = (setState, fieldKey) => value => {
@@ -122,6 +123,8 @@ const IntegrationsSection = () => {
 
   return (
     <>
+      <LoginSection />
+
       <GeneralSettingsSection
         description="Credenciais usadas pelo pagamento local da Cielo para a empresa ativa."
         icon="credit-card"

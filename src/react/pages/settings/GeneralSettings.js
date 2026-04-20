@@ -17,8 +17,9 @@ import OrderPaymentSection from './sections/OrderPaymentSection';
 import OperationsSection from './sections/OperationsSection';
 import CrmSection from './sections/CrmSection';
 import ShopSection from './sections/ShopSection';
-import LoginSection from './sections/LoginSection';
 import IntegrationsSection from './sections/IntegrationsSection';
+
+const MAIN_COMPANY_ONLY_TABS = new Set(['integrations', 'shop']);
 
 const SETTINGS_TABS = [
   {
@@ -28,14 +29,6 @@ const SETTINGS_TABS = [
     color: '#0369A1',
     stores: ['configs', 'people'],
     Component: DeviceRuntimeFooterSection,
-  },
-  {
-    key: 'login',
-    label: 'Login',
-    icon: 'login',
-    color: '#EA580C',
-    stores: ['configs', 'people'],
-    Component: LoginSection,
   },
   {
     key: 'integrations',
@@ -112,7 +105,8 @@ const GeneralSettings = () => {
   const availableTabs = useMemo(
     () =>
       SETTINGS_TABS.filter(
-        tab => tab.key !== 'shop' || isMainCompanySelected,
+        tab =>
+          !MAIN_COMPANY_ONLY_TABS.has(tab.key) || isMainCompanySelected,
       ),
     [isMainCompanySelected],
   );
