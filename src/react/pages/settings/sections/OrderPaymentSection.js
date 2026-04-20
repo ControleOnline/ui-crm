@@ -12,6 +12,8 @@ import css from '@controleonline/ui-orders/src/react/css/orders';
 import {
   filterDeviceConfigsByCompany,
   getCompanyPaymentDeviceOptions,
+  isOrderChargeOnDeliveryEnabled,
+  ORDER_CHARGE_ON_DELIVERY_ENABLED_CONFIG_KEY,
   ORDER_PAYMENT_DEVICES_CONFIG_KEY,
   normalizeDeviceIds,
 } from '@controleonline/ui-common/src/react/utils/paymentDevices';
@@ -27,7 +29,7 @@ const OrderPaymentSection = () => {
     currentCompany,
     effectiveCompanyConfigs,
     isSaving,
-    saveConfig,
+    saveConfigs,
   } = useGeneralSettingsConfig();
 
   const deviceConfigStore = useStore('device_config');
@@ -39,6 +41,7 @@ const OrderPaymentSection = () => {
 
   const [orderPaymentEnabled, setOrderPaymentEnabled] = useState(false);
   const [orderPaymentDevices, setOrderPaymentDevices] = useState([]);
+  const [chargeOnDeliveryEnabled, setChargeOnDeliveryEnabled] = useState(false);
 
   useEffect(() => {
     const nextOrderPaymentDevices = normalizeDeviceIds(
@@ -46,6 +49,9 @@ const OrderPaymentSection = () => {
     );
     setOrderPaymentDevices(nextOrderPaymentDevices);
     setOrderPaymentEnabled(nextOrderPaymentDevices.length > 0);
+    setChargeOnDeliveryEnabled(
+      isOrderChargeOnDeliveryEnabled(effectiveCompanyConfigs),
+    );
   }, [effectiveCompanyConfigs]);
 
   useEffect(() => {
@@ -83,7 +89,7 @@ const OrderPaymentSection = () => {
     );
   }, []);
 
-  const saveOrderPaymentDevices = useCallback(async () => {
+  const saveOrderPaymentSettings = useCallback(async () => {
     const normalizedDevices = orderPaymentDevices
       .map(item => String(item || '').trim())
       .filter(Boolean);
@@ -96,15 +102,22 @@ const OrderPaymentSection = () => {
       return;
     }
 
-    await saveConfig(
-      ORDER_PAYMENT_DEVICES_CONFIG_KEY,
-      orderPaymentEnabled ? normalizedDevices : [],
-    );
-  }, [orderPaymentDevices, orderPaymentEnabled, saveConfig]);
+    await saveConfigs({
+      [ORDER_PAYMENT_DEVICES_CONFIG_KEY]: orderPaymentEnabled
+        ? normalizedDevices
+        : [],
+      [ORDER_CHARGE_ON_DELIVERY_ENABLED_CONFIG_KEY]: chargeOnDeliveryEnabled,
+    });
+  }, [
+    chargeOnDeliveryEnabled,
+    orderPaymentDevices,
+    orderPaymentEnabled,
+    saveConfigs,
+  ]);
 
   return (
     <GeneralSettingsSection
-      description="Define a ordem padrao dos devices que recebem pedidos para pagamento remoto. Quando um device nao tem destino proprio, o primeiro da lista vira o fallback padrao."
+      description="Define a ordem padrao dos terminais com gateway local que podem receber cobrancas remotas. Esse destino atende manager web, celulares e tambem PDVs Android quando o operador escolhe cobrar em outro terminal pela barra unica."
       icon="credit-card"
       iconBackgroundColor="#EDE9FE"
       iconColor="#7C3AED"
@@ -138,8 +151,40 @@ const OrderPaymentSection = () => {
       <Text style={localStyles.helperText}>
         {orderPaymentEnabled
           ? `${selectedPaymentDeviceCount} device(s) configurado(s) para fallback remoto.`
-          : 'Quando desativado, devices sem gateway local nao recebem fallback remoto por empresa.'}
+          : 'Quando desativado, a barra unica nao oferece destino remoto padrao para manager, celulares e PDVs Android.'}
       </Text>
+
+      <View style={localStyles.settingRow}>
+        <View style={localStyles.settingCopy}>
+          <Text style={localStyles.statusLabel}>Cobrar na entrega</Text>
+          <Text style={localStyles.settingDescription}>
+            Libera na barra unica de pagamentos a opcao de registrar o pedido
+            para cobrar manualmente na entrega.
+          </Text>
+        </View>
+        <TouchableOpacity
+          style={[
+            localStyles.statusChip,
+            chargeOnDeliveryEnabled
+              ? localStyles.statusChipEnabled
+              : localStyles.statusChipDisabled,
+          ]}
+          activeOpacity={0.85}
+          onPress={() => setChargeOnDeliveryEnabled(current => !current)}>
+          <Icon
+            name={chargeOnDeliveryEnabled ? 'check-circle' : 'block'}
+            size={16}
+            color={chargeOnDeliveryEnabled ? '#166534' : '#991B1B'}
+          />
+          <Text
+            style={[
+              localStyles.statusChipText,
+              {color: chargeOnDeliveryEnabled ? '#166534' : '#991B1B'},
+            ]}>
+            {chargeOnDeliveryEnabled ? 'Ativado' : 'Desativado'}
+          </Text>
+        </TouchableOpacity>
+      </View>
 
       {isLoadingDeviceConfigs ? (
         <ActivityIndicator size="small" style={localStyles.sectionLoader} />
@@ -149,8 +194,8 @@ const OrderPaymentSection = () => {
             Nenhum device com pagamento remoto disponivel
           </Text>
           <Text style={localStyles.emptyText}>
-            Configure ao menos um device da empresa com gateway Cielo ou
-            Infinite Pay para usar o pagamento remoto.
+            Configure ao menos um PDV da empresa com gateway Cielo ou
+            Infinite Pay para receber o fallback remoto.
           </Text>
         </View>
       ) : (
@@ -195,9 +240,9 @@ const OrderPaymentSection = () => {
           (!currentCompany?.id || isSaving) && localStyles.primaryButtonDisabled,
         ]}
         disabled={!currentCompany?.id || isSaving}
-        onPress={saveOrderPaymentDevices}>
+        onPress={saveOrderPaymentSettings}>
         <Text style={localStyles.primaryButtonText}>
-          Salvar devices de pagamento
+          Salvar regras de pagamento
         </Text>
       </TouchableOpacity>
     </GeneralSettingsSection>

@@ -30,6 +30,7 @@ import {
   normalizeShopProductIds,
   normalizeShopTextConfig,
   SHOP_BOTTOM_BAR_ENABLED_CONFIG_KEY,
+  SHOP_CHARGE_ON_DELIVERY_ENABLED_CONFIG_KEY,
   SHOP_FRANCHISE_PIN_ICON_URL_CONFIG_KEY,
   SHOP_FRANCHISE_VISIBLE_ADDRESS_IDS_CONFIG_KEY,
   SHOP_FRANCHISE_VISIBLE_COMPANY_IDS_CONFIG_KEY,
@@ -491,6 +492,7 @@ const ShopSection = () => {
   const [salesPageEnabled, setSalesPageEnabled] = useState(false);
   const [franchiseLocatorEnabled, setFranchiseLocatorEnabled] = useState(false);
   const [bottomBarEnabled, setBottomBarEnabled] = useState(false);
+  const [chargeOnDeliveryEnabled, setChargeOnDeliveryEnabled] = useState(false);
   const [googleMapsApiKey, setGoogleMapsApiKey] = useState('');
   const [franchisePinIconUrl, setFranchisePinIconUrl] = useState('');
   const [primaryEntry, setPrimaryEntry] = useState('');
@@ -571,6 +573,11 @@ const ShopSection = () => {
     setBottomBarEnabled(
       normalizeBooleanConfig(
         effectiveCompanyConfigs[SHOP_BOTTOM_BAR_ENABLED_CONFIG_KEY],
+      ),
+    );
+    setChargeOnDeliveryEnabled(
+      normalizeBooleanConfig(
+        effectiveCompanyConfigs[SHOP_CHARGE_ON_DELIVERY_ENABLED_CONFIG_KEY],
       ),
     );
     setGoogleMapsApiKey(
@@ -966,6 +973,12 @@ const ShopSection = () => {
     visibleFranchiseAddressIds,
     visibleFranchiseCompanyIds,
   ]);
+
+  const saveCheckoutSettings = useCallback(async () => {
+    await saveConfigs({
+      [SHOP_CHARGE_ON_DELIVERY_ENABLED_CONFIG_KEY]: chargeOnDeliveryEnabled,
+    });
+  }, [chargeOnDeliveryEnabled, saveConfigs]);
 
   const saveLoyaltySettings = useCallback(async () => {
     const normalizedRequiredSales = normalizeShopLoyaltyRequiredSales(
@@ -1382,6 +1395,39 @@ const ShopSection = () => {
           onPress={saveHomeSettings}>
           <Text style={localStyles.primaryButtonText}>
             Salvar home do shop
+          </Text>
+        </TouchableOpacity>
+      </GeneralSettingsSection>
+
+      <GeneralSettingsSection
+        description="Controla como o shop apresenta a cobranca ao cliente. O checkout online continua usando as carteiras e meios integrados da empresa, como Asaas. Quando a opcao abaixo estiver ativa, o cliente tambem pode registrar o pedido para cobrar na entrega usando um meio manual da loja."
+        icon="payments"
+        iconBackgroundColor="#DBEAFE"
+        iconColor="#1D4ED8"
+        title="Checkout do shop">
+        <ConfigToggleRow
+          label="Cobrar na entrega"
+          description="Libera uma acao no checkout para registrar pedidos que serao pagos manualmente na entrega."
+          value={chargeOnDeliveryEnabled}
+          onToggle={() => setChargeOnDeliveryEnabled(current => !current)}
+        />
+
+        <Text style={localStyles.helperText}>
+          {chargeOnDeliveryEnabled
+            ? 'O checkout exibira a opcao para cobrar na entrega, usando as formas manuais cadastradas nas carteiras da empresa.'
+            : 'Quando desativada, o shop oferece apenas as cobrancas online integradas no checkout.'}
+        </Text>
+
+        <TouchableOpacity
+          style={[
+            globalStyles.button,
+            localStyles.primaryButton,
+            (!currentCompany?.id || isSaving) && localStyles.primaryButtonDisabled,
+          ]}
+          disabled={!currentCompany?.id || isSaving}
+          onPress={saveCheckoutSettings}>
+          <Text style={localStyles.primaryButtonText}>
+            Salvar checkout do shop
           </Text>
         </TouchableOpacity>
       </GeneralSettingsSection>
