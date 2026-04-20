@@ -17,6 +17,8 @@ import OrderPaymentSection from './sections/OrderPaymentSection';
 import OperationsSection from './sections/OperationsSection';
 import CrmSection from './sections/CrmSection';
 import ShopSection from './sections/ShopSection';
+import LoginSection from './sections/LoginSection';
+import IntegrationsSection from './sections/IntegrationsSection';
 
 const SETTINGS_TABS = [
   {
@@ -26,6 +28,22 @@ const SETTINGS_TABS = [
     color: '#0369A1',
     stores: ['configs', 'people'],
     Component: DeviceRuntimeFooterSection,
+  },
+  {
+    key: 'login',
+    label: 'Login',
+    icon: 'login',
+    color: '#EA580C',
+    stores: ['configs', 'people'],
+    Component: LoginSection,
+  },
+  {
+    key: 'integrations',
+    label: 'Integracoes',
+    icon: 'link',
+    color: '#0284C7',
+    stores: ['configs', 'people'],
+    Component: IntegrationsSection,
   },
   {
     key: 'print',
