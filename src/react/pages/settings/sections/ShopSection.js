@@ -28,12 +28,16 @@ import {
   normalizeShopPrimaryEntry,
   normalizeShopProductId,
   normalizeShopProductIds,
+  normalizeShopTextConfig,
   SHOP_BOTTOM_BAR_ENABLED_CONFIG_KEY,
+  SHOP_FRANCHISE_PIN_ICON_URL_CONFIG_KEY,
   SHOP_FRANCHISE_VISIBLE_ADDRESS_IDS_CONFIG_KEY,
   SHOP_FRANCHISE_VISIBLE_COMPANY_IDS_CONFIG_KEY,
   SHOP_FRANCHISE_LOCATOR_ENABLED_CONFIG_KEY,
   SHOP_HOME_OPTION_FRANCHISE_LOCATOR,
+  SHOP_HOME_OPTION_LOYALTY,
   SHOP_HOME_OPTION_SALES,
+  SHOP_GOOGLE_MAPS_API_KEY_CONFIG_KEY,
   SHOP_LOYALTY_COUPONS_ENABLED_CONFIG_KEY,
   SHOP_LOYALTY_GIFT_PRODUCT_ID_CONFIG_KEY,
   SHOP_LOYALTY_PRODUCT_IDS_CONFIG_KEY,
@@ -58,6 +62,12 @@ const SHOP_HOME_OPTIONS = [
     label: 'Localizador de franquias',
     description:
       'Libera a entrada do shop focada em encontrar unidades ou franquias.',
+  },
+  {
+    key: SHOP_HOME_OPTION_LOYALTY,
+    label: 'Cartao fidelidade',
+    description:
+      'Libera a entrada do shop para acompanhar a fidelidade e os brindes.',
   },
 ];
 
@@ -481,6 +491,8 @@ const ShopSection = () => {
   const [salesPageEnabled, setSalesPageEnabled] = useState(false);
   const [franchiseLocatorEnabled, setFranchiseLocatorEnabled] = useState(false);
   const [bottomBarEnabled, setBottomBarEnabled] = useState(false);
+  const [googleMapsApiKey, setGoogleMapsApiKey] = useState('');
+  const [franchisePinIconUrl, setFranchisePinIconUrl] = useState('');
   const [primaryEntry, setPrimaryEntry] = useState('');
   const [visibleFranchiseCompanyIds, setVisibleFranchiseCompanyIds] = useState(
     [],
@@ -561,12 +573,26 @@ const ShopSection = () => {
         effectiveCompanyConfigs[SHOP_BOTTOM_BAR_ENABLED_CONFIG_KEY],
       ),
     );
+    setGoogleMapsApiKey(
+      normalizeShopTextConfig(
+        effectiveCompanyConfigs[SHOP_GOOGLE_MAPS_API_KEY_CONFIG_KEY],
+      ),
+    );
+    setFranchisePinIconUrl(
+      normalizeShopTextConfig(
+        effectiveCompanyConfigs[SHOP_FRANCHISE_PIN_ICON_URL_CONFIG_KEY],
+      ),
+    );
+    const nextLoyaltyCouponsEnabled = normalizeBooleanConfig(
+      effectiveCompanyConfigs[SHOP_LOYALTY_COUPONS_ENABLED_CONFIG_KEY],
+    );
     setPrimaryEntry(
       normalizeShopPrimaryEntry(
         effectiveCompanyConfigs[SHOP_PRIMARY_ENTRY_CONFIG_KEY],
         {
           salesPageEnabled: nextSalesPageEnabled,
           franchiseLocatorEnabled: nextFranchiseLocatorEnabled,
+          loyaltyCouponsEnabled: nextLoyaltyCouponsEnabled,
         },
       ),
     );
@@ -580,11 +606,7 @@ const ShopSection = () => {
         effectiveCompanyConfigs[SHOP_FRANCHISE_VISIBLE_ADDRESS_IDS_CONFIG_KEY],
       ),
     );
-    setLoyaltyCouponsEnabled(
-      normalizeBooleanConfig(
-        effectiveCompanyConfigs[SHOP_LOYALTY_COUPONS_ENABLED_CONFIG_KEY],
-      ),
-    );
+    setLoyaltyCouponsEnabled(nextLoyaltyCouponsEnabled);
     setLoyaltyRequiredSales(
       String(
         normalizeShopLoyaltyRequiredSales(
@@ -609,9 +631,10 @@ const ShopSection = () => {
       normalizeShopPrimaryEntry(currentValue, {
         salesPageEnabled,
         franchiseLocatorEnabled,
+        loyaltyCouponsEnabled,
       }),
     );
-  }, [franchiseLocatorEnabled, salesPageEnabled]);
+  }, [franchiseLocatorEnabled, loyaltyCouponsEnabled, salesPageEnabled]);
 
   useEffect(() => {
     if (!currentCompany?.id) {
@@ -731,8 +754,9 @@ const ShopSection = () => {
       getEnabledShopHomeOptions({
         salesPageEnabled,
         franchiseLocatorEnabled,
+        loyaltyCouponsEnabled,
       }),
-    [franchiseLocatorEnabled, salesPageEnabled],
+    [franchiseLocatorEnabled, loyaltyCouponsEnabled, salesPageEnabled],
   );
 
   const resolvedPrimaryEntry = useMemo(
@@ -740,8 +764,14 @@ const ShopSection = () => {
       normalizeShopPrimaryEntry(primaryEntry, {
         salesPageEnabled,
         franchiseLocatorEnabled,
+        loyaltyCouponsEnabled,
       }),
-    [franchiseLocatorEnabled, primaryEntry, salesPageEnabled],
+    [
+      franchiseLocatorEnabled,
+      loyaltyCouponsEnabled,
+      primaryEntry,
+      salesPageEnabled,
+    ],
   );
 
   const primaryEntryOptions = useMemo(
@@ -912,14 +942,24 @@ const ShopSection = () => {
       [SHOP_PRIMARY_ENTRY_CONFIG_KEY]: normalizeShopPrimaryEntry(primaryEntry, {
         salesPageEnabled,
         franchiseLocatorEnabled,
+        loyaltyCouponsEnabled,
       }),
       [SHOP_BOTTOM_BAR_ENABLED_CONFIG_KEY]: bottomBarEnabled,
+      [SHOP_GOOGLE_MAPS_API_KEY_CONFIG_KEY]: normalizeShopTextConfig(
+        googleMapsApiKey,
+      ),
+      [SHOP_FRANCHISE_PIN_ICON_URL_CONFIG_KEY]: normalizeShopTextConfig(
+        franchisePinIconUrl,
+      ),
       [SHOP_FRANCHISE_VISIBLE_COMPANY_IDS_CONFIG_KEY]: visibleFranchiseCompanyIds,
       [SHOP_FRANCHISE_VISIBLE_ADDRESS_IDS_CONFIG_KEY]: visibleFranchiseAddressIds,
     });
   }, [
     bottomBarEnabled,
     franchiseLocatorEnabled,
+    franchisePinIconUrl,
+    googleMapsApiKey,
+    loyaltyCouponsEnabled,
     primaryEntry,
     salesPageEnabled,
     saveConfigs,
@@ -1018,6 +1058,40 @@ const ShopSection = () => {
           value={bottomBarEnabled}
           onToggle={() => setBottomBarEnabled(current => !current)}
         />
+
+        <View style={localStyles.fieldBlock}>
+          <Text style={localStyles.fieldLabel}>Chave do Google Maps</Text>
+          <Text style={localStyles.helperText}>
+            Essa chave passa a ser usada pelo localizador de franquias do shop
+            para carregar o mapa web e geocodificar enderecos sem coordenadas.
+          </Text>
+          <TextInput
+            value={googleMapsApiKey}
+            onChangeText={setGoogleMapsApiKey}
+            autoCapitalize="none"
+            autoCorrect={false}
+            placeholder="Cole a chave do Google Maps desta empresa"
+            placeholderTextColor="#94A3B8"
+            style={localStyles.input}
+          />
+        </View>
+
+        <View style={localStyles.fieldBlock}>
+          <Text style={localStyles.fieldLabel}>URL do icone dos pins</Text>
+          <Text style={localStyles.helperText}>
+            Informe a URL da imagem que deve ser usada nos pins das franquias.
+            Se ficar vazia, o mapa usa o pin padrao do Google.
+          </Text>
+          <TextInput
+            value={franchisePinIconUrl}
+            onChangeText={setFranchisePinIconUrl}
+            autoCapitalize="none"
+            autoCorrect={false}
+            placeholder="https://..."
+            placeholderTextColor="#94A3B8"
+            style={localStyles.input}
+          />
+        </View>
 
         <Text style={localStyles.helperText}>
           {enabledHomeOptions.length === 0
