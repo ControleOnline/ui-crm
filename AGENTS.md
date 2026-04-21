@@ -8,6 +8,7 @@
 
 ## Quando usar
 - Prompts sobre CRM, vendedor, comissao, fluxo comercial, home comercial e configuracoes comerciais.
+- O configurador geral de pagamento remoto dos pedidos vive neste modulo e define o device padrao, a lista de devices permitidos e se o operador pode trocar de equipamento no checkout.
 
 ## Limites
 - Este modulo nao deve receber responsabilidades administrativas do `MANAGER` quando elas forem claramente de gestao.

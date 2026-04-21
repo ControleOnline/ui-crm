@@ -13,7 +13,9 @@ import {
   filterDeviceConfigsByCompany,
   getCompanyPaymentDeviceOptions,
   isOrderChargeOnDeliveryEnabled,
+  isOrderPaymentDeviceChangeAllowed,
   ORDER_CHARGE_ON_DELIVERY_ENABLED_CONFIG_KEY,
+  ORDER_PAYMENT_DEVICE_CHANGE_ALLOWED_CONFIG_KEY,
   ORDER_PAYMENT_DEVICES_CONFIG_KEY,
   normalizeDeviceIds,
 } from '@controleonline/ui-common/src/react/utils/paymentDevices';
@@ -42,6 +44,8 @@ const OrderPaymentSection = () => {
   const [orderPaymentEnabled, setOrderPaymentEnabled] = useState(false);
   const [orderPaymentDevices, setOrderPaymentDevices] = useState([]);
   const [chargeOnDeliveryEnabled, setChargeOnDeliveryEnabled] = useState(false);
+  const [allowPaymentDeviceChange, setAllowPaymentDeviceChange] =
+    useState(false);
 
   useEffect(() => {
     const nextOrderPaymentDevices = normalizeDeviceIds(
@@ -51,6 +55,9 @@ const OrderPaymentSection = () => {
     setOrderPaymentEnabled(nextOrderPaymentDevices.length > 0);
     setChargeOnDeliveryEnabled(
       isOrderChargeOnDeliveryEnabled(effectiveCompanyConfigs),
+    );
+    setAllowPaymentDeviceChange(
+      isOrderPaymentDeviceChangeAllowed(effectiveCompanyConfigs),
     );
   }, [effectiveCompanyConfigs]);
 
@@ -106,9 +113,12 @@ const OrderPaymentSection = () => {
       [ORDER_PAYMENT_DEVICES_CONFIG_KEY]: orderPaymentEnabled
         ? normalizedDevices
         : [],
+      [ORDER_PAYMENT_DEVICE_CHANGE_ALLOWED_CONFIG_KEY]:
+        allowPaymentDeviceChange,
       [ORDER_CHARGE_ON_DELIVERY_ENABLED_CONFIG_KEY]: chargeOnDeliveryEnabled,
     });
   }, [
+    allowPaymentDeviceChange,
     chargeOnDeliveryEnabled,
     orderPaymentDevices,
     orderPaymentEnabled,
@@ -150,9 +160,44 @@ const OrderPaymentSection = () => {
 
       <Text style={localStyles.helperText}>
         {orderPaymentEnabled
-          ? `${selectedPaymentDeviceCount} device(s) configurado(s) para fallback remoto.`
+          ? `${selectedPaymentDeviceCount} device(s) configurado(s). O primeiro vira o equipamento padrao do pagamento remoto.`
           : 'Quando desativado, a barra unica nao oferece destino remoto padrao para manager, celulares e PDVs Android.'}
       </Text>
+
+      <View style={localStyles.settingRow}>
+        <View style={localStyles.settingCopy}>
+          <Text style={localStyles.statusLabel}>
+            Pode trocar de equipamento no pagamento?
+          </Text>
+          <Text style={localStyles.settingDescription}>
+            Quando desativado, o checkout remoto usa sempre o primeiro device
+            configurado acima. Quando ativado, o operador pode trocar o
+            equipamento na hora do pagamento.
+          </Text>
+        </View>
+        <TouchableOpacity
+          style={[
+            localStyles.statusChip,
+            allowPaymentDeviceChange
+              ? localStyles.statusChipEnabled
+              : localStyles.statusChipDisabled,
+          ]}
+          activeOpacity={0.85}
+          onPress={() => setAllowPaymentDeviceChange(current => !current)}>
+          <Icon
+            name={allowPaymentDeviceChange ? 'check-circle' : 'block'}
+            size={16}
+            color={allowPaymentDeviceChange ? '#166534' : '#991B1B'}
+          />
+          <Text
+            style={[
+              localStyles.statusChipText,
+              {color: allowPaymentDeviceChange ? '#166534' : '#991B1B'},
+            ]}>
+            {allowPaymentDeviceChange ? 'Ativado' : 'Desativado'}
+          </Text>
+        </TouchableOpacity>
+      </View>
 
       <View style={localStyles.settingRow}>
         <View style={localStyles.settingCopy}>
