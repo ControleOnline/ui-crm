@@ -216,6 +216,20 @@ const localStyles = StyleSheet.create({
     flex: 1,
     marginLeft: 10,
   },
+
+  /* botão para abrir cadastro de endereco */
+  franchiseAddressAddBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F1F5F9',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    marginLeft: 8,
+  },
+
   franchiseAddressOptionList: {
     gap: 8,
   },

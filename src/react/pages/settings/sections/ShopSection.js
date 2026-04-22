@@ -9,7 +9,7 @@ import {
   View,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-
+import {useNavigation} from '@react-navigation/native';
 import css from '@controleonline/ui-orders/src/react/css/orders';
 import AnimatedModal from '@controleonline/ui-crm/src/react/components/AnimatedModal';
 import {useStore} from '@store';
@@ -478,6 +478,7 @@ const SelectionModal = ({
 
 const ShopSection = () => {
   const {globalStyles} = css();
+  const navigation = useNavigation();
   const {
     currentCompany,
     defaultCompanyLabel,
@@ -1320,6 +1321,19 @@ const ShopSection = () => {
                             : 'Nenhum endereco disponivel para essa franquia.'}
                         </Text>
                       </View>
+                      
+                      {/* botao  para cadastrar endereco quando nao ha nenhum */}
+                      {addresses.length === 0 && (
+                        <TouchableOpacity
+                          style={localStyles.franchiseAddressAddBtn}
+                          activeOpacity={0.7}
+                          onPress={() =>
+                            navigation.navigate('ClientDetails', {client: company})
+                          }>
+                          <Icon name="add" size={16} color="#64748B" />
+                        </TouchableOpacity>
+                      )}
+
                     </View>
 
                     {addresses.length === 0 ? (
