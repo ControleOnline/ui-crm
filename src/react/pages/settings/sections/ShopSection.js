@@ -884,6 +884,10 @@ const ShopSection = () => {
   );
 
   useEffect(() => {
+    if (Object.keys(franchiseAddressesById).length === 0) {
+      return;
+    }
+
     setVisibleFranchiseAddressIds(currentIds =>
       currentIds.filter(addressId => {
         const address = franchiseAddressesById[addressId];
