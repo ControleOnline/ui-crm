@@ -171,9 +171,25 @@ export const toConfigCacheValue = value => {
   return String(value);
 };
 
+const isMethodNotAllowedError = error => {
+  const status = Number(
+    error?.status || error?.response?.status || error?.data?.status || 0,
+  );
+
+  if (status === 405) {
+    return true;
+  }
+
+  const details = String(
+    error?.detail || error?.message || JSON.stringify(error || {}),
+  ).toLowerCase();
+
+  return details.includes('method not allowed') || details.includes('405');
+};
+
 export const useGeneralSettingsConfig = () => {
   const peopleStore = useStore('people');
-  const {companies, currentCompany, defaultCompany} = peopleStore.getters;
+  const {currentCompany, defaultCompany} = peopleStore.getters;
   const peopleActions = peopleStore.actions;
 
   const configsStore = useStore('configs');
@@ -207,23 +223,6 @@ export const useGeneralSettingsConfig = () => {
     selectedCompanyId === defaultCompanyId;
   const defaultCompanyLabel =
     defaultCompany?.alias || defaultCompany?.name || 'empresa principal';
-  const hasDefaultCompanyAccess = useMemo(() => {
-    if (defaultCompanyId === '') {
-      return false;
-    }
-
-    if (selectedCompanyId !== '' && selectedCompanyId === defaultCompanyId) {
-      return true;
-    }
-
-    return Array.isArray(companies)
-      ? companies.some(
-          company =>
-            normalizeEntityId(company?.id || company?.['@id']) ===
-            defaultCompanyId,
-        )
-      : false;
-  }, [companies, defaultCompanyId, selectedCompanyId]);
 
   const syncConfigCache = useCallback(
     entries => {
@@ -275,30 +274,56 @@ export const useGeneralSettingsConfig = () => {
       );
 
       return new Promise(resolve => {
-        configActions.addToQueue(() =>
-          configActions
-            .addManyConfigs({
-              configs: Object.entries(requestEntries).map(
-                ([configKey, configValue]) => ({
-                  configKey,
-                  configValue,
-                }),
-              ),
+        configActions.addToQueue(async () => {
+          const requestConfigItems = Object.entries(requestEntries).map(
+            ([configKey, configValue]) => ({
+              configKey,
+              configValue,
+            }),
+          );
+
+          try {
+            const data = await configActions.addManyConfigs({
+              configs: requestConfigItems,
               people: '/people/' + currentCompany.id,
               module: 4,
               visibility: 'public',
-            })
-            .then(data => {
-              syncConfigCache(cacheEntries);
-              resolve(true);
-              return data;
-            })
-            .catch(err => {
+            });
+
+            syncConfigCache(cacheEntries);
+            resolve(true);
+            return data;
+          } catch (err) {
+            if (!isMethodNotAllowedError(err)) {
               Alert.alert('Erro', err?.message || JSON.stringify(err));
               resolve(false);
               return null;
-            }),
-        );
+            }
+
+            try {
+              for (const item of requestConfigItems) {
+                await configActions.addConfigs({
+                  configKey: item.configKey,
+                  configValue: item.configValue,
+                  people: '/people/' + currentCompany.id,
+                  module: 4,
+                  visibility: 'public',
+                });
+              }
+
+              syncConfigCache(cacheEntries);
+              resolve(true);
+              return true;
+            } catch (fallbackErr) {
+              Alert.alert(
+                'Erro',
+                fallbackErr?.message || JSON.stringify(fallbackErr),
+              );
+              resolve(false);
+              return null;
+            }
+          }
+        });
         configActions.initQueue();
       });
     },
@@ -346,13 +371,11 @@ export const useGeneralSettingsConfig = () => {
   );
 
   return {
-    companies,
     configActions,
     currentCompany,
     defaultCompany,
     defaultCompanyLabel,
     effectiveCompanyConfigs,
-    hasDefaultCompanyAccess,
     isMainCompanySelected,
     isSaving,
     peopleActions,

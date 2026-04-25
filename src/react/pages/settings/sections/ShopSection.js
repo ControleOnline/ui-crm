@@ -485,6 +485,7 @@ const ShopSection = () => {
     effectiveCompanyConfigs,
     isMainCompanySelected,
     isSaving,
+    saveConfig,
     saveConfigs,
   } = useGeneralSettingsConfig();
 
@@ -980,15 +981,25 @@ const ShopSection = () => {
   ]);
 
   const saveCheckoutSettings = useCallback(async () => {
-    await saveConfigs({
-      [SHOP_CHARGE_ON_DELIVERY_ENABLED_CONFIG_KEY]: chargeOnDeliveryEnabled,
-    });
-  }, [chargeOnDeliveryEnabled, saveConfigs]);
+    await saveConfig(
+      SHOP_CHARGE_ON_DELIVERY_ENABLED_CONFIG_KEY,
+      chargeOnDeliveryEnabled ? '1' : '0',
+    );
+  }, [chargeOnDeliveryEnabled, saveConfig]);
 
   const saveLoyaltySettings = useCallback(async () => {
     const normalizedRequiredSales = normalizeShopLoyaltyRequiredSales(
       loyaltyRequiredSales,
     );
+
+    const loyaltyToggleSaved = await saveConfig(
+      SHOP_LOYALTY_COUPONS_ENABLED_CONFIG_KEY,
+      loyaltyCouponsEnabled ? '1' : '0',
+    );
+
+    if (!loyaltyToggleSaved || !loyaltyCouponsEnabled) {
+      return;
+    }
 
     if (loyaltyCouponsEnabled && loyaltyProductIds.length === 0) {
       Alert.alert(
@@ -1015,7 +1026,6 @@ const ShopSection = () => {
     }
 
     await saveConfigs({
-      [SHOP_LOYALTY_COUPONS_ENABLED_CONFIG_KEY]: loyaltyCouponsEnabled,
       [SHOP_LOYALTY_PRODUCT_IDS_CONFIG_KEY]: loyaltyProductIds,
       [SHOP_LOYALTY_REQUIRED_SALES_CONFIG_KEY]: normalizedRequiredSales,
       [SHOP_LOYALTY_GIFT_PRODUCT_ID_CONFIG_KEY]: loyaltyGiftProductId,
@@ -1025,6 +1035,7 @@ const ShopSection = () => {
     loyaltyGiftProductId,
     loyaltyProductIds,
     loyaltyRequiredSales,
+    saveConfig,
     saveConfigs,
   ]);
 
