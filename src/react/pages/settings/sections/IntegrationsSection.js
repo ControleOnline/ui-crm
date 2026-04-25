@@ -1,7 +1,9 @@
 import React, {useCallback, useEffect, useState} from 'react';
-import {Alert, Text, TextInput, TouchableOpacity} from 'react-native';
+import {ActivityIndicator, Text, TextInput, TouchableOpacity} from 'react-native';
 
 import css from '@controleonline/ui-orders/src/react/css/orders';
+import useToastMessage from '@controleonline/ui-crm/src/react/hooks/useToastMessage';
+import {api} from '@controleonline/ui-common/src/api';
 import {
   CIELO_CONFIG_KEY,
   DEFAULT_CIELO_CONFIG,
@@ -17,7 +19,11 @@ import {
 import localStyles from '../GeneralSettings.styles';
 import GeneralSettingsSection from '../GeneralSettingsSection';
 import LoginSection from './LoginSection';
-import {toConfigRequestValue, toConfigCacheValue, useGeneralSettingsConfig} from '../GeneralSettings.shared';
+import {
+  toConfigCacheValue,
+  toConfigRequestValue,
+  useGeneralSettingsConfig,
+} from '../GeneralSettings.shared';
 
 const buildConfigUpdater = (setState, fieldKey) => value => {
   setState(currentValue => ({
@@ -49,29 +55,99 @@ const IntegrationField = ({
 
 const IntegrationsSection = () => {
   const {globalStyles} = css();
+  const {showError, showSuccess} = useToastMessage();
   const {
     configActions,
-    currentCompany,
-    effectiveCompanyConfigs,
+    defaultCompany,
+    defaultCompanyLabel,
+    hasDefaultCompanyAccess,
+    isMainCompanySelected,
     isSaving,
+    peopleActions,
   } = useGeneralSettingsConfig();
+  const [privateConfigs, setPrivateConfigs] = useState({});
+  const [isLoadingPrivateConfigs, setIsLoadingPrivateConfigs] = useState(false);
 
   const [cieloConfig, setCieloConfig] = useState(DEFAULT_CIELO_CONFIG);
   const [newRelicConfig, setNewRelicConfig] = useState(DEFAULT_NEW_RELIC_CONFIG);
   const [spotifyConfig, setSpotifyConfig] = useState(DEFAULT_SPOTIFY_CONFIG);
 
   useEffect(() => {
-    setCieloConfig(resolveCieloConfig(effectiveCompanyConfigs));
-    setNewRelicConfig(resolveNewRelicConfig(effectiveCompanyConfigs));
-    setSpotifyConfig(resolveSpotifyConfig(effectiveCompanyConfigs));
-  }, [effectiveCompanyConfigs]);
+    if (!hasDefaultCompanyAccess || !defaultCompany?.id) {
+      setPrivateConfigs({});
+      setIsLoadingPrivateConfigs(false);
+      return undefined;
+    }
+
+    let cancelled = false;
+    setIsLoadingPrivateConfigs(true);
+
+    api
+      .fetch('/configs', {
+        params: {
+          people: '/people/' + defaultCompany.id,
+          visibility: 'private',
+        },
+      })
+      .then(response => {
+        if (cancelled) {
+          return;
+        }
+
+        const items = Array.isArray(response?.member)
+          ? response.member
+          : Array.isArray(response?.['hydra:member'])
+            ? response['hydra:member']
+            : [];
+
+        const mapped = items.reduce((accumulator, item) => {
+          const configKey = String(item?.configKey || '').trim();
+          if (configKey) {
+            accumulator[configKey] = item?.configValue;
+          }
+          return accumulator;
+        }, {});
+
+        setPrivateConfigs(mapped);
+      })
+      .catch(error => {
+        if (!cancelled) {
+          setPrivateConfigs({});
+          showError(
+            error?.message ||
+              'Nao foi possivel carregar as configuracoes privadas da empresa principal.',
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsLoadingPrivateConfigs(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [defaultCompany?.id, hasDefaultCompanyAccess, showError]);
+
+  useEffect(() => {
+    setCieloConfig(resolveCieloConfig(privateConfigs));
+    setNewRelicConfig(resolveNewRelicConfig(privateConfigs));
+    setSpotifyConfig(resolveSpotifyConfig(privateConfigs));
+  }, [privateConfigs]);
 
   const savePrivateConfig = useCallback(
     (configKey, configValue) => {
-      if (!currentCompany?.id) {
-        Alert.alert(
-          'Empresa nao selecionada',
-          'Selecione uma empresa para salvar as configuracoes da integracao.',
+      if (!hasDefaultCompanyAccess || !defaultCompany?.id) {
+        showError(
+          'Nao foi possivel identificar a empresa principal para salvar a integracao.',
+        );
+        return Promise.resolve(false);
+      }
+
+      if (!isMainCompanySelected) {
+        showError(
+          `Abra a empresa principal (${defaultCompanyLabel}) para editar essas credenciais.`,
         );
         return Promise.resolve(false);
       }
@@ -82,20 +158,26 @@ const IntegrationsSection = () => {
             .addConfigs({
               configKey,
               configValue: toConfigRequestValue(configValue),
-              people: '/people/' + currentCompany.id,
+              people: '/people/' + defaultCompany.id,
               module: 4,
               visibility: 'private',
             })
-            .then(data => {
-              configActions.setItems({
-                ...(effectiveCompanyConfigs || {}),
+            .then(async data => {
+              setPrivateConfigs(currentValue => ({
+                ...(currentValue || {}),
                 [configKey]: toConfigCacheValue(configValue),
-              });
+              }));
+
+              try {
+                await peopleActions.defaultCompany();
+              } catch {}
+
+              showSuccess('Configuracao tecnica salva com sucesso.');
               resolve(true);
               return data;
             })
             .catch(err => {
-              Alert.alert('Erro', err?.message || JSON.stringify(err));
+              showError(err?.message || JSON.stringify(err));
               resolve(false);
               return null;
             }),
@@ -103,7 +185,16 @@ const IntegrationsSection = () => {
         configActions.initQueue();
       });
     },
-    [configActions, currentCompany?.id, effectiveCompanyConfigs],
+    [
+      configActions,
+      defaultCompany?.id,
+      defaultCompanyLabel,
+      hasDefaultCompanyAccess,
+      isMainCompanySelected,
+      peopleActions,
+      showError,
+      showSuccess,
+    ],
   );
 
   const saveCieloConfig = useCallback(
@@ -119,22 +210,35 @@ const IntegrationsSection = () => {
     [savePrivateConfig, spotifyConfig],
   );
 
-  const editable = !!currentCompany?.id && !isSaving;
+  const editable =
+    hasDefaultCompanyAccess &&
+    !!defaultCompany?.id &&
+    isMainCompanySelected &&
+    !isSaving &&
+    !isLoadingPrivateConfigs;
 
   return (
     <>
       <LoginSection />
 
       <GeneralSettingsSection
-        description="Credenciais usadas pelo pagamento local da Cielo para a empresa ativa."
+        description="Credenciais tecnicas da Cielo centralizadas na empresa principal."
         icon="credit-card"
         iconBackgroundColor="#FEF3C7"
         iconColor="#B45309"
         title="Cielo">
         <Text style={localStyles.helperText}>
-          Esses dados ficam vinculados a empresa ativa e sao tratados como
-          configuracao privada.
+          {`Esses dados privados ficam vinculados a empresa principal (${defaultCompanyLabel}).`}
         </Text>
+        {!isMainCompanySelected && hasDefaultCompanyAccess && (
+          <Text style={localStyles.helperText}>
+            Abra a empresa principal para editar as credenciais. Fora dela esta
+            tela fica somente para consulta.
+          </Text>
+        )}
+        {isLoadingPrivateConfigs && (
+          <ActivityIndicator style={localStyles.sectionLoader} color="#B45309" />
+        )}
 
         <IntegrationField
           editable={editable}
@@ -171,14 +275,14 @@ const IntegrationsSection = () => {
       </GeneralSettingsSection>
 
       <GeneralSettingsSection
-        description="Campos de observabilidade para a empresa ativa. Sem integracao React nova neste patch."
+        description="Campos de observabilidade centralizados na empresa principal."
         icon="analytics"
         iconBackgroundColor="#DBEAFE"
         iconColor="#1D4ED8"
         title="New Relic">
         <Text style={localStyles.helperText}>
-          Use esta area para centralizar os parametros do New Relic por
-          empresa.
+          Use esta area para centralizar os parametros do New Relic da empresa
+          principal.
         </Text>
 
         <IntegrationField
@@ -240,13 +344,13 @@ const IntegrationsSection = () => {
       </GeneralSettingsSection>
 
       <GeneralSettingsSection
-        description="Chaves usadas pela integracao Spotify da empresa ativa."
+        description="Chaves usadas pela integracao Spotify da empresa principal."
         icon="graphic-eq"
         iconBackgroundColor="#DCFCE7"
         iconColor="#15803D"
         title="Spotify">
         <Text style={localStyles.helperText}>
-          Guarde aqui as chaves de Spotify vinculadas a empresa ativa.
+          Guarde aqui as chaves de Spotify vinculadas a empresa principal.
         </Text>
 
         <IntegrationField

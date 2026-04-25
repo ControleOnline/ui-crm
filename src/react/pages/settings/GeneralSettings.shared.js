@@ -173,7 +173,7 @@ export const toConfigCacheValue = value => {
 
 export const useGeneralSettingsConfig = () => {
   const peopleStore = useStore('people');
-  const {currentCompany, defaultCompany} = peopleStore.getters;
+  const {companies, currentCompany, defaultCompany} = peopleStore.getters;
   const peopleActions = peopleStore.actions;
 
   const configsStore = useStore('configs');
@@ -207,6 +207,23 @@ export const useGeneralSettingsConfig = () => {
     selectedCompanyId === defaultCompanyId;
   const defaultCompanyLabel =
     defaultCompany?.alias || defaultCompany?.name || 'empresa principal';
+  const hasDefaultCompanyAccess = useMemo(() => {
+    if (defaultCompanyId === '') {
+      return false;
+    }
+
+    if (selectedCompanyId !== '' && selectedCompanyId === defaultCompanyId) {
+      return true;
+    }
+
+    return Array.isArray(companies)
+      ? companies.some(
+          company =>
+            normalizeEntityId(company?.id || company?.['@id']) ===
+            defaultCompanyId,
+        )
+      : false;
+  }, [companies, defaultCompanyId, selectedCompanyId]);
 
   const syncConfigCache = useCallback(
     entries => {
@@ -329,11 +346,13 @@ export const useGeneralSettingsConfig = () => {
   );
 
   return {
+    companies,
     configActions,
     currentCompany,
     defaultCompany,
     defaultCompanyLabel,
     effectiveCompanyConfigs,
+    hasDefaultCompanyAccess,
     isMainCompanySelected,
     isSaving,
     peopleActions,

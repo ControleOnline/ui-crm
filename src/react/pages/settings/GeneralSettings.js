@@ -19,8 +19,10 @@ import CrmSection from './sections/CrmSection';
 import ShopSection from './sections/ShopSection';
 import IntegrationsSection from './sections/IntegrationsSection';
 import LogSection from './sections/LogSection';
+import MaintenanceSection from './sections/MaintenanceSection';
 
-const MAIN_COMPANY_ONLY_TABS = new Set(['integrations', 'shop']);
+const MAIN_COMPANY_ONLY_TABS = new Set(['shop']);
+const TECHNICAL_TABS = new Set(['integrations', 'logs', 'maintenance']);
 
 const SETTINGS_TABS = [
   {
@@ -46,6 +48,14 @@ const SETTINGS_TABS = [
     color: '#B91C1C',
     stores: ['configs', 'people'],
     Component: LogSection,
+  },
+  {
+    key: 'maintenance',
+    label: 'Rotinas',
+    icon: 'schedule',
+    color: '#0F766E',
+    stores: ['configs', 'people'],
+    Component: MaintenanceSection,
   },
   {
     key: 'print',
@@ -107,7 +117,12 @@ const SETTINGS_TABS = [
 
 const GeneralSettings = () => {
   const {styles} = css();
-  const {currentCompany, isMainCompanySelected, peopleActions} =
+  const {
+    currentCompany,
+    hasDefaultCompanyAccess,
+    isMainCompanySelected,
+    peopleActions,
+  } =
     useGeneralSettingsConfig();
   const [activeTab, setActiveTab] = useState(SETTINGS_TABS[0].key);
 
@@ -115,13 +130,15 @@ const GeneralSettings = () => {
     () =>
       SETTINGS_TABS.filter(
         tab =>
-          !MAIN_COMPANY_ONLY_TABS.has(tab.key) || isMainCompanySelected,
+          (!MAIN_COMPANY_ONLY_TABS.has(tab.key) || isMainCompanySelected) &&
+          (!TECHNICAL_TABS.has(tab.key) || hasDefaultCompanyAccess),
       ),
-    [isMainCompanySelected],
+    [hasDefaultCompanyAccess, isMainCompanySelected],
   );
 
   useFocusEffect(
     useCallback(() => {
+      peopleActions.myCompanies?.().catch(() => {});
       peopleActions.defaultCompany().catch(() => {});
     }, [peopleActions]),
   );

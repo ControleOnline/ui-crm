@@ -1,7 +1,8 @@
 import React, {useCallback, useEffect, useState} from 'react';
-import {Alert, Text, TextInput, TouchableOpacity} from 'react-native';
+import {Text, TextInput, TouchableOpacity} from 'react-native';
 
 import css from '@controleonline/ui-orders/src/react/css/orders';
+import useToastMessage from '@controleonline/ui-crm/src/react/hooks/useToastMessage';
 import {
   OAUTH_GOOGLE_CLIENT_ID_CONFIG_KEY,
   resolveCompanyGoogleOauthClientId,
@@ -13,10 +14,12 @@ import {toConfigRequestValue, useGeneralSettingsConfig} from '../GeneralSettings
 
 const LoginSection = () => {
   const {globalStyles} = css();
+  const {showError, showSuccess} = useToastMessage();
   const {
     configActions,
     defaultCompany,
     defaultCompanyLabel,
+    hasDefaultCompanyAccess,
     isMainCompanySelected,
     isSaving,
     peopleActions,
@@ -29,17 +32,15 @@ const LoginSection = () => {
   }, [defaultCompany?.configs]);
 
   const saveGoogleOauthConfig = useCallback(() => {
-    if (!defaultCompany?.id) {
-      Alert.alert(
-        'Empresa principal indisponivel',
+    if (!hasDefaultCompanyAccess || !defaultCompany?.id) {
+      showError(
         'Nao foi possivel identificar a empresa principal para salvar o login Google.',
       );
       return Promise.resolve(false);
     }
 
     if (!isMainCompanySelected) {
-      Alert.alert(
-        'Empresa principal',
+      showError(
         'Abra as configuracoes da empresa principal para editar o Google OAuth.',
       );
       return Promise.resolve(false);
@@ -64,11 +65,12 @@ const LoginSection = () => {
               await peopleActions.defaultCompany();
             } catch {}
 
+            showSuccess('Google OAuth salvo com sucesso.');
             resolve(true);
             return data;
           })
           .catch(err => {
-            Alert.alert('Erro', err?.message || JSON.stringify(err));
+            showError(err?.message || JSON.stringify(err));
             resolve(false);
             return null;
           }),
@@ -78,9 +80,12 @@ const LoginSection = () => {
   }, [
     configActions,
     defaultCompany?.id,
+    hasDefaultCompanyAccess,
     googleClientId,
     isMainCompanySelected,
     peopleActions,
+    showError,
+    showSuccess,
   ]);
 
   return (
