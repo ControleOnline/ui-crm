@@ -949,15 +949,45 @@ const ShopSection = () => {
   }, []);
 
   const saveHomeSettings = useCallback(async () => {
+    const normalizedPrimaryEntry = normalizeShopPrimaryEntry(primaryEntry, {
+      salesPageEnabled,
+      franchiseLocatorEnabled,
+      loyaltyCouponsEnabled,
+    });
+
+    const salesSaved = await saveConfig(
+      SHOP_SALES_PAGE_ENABLED_CONFIG_KEY,
+      salesPageEnabled ? '1' : '0',
+    );
+    if (!salesSaved) {
+      return;
+    }
+
+    const franchiseSaved = await saveConfig(
+      SHOP_FRANCHISE_LOCATOR_ENABLED_CONFIG_KEY,
+      franchiseLocatorEnabled ? '1' : '0',
+    );
+    if (!franchiseSaved) {
+      return;
+    }
+
+    const bottomBarSaved = await saveConfig(
+      SHOP_BOTTOM_BAR_ENABLED_CONFIG_KEY,
+      bottomBarEnabled ? '1' : '0',
+    );
+    if (!bottomBarSaved) {
+      return;
+    }
+
+    const primaryEntrySaved = await saveConfig(
+      SHOP_PRIMARY_ENTRY_CONFIG_KEY,
+      normalizedPrimaryEntry,
+    );
+    if (!primaryEntrySaved) {
+      return;
+    }
+
     await saveConfigs({
-      [SHOP_SALES_PAGE_ENABLED_CONFIG_KEY]: salesPageEnabled,
-      [SHOP_FRANCHISE_LOCATOR_ENABLED_CONFIG_KEY]: franchiseLocatorEnabled,
-      [SHOP_PRIMARY_ENTRY_CONFIG_KEY]: normalizeShopPrimaryEntry(primaryEntry, {
-        salesPageEnabled,
-        franchiseLocatorEnabled,
-        loyaltyCouponsEnabled,
-      }),
-      [SHOP_BOTTOM_BAR_ENABLED_CONFIG_KEY]: bottomBarEnabled,
       [SHOP_GOOGLE_MAPS_API_KEY_CONFIG_KEY]: normalizeShopTextConfig(
         googleMapsApiKey,
       ),
@@ -975,6 +1005,7 @@ const ShopSection = () => {
     loyaltyCouponsEnabled,
     primaryEntry,
     salesPageEnabled,
+    saveConfig,
     saveConfigs,
     visibleFranchiseAddressIds,
     visibleFranchiseCompanyIds,
