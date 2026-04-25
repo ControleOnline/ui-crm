@@ -18,6 +18,7 @@ import OperationsSection from './sections/OperationsSection';
 import CrmSection from './sections/CrmSection';
 import ShopSection from './sections/ShopSection';
 import IntegrationsSection from './sections/IntegrationsSection';
+import LogSection from './sections/LogSection';
 
 const MAIN_COMPANY_ONLY_TABS = new Set(['integrations', 'shop']);
 
@@ -37,6 +38,14 @@ const SETTINGS_TABS = [
     color: '#0284C7',
     stores: ['configs', 'people'],
     Component: IntegrationsSection,
+  },
+  {
+    key: 'logs',
+    label: 'Logs',
+    icon: 'bug-report',
+    color: '#B91C1C',
+    stores: ['configs', 'people'],
+    Component: LogSection,
   },
   {
     key: 'print',

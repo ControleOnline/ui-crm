@@ -319,6 +319,16 @@ const localStyles = StyleSheet.create({
     minHeight: 96,
     textAlignVertical: 'top',
   },
+  logPolicyList: {
+    gap: 12,
+  },
+  logPolicyCard: {
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#F8FAFC',
+    padding: 14,
+  },
   profileRow: {
     flexDirection: 'row',
     alignItems: 'center',
