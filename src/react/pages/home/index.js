@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { TouchableOpacity, View, ScrollView, Platform, ActivityIndicator, Image } from 'react-native';
+import { TouchableOpacity, View, ScrollView, ActivityIndicator, Image } from 'react-native';
 import { Text } from 'react-native-animatable';
 import { colors } from '@controleonline/../../src/styles/colors';
 
@@ -64,21 +64,6 @@ export default function HomePage({ navigation }) {
     [themeColors, currentCompany?.id],
   );
   const companyLogoUrl = buildAssetUrl(currentCompany?.logo);
-  const actionBannerDynamicStyle = useMemo(
-    () => ({
-      backgroundColor: brandColors.primary,
-      ...Platform.select({
-        ios: {
-          shadowColor: brandColors.primary,
-          shadowOffset: { width: 0, height: 8 },
-          shadowOpacity: 0.2,
-          shadowRadius: 16,
-        },
-        web: { boxShadow: `0 8px 24px ${withOpacity(brandColors.primary, 0.25)}` },
-      }),
-    }),
-    [brandColors.primary],
-  );
 
   const getAvatarUrl = () => {
     if (typeof currentUser?.avatarUrl === 'string' && currentUser.avatarUrl) {
@@ -485,22 +470,6 @@ export default function HomePage({ navigation }) {
             </TouchableOpacity>
           ))}
         </View>
-
-        {/* Acessar Pipeline */}
-        <TouchableOpacity
-          style={[styles.actionBanner, actionBannerDynamicStyle]}
-          activeOpacity={0.9}
-          onPress={() => navigation.navigate('CrmIndex')}>
-          <View style={styles.actionContent}>
-            <View>
-              <Text style={styles.actionTitle}>{global.t?.t('people', 'title', 'accessPipeline')}</Text>
-              <Text style={styles.actionSub}>{global.t?.t('people', 'title', 'manageDeals')}</Text>
-            </View>
-            <View style={styles.actionButton}>
-              <Icon name="arrow-right" size={20} color={brandColors.primary} />
-            </View>
-          </View>
-        </TouchableOpacity>
 
         {/* Atalhos Clientes e Comissões */}
         <View style={styles.shortcutsRow}>

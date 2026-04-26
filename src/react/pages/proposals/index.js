@@ -386,27 +386,45 @@ const ProposalsPage = () => {
   );
 
   const statusFilterOptions = React.useMemo(
-    () => [
-      {
-        key: 'realStatus:open',
-        label: global.t?.t('contract','status', 'open') || 'Em aberto',
-        color: getStatusColor('open'),
-        normalizedStatus: 'open',
-      },
-      {
-        key: 'realStatus:pending',
-        label: global.t?.t('contract','status', 'pending') || 'Pendente',
-        color: getStatusColor('pending'),
-        normalizedStatus: 'pending',
-      },
-      {
-        key: 'realStatus:closed',
-        label: global.t?.t('contract','status', 'closed') || 'Fechado',
-        color: getStatusColor('closed'),
-        normalizedStatus: 'closed',
-      },
-    ],
-    [getStatusColor],
+    () => {
+      const options = [
+        {
+          key: 'realStatus:open',
+          label: global.t?.t('contract','status', 'open') || 'Em aberto',
+          color: getStatusColor('open'),
+          normalizedStatus: 'open',
+        },
+        {
+          key: 'realStatus:pending',
+          label: global.t?.t('contract','status', 'pending') || 'Pendente',
+          color: getStatusColor('pending'),
+          normalizedStatus: 'pending',
+        },
+        {
+          key: 'realStatus:closed',
+          label: global.t?.t('contract','status', 'closed') || 'Fechado',
+          color: getStatusColor('closed'),
+          normalizedStatus: 'closed',
+        },
+      ];
+
+      (allContracts || []).forEach(contract => {
+        const statusObj = contract?.status || {};
+        const key = getStatusFilterKey(statusObj);
+        if (!key || options.some(item => item.key === key)) return;
+
+        const normalizedStatus = normalizeStatusKey(statusObj?.realStatus || statusObj?.status);
+        options.push({
+          key,
+          label: getStatusLabel(statusObj?.status || statusObj?.realStatus),
+          color: statusObj?.color || getStatusColor(normalizedStatus),
+          normalizedStatus,
+        });
+      });
+
+      return options;
+    },
+    [allContracts, getStatusFilterKey, getStatusColor, getStatusLabel, normalizeStatusKey],
   );
 
   const contractMatchesStatusFilter = useCallback(
