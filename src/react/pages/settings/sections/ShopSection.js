@@ -1043,7 +1043,7 @@ const ShopSection = () => {
     if (loyaltyCouponsEnabled && normalizedRequiredSales < 1) {
       Alert.alert(
         'Cupons de fidelidade',
-        'Informe quantas vendas sao necessarias para liberar o brinde.',
+        'Informe quantas compras sao necessarias para liberar o brinde.',
       );
       return;
     }
