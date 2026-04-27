@@ -74,7 +74,7 @@ const DisplayPreparationSection = () => {
 
   return (
     <GeneralSettingsSection
-      description="A copia de preparo e gerada automaticamente por fila nos devices do tipo DISPLAY. Cada DISPLAY precisa estar vinculado a um display e a uma impressora no detalhe do device para que o backend envie a copia correta."
+      description="A copia de preparo e disparada automaticamente pelo app DISPLAY quando um item entra em preparo. Cada DISPLAY precisa estar vinculado a um display e a uma impressora no detalhe do device para que a copia seja enviada para a fila correta."
       icon="receipt-long"
       iconBackgroundColor="#FEF3C7"
       iconColor="#B45309"
