@@ -552,6 +552,10 @@ export default function CrmIndex() {
     searchQuery,
   ]);
 
+  const hasActiveOpportunityFilters = Boolean(
+    normalizeSearchValue(searchQuery) || selectedStatusFilterKey,
+  );
+
   const showStatusFilterSkeleton =
     isStatusLoading || isStatusFilterBootstrapping;
 
@@ -2066,12 +2070,12 @@ export default function CrmIndex() {
                 <>
                   <Icon name="line-chart" size={64} color="#bdc3c7" />
                   <Text style={styles.emptyTitle}>
-                    {searchQuery
+                    {hasActiveOpportunityFilters
                       ? global.t?.t('people', 'state', 'noOpportunityFound')
                       : global.t?.t('people', 'state', 'noOpportunity')}
                   </Text>
                   <Text style={styles.emptySubtitle}>
-                    {searchQuery
+                    {hasActiveOpportunityFilters
                       ? global.t?.t('people', 'state', 'tryOtherTerms')
                       : global.t?.t('people', 'state', 'addFirstOpportunity')}
                   </Text>
