@@ -382,29 +382,53 @@ export default function CrmIndex() {
 
   const visibleOpportunities = React.useMemo(() => {
     const normalizedQuery = normalizeSearchValue(searchQuery);
-    if (!normalizedQuery) {
-      return allOpportunities;
-    }
+    const filteredOpportunities = !normalizedQuery
+      ? allOpportunities
+      : allOpportunities.filter(opportunity => {
+        const clientIdentity = getOpportunityClientIdentity(opportunity);
+        const searchableFields = [
+          clientIdentity.name,
+          clientIdentity.alias,
+          `${clientIdentity.name} ${clientIdentity.alias}`.trim(),
+        ];
 
-    return allOpportunities.filter(opportunity => {
-      const clientIdentity = getOpportunityClientIdentity(opportunity);
-      const searchableFields = [
-        clientIdentity.name,
-        clientIdentity.alias,
-        `${clientIdentity.name} ${clientIdentity.alias}`.trim(),
-      ];
+        const availableFields = searchableFields.filter(field =>
+          normalizeSearchValue(field).length > 0,
+        );
 
-      const availableFields = searchableFields.filter(field =>
-        normalizeSearchValue(field).length > 0,
-      );
+        if (availableFields.length === 0) {
+          return true;
+        }
 
-      if (availableFields.length === 0) {
-        return true;
+        return availableFields.some(field =>
+          normalizeSearchValue(field).includes(normalizedQuery),
+        );
+      });
+
+    return [...filteredOpportunities].sort((leftOpportunity, rightOpportunity) => {
+      const leftDateValue =
+        leftOpportunity?.dueDate || leftOpportunity?.alterDate || null;
+      const rightDateValue =
+        rightOpportunity?.dueDate || rightOpportunity?.alterDate || null;
+      const leftTimestamp = leftDateValue
+        ? new Date(leftDateValue).getTime()
+        : Number.POSITIVE_INFINITY;
+      const rightTimestamp = rightDateValue
+        ? new Date(rightDateValue).getTime()
+        : Number.POSITIVE_INFINITY;
+
+      const normalizedLeftTimestamp = Number.isNaN(leftTimestamp)
+        ? Number.POSITIVE_INFINITY
+        : leftTimestamp;
+      const normalizedRightTimestamp = Number.isNaN(rightTimestamp)
+        ? Number.POSITIVE_INFINITY
+        : rightTimestamp;
+
+      if (normalizedLeftTimestamp !== normalizedRightTimestamp) {
+        return normalizedLeftTimestamp - normalizedRightTimestamp;
       }
 
-      return availableFields.some(field =>
-        normalizeSearchValue(field).includes(normalizedQuery),
-      );
+      return (leftOpportunity?.id || 0) - (rightOpportunity?.id || 0);
     });
   }, [
     allOpportunities,
