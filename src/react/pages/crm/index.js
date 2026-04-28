@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useLayoutEffect, useRef } from 'react';
-import { View, ScrollView, TouchableOpacity, RefreshControl, Modal, TextInput, TouchableWithoutFeedback } from 'react-native';
+import { ActivityIndicator, View, ScrollView, TouchableOpacity, RefreshControl, TextInput } from 'react-native';
 import { Text } from 'react-native-animatable';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import IconAdd from 'react-native-vector-icons/MaterialIcons';
@@ -18,6 +18,64 @@ const FONT_AWESOME_GLYPH_MAP = Icon?.getRawGlyphMap
   ? Icon.getRawGlyphMap()
   : null;
 
+const extractCollectionItems = response => {
+  if (Array.isArray(response)) {
+    return response;
+  }
+
+  if (Array.isArray(response?.['hydra:member'])) {
+    return response['hydra:member'];
+  }
+
+  return [];
+};
+
+const normalizePeopleReferenceValue = value => {
+  if (!value) {
+    return '';
+  }
+
+  const rawValue =
+    typeof value === 'object' ? value['@id'] ?? value.id : value;
+
+  if (rawValue == null) {
+    return '';
+  }
+
+  const normalized = String(rawValue).trim();
+  if (!normalized) {
+    return '';
+  }
+
+  if (normalized.startsWith('/people/') || normalized.startsWith('/peoples/')) {
+    return normalized;
+  }
+
+  if (normalized.startsWith('/')) {
+    return normalized;
+  }
+
+  if (/^\d+$/.test(normalized)) {
+    return `/people/${normalized}`;
+  }
+
+  return normalized;
+};
+
+const extractId = value => String(value || '').replace(/\D/g, '');
+
+const mergePeopleEntries = (currentItems = [], nextItems = []) => {
+  const itemsByReference = new Map();
+
+  [...currentItems, ...nextItems].forEach((item, index) => {
+    const reference = normalizePeopleReferenceValue(item);
+    const fallbackKey = `person-${item?.id || 'sem-id'}-${item?.document || 'sem-doc'}-${item?.name || 'sem-nome'}-${index}`;
+    itemsByReference.set(reference || fallbackKey, item);
+  });
+
+  return Array.from(itemsByReference.values());
+};
+
 export default function CrmIndex() {
   const { showSuccess, showError } = useToastMessage();
   const navigation = useNavigation();
@@ -31,6 +89,11 @@ export default function CrmIndex() {
   const [criticalityPickerVisible, setCriticalityPickerVisible] = useState(false);
   const [providerPickerVisible, setProviderPickerVisible] = useState(false);
   const [reasonPickerVisible, setReasonPickerVisible] = useState(false);
+  const [providerSearchText, setProviderSearchText] = useState('');
+  const [providerSearchQuery, setProviderSearchQuery] = useState('');
+  const [providerOptions, setProviderOptions] = useState([]);
+  const [knownPeople, setKnownPeople] = useState([]);
+  const [isProviderSearchLoading, setIsProviderSearchLoading] = useState(false);
 
   const [searchText, setSearchText] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -39,10 +102,8 @@ export default function CrmIndex() {
     useState(true);
   const [isStatusFilterApplying, setIsStatusFilterApplying] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(50);
+  const [itemsPerPage] = useState(50);
   const [allOpportunities, setAllOpportunities] = useState([]);
-  const [showItemsPerPageDropdown, setShowItemsPerPageDropdown] =
-    useState(false);
   const [dueDateDayPickerVisible, setDueDateDayPickerVisible] = useState(false);
   const [dueDateMonthPickerVisible, setDueDateMonthPickerVisible] =
     useState(false);
@@ -51,6 +112,7 @@ export default function CrmIndex() {
   const [alterDateMonthPickerVisible, setAlterDateMonthPickerVisible] =
     useState(false);
   const hasInitializedStatusFilter = useRef(false);
+  const providerFetchKeyRef = useRef('');
   const tasksStore = useStore('tasks');
   const opportunitiesGetters = tasksStore.getters;
   const opportunitiesActions = tasksStore.actions;
@@ -71,7 +133,7 @@ export default function CrmIndex() {
   const categoriesGetters = categoriesStore.getters;
   const categoriesActions = categoriesStore.actions;
   const { items: categories } = categoriesGetters;
-  const { currentCompany, items: people, isLoading: isPeopleLoading } = getters;
+  const { currentCompany, isLoading: isPeopleLoading } = getters;
   const authStore = useStore('auth');
   const authGetters = authStore.getters;
   const { user } = authGetters;
@@ -165,6 +227,62 @@ export default function CrmIndex() {
     );
   }, []);
 
+  const closeProviderPicker = useCallback(() => {
+    setProviderPickerVisible(false);
+    setProviderSearchText('');
+    setProviderSearchQuery('');
+  }, []);
+
+  const fetchProviderOptions = useCallback(
+    async (query = '') => {
+      if (!currentCompany?.id) {
+        setProviderOptions([]);
+        return [];
+      }
+
+      setIsProviderSearchLoading(true);
+
+      try {
+        const normalizedQuery = String(query || '').trim();
+        const params = {
+          'link.company': `/people/${currentCompany.id}`,
+          'link.linkType': ['client', 'prospect'],
+          itemsPerPage: 100,
+        };
+        const fetchKey = JSON.stringify({
+          company: currentCompany.id,
+          query: normalizedQuery,
+        });
+
+        providerFetchKeyRef.current = fetchKey;
+
+        if (normalizedQuery) {
+          params.search = normalizedQuery;
+        }
+
+        const response = await peopleActions.getItems(params);
+        const nextItems = extractCollectionItems(response);
+
+        if (providerFetchKeyRef.current !== fetchKey) {
+          return [];
+        }
+
+        setProviderOptions(nextItems);
+        setKnownPeople(previousItems =>
+          mergePeopleEntries(previousItems, nextItems),
+        );
+
+        return nextItems;
+      } catch {
+        setProviderOptions([]);
+        return [];
+      } finally {
+        setIsProviderSearchLoading(false);
+      }
+    },
+    [currentCompany?.id, peopleActions],
+  );
+
   const statusFilterParam = selectedStatusFilterKey || null;
 
   const buildOpportunityParams = useCallback((overrides = {}) => {
@@ -213,10 +331,7 @@ export default function CrmIndex() {
       const params = buildOpportunityParams();
       if (params) {
         opportunitiesActions.getItems(params);
-        peopleActions.getItems({
-          'link.company': '/people/' + currentCompany.id,
-          'link.linkType': 'client',
-        });
+        fetchProviderOptions();
       }
 
       categoriesActions.getItems({
@@ -229,7 +344,7 @@ export default function CrmIndex() {
       });
 
       return () => { };
-    }, [buildOpportunityParams, currentCompany?.id]),
+    }, [buildOpportunityParams, currentCompany?.id, fetchProviderOptions]),
   );
 
   useEffect(() => {
@@ -314,6 +429,30 @@ export default function CrmIndex() {
     return () => clearTimeout(delayDebounceFn);
   }, [searchText]);
 
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      setProviderSearchQuery(providerSearchText.trim());
+    }, 300);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [providerSearchText]);
+
+  useEffect(() => {
+    if (!providerPickerVisible) {
+      return;
+    }
+
+    fetchProviderOptions(providerSearchQuery);
+  }, [fetchProviderOptions, providerPickerVisible, providerSearchQuery]);
+
+  useEffect(() => {
+    setProviderOptions([]);
+    setKnownPeople([]);
+    setProviderSearchText('');
+    setProviderSearchQuery('');
+    providerFetchKeyRef.current = '';
+  }, [currentCompany?.id]);
+
   const normalizeSearchValue = useCallback(value => {
     if (value == null) {
       return '';
@@ -360,8 +499,8 @@ export default function CrmIndex() {
       }
 
       const clientReference = normalizePeopleReferenceForSearch(client);
-      if (clientReference && Array.isArray(people)) {
-        const matched = people.find(item => {
+      if (clientReference && Array.isArray(knownPeople)) {
+        const matched = knownPeople.find(item => {
           return normalizePeopleReferenceForSearch(item) === clientReference;
         });
 
@@ -377,7 +516,7 @@ export default function CrmIndex() {
 
       return { name, alias };
     },
-    [normalizePeopleReferenceForSearch, people],
+    [knownPeople, normalizePeopleReferenceForSearch],
   );
 
   const visibleOpportunities = React.useMemo(() => {
@@ -507,50 +646,20 @@ export default function CrmIndex() {
     return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
   };
 
-  const normalizePeopleReference = useCallback(value => {
-    if (!value) {
-      return '';
-    }
-
-    const rawValue =
-      typeof value === 'object' ? value['@id'] ?? value.id : value;
-
-    if (rawValue == null) {
-      return '';
-    }
-
-    const normalized = String(rawValue).trim();
-    if (!normalized) {
-      return '';
-    }
-
-    if (normalized.startsWith('/people/') || normalized.startsWith('/peoples/')) {
-      return normalized;
-    }
-
-    if (normalized.startsWith('/')) {
-      return normalized;
-    }
-
-    if (/^\d+$/.test(normalized)) {
-      return `/people/${normalized}`;
-    }
-
-    return normalized;
-  }, []);
+  const normalizePeopleReference = normalizePeopleReferenceValue;
 
   const getPersonByReference = useCallback(
     value => {
       const reference = normalizePeopleReference(value);
-      if (!reference || !Array.isArray(people)) {
+      if (!reference || !Array.isArray(knownPeople)) {
         return null;
       }
 
       return (
-        people.find(item => normalizePeopleReference(item) === reference) || null
+        knownPeople.find(item => normalizePeopleReference(item) === reference) || null
       );
     },
-    [normalizePeopleReference, people],
+    [knownPeople],
   );
 
   const getProviderName = useCallback(
@@ -997,10 +1106,10 @@ export default function CrmIndex() {
     </View>
   );
 
-  const renderOpportunityCard = (opportunity, index) => {
+  const renderOpportunityCard = opportunity => {
     const providerName = getProviderName(opportunity?.client);
     const showClientSkeleton =
-      !providerName && (isPeopleLoading || people == null);
+      !providerName && isPeopleLoading && knownPeople.length === 0;
 
     return (
       <View key={opportunity.id} style={styles.cardWrapper}>
@@ -1329,22 +1438,46 @@ export default function CrmIndex() {
   const renderProviderSelectModal = () => (
     <AnimatedModal
       visible={providerPickerVisible}
-      onRequestClose={() => setProviderPickerVisible(false)}>
+      onRequestClose={closeProviderPicker}>
       <View style={styles.selectModalContent}>
         <View style={styles.selectModalHeader}>
           <Text style={styles.selectModalTitle}>
             {global.t?.t('people', 'modal', 'selectProvider')}
           </Text>
           <TouchableOpacity
-            onPress={() => setProviderPickerVisible(false)}
+            onPress={closeProviderPicker}
             style={styles.closeButton}>
             <Icon name="times" size={20} color="#7f8c8d" />
           </TouchableOpacity>
         </View>
 
+        <View style={styles.selectModalSearchSection}>
+          <View style={styles.searchInputContainer}>
+            <Icon name="search" size={16} color="#94A3B8" />
+            <TextInput
+              style={styles.searchInput}
+              placeholder={global.t?.t('people', 'search', 'placeholder')}
+              placeholderTextColor="#94A3B8"
+              value={providerSearchText}
+              onChangeText={setProviderSearchText}
+            />
+            {providerSearchText.length > 0 && (
+              <TouchableOpacity
+                onPress={() => setProviderSearchText('')}
+                style={styles.clearSearchButton}>
+                <Icon name="times-circle" size={16} color="#94A3B8" />
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+
         <ScrollView style={styles.selectModalBody}>
-          {people && people.length > 0 ? (
-            people
+          {isProviderSearchLoading && providerOptions.length === 0 ? (
+            <View style={styles.providerSearchLoadingState}>
+              <ActivityIndicator color={colors.primary} size="small" />
+            </View>
+          ) : providerOptions.length > 0 ? (
+            providerOptions
               .filter((person, index, source) => {
                 const currentRef = normalizePeopleReference(person);
                 if (!currentRef) {
@@ -1399,7 +1532,7 @@ export default function CrmIndex() {
                           client: clientData,
                         }));
                       }
-                      setProviderPickerVisible(false);
+                      closeProviderPicker();
                     }}>
                     <View style={styles.personInfo}>
                       <View style={styles.avatarContainer}>

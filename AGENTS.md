@@ -11,6 +11,7 @@
 - O configurador geral de pagamento remoto dos pedidos vive neste modulo e define o device padrao, a lista de devices permitidos e se o operador pode trocar de equipamento no checkout.
 - O configurador geral compartilhado tambem hospeda a edicao React das politicas globais que pertencem a empresa principal, como alertas de erro e configuracoes centrais de log.
 - Abas tecnicas do configurador geral, como logs, rotinas e credenciais centrais, devem usar a `defaultCompany` como fonte real e nao podem aparecer para quem nao tem acesso a ela.
+- Na criacao e edicao de oportunidades, o seletor de cliente/provider deve oferecer busca textual e considerar tanto `client` quanto `prospect`.
 
 ## Limites
 - Este modulo nao deve receber responsabilidades administrativas do `MANAGER` quando elas forem claramente de gestao.
