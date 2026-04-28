@@ -480,8 +480,20 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#0F172A',
   },
+  selectModalSearchSection: {
+    paddingHorizontal: 18,
+    paddingTop: 14,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F8FAFC',
+  },
   selectModalBody: {
     flex: 1,
+  },
+  providerSearchLoadingState: {
+    paddingVertical: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   selectModalBodyContent: {
     paddingBottom: 8,
