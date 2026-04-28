@@ -199,6 +199,12 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#64748B',
     fontWeight: '500',
+    textAlign: 'center',
+  },
+  shortcutSubCompact: {
+    fontSize: 10,
+    lineHeight: 13,
+    textAlign: 'center',
   },
   activityList: {
     backgroundColor: '#fff',
@@ -265,4 +271,3 @@ export const inlineStyle_564_18 = {
 export const inlineStyle_565_20 = {
   color: '#94A3B8',
 };
-
