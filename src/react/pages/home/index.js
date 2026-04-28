@@ -482,7 +482,9 @@ export default function HomePage({ navigation }) {
               <Icon name="users" size={24} color={brandColors.primary} />
             </View>
             <Text style={styles.shortcutLabel}>{global.t?.t('people', 'title', 'prospects')}</Text>
-            <Text style={styles.shortcutSub}>{global.t?.t('people', 'title', 'viewProspects')}</Text>
+            <Text style={[styles.shortcutSub, styles.shortcutSubCompact]}>
+              {global.t?.t('people', 'title', 'viewProspects')}
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.shortcutCard}
@@ -498,11 +500,13 @@ export default function HomePage({ navigation }) {
             style={styles.shortcutCard}
             activeOpacity={0.9}
             onPress={() => navigation.navigate('ComissionsPage')}>
-            <View style={[styles.shortcutIcon, { backgroundColor: '#D1FAE5' }]}>
+            <View style={[styles.shortcutIcon, { backgroundColor: '#D1FAE5' }]}> 
               <Icon name="trending-up" size={24} color="#10B981" />
             </View>
             <Text style={styles.shortcutLabel}>{global.t?.t('people', 'title', 'commissions')}</Text>
-            <Text style={styles.shortcutSub}>{global.t?.t('people', 'title', 'financialReport')}</Text>
+            <Text style={[styles.shortcutSub, styles.shortcutSubCompact]}>
+              {global.t?.t('people', 'title', 'financialReport')}
+            </Text>
           </TouchableOpacity>
         </View>
 
