@@ -5,7 +5,9 @@
   "description": "ControleOnline CRM Quasar UI Component",
   "license": "MIT",
   "main": "src/vue/index.js",
-  "scripts": {},
+  "scripts": {
+    "test:proposal-product-category": "node --test src/tests/react/utils/proposalProductSelection.test.js"
+  },
   "repository": {
     "type": "git",
 

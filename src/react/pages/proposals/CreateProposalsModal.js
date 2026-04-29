@@ -14,6 +14,10 @@ import {
   normalizeEntityId,
   searchCompanyProducts,
 } from '@controleonline/ui-common/src/react/utils/commercialDocumentOrders';
+const {
+  filterProductsByModelCategory,
+  getProposalModelCategoryId,
+} = require('../../utils/proposalProductSelection');
 
 import {
   inlineStyle_482_6,
@@ -53,15 +57,6 @@ const formatApiError = error => {
   return error?.message || error?.description || error?.errmsg || 'Nao foi possivel criar a proposta.';
 };
 
-const normalizeCategoryId = value =>
-  normalizeEntityId(
-    value?.category ||
-      value?.parent ||
-      value?.['@id'] ||
-      value?.id ||
-      value,
-  );
-
 const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
   const { showError, showSuccess } = useToastMessage();
   const contractStore = useStore('contract');
@@ -99,7 +94,7 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
     [contractModels, selectedModel],
   );
   const selectedModelCategoryId = useMemo(
-    () => normalizeCategoryId(selectedContractModel?.category),
+    () => getProposalModelCategoryId(selectedContractModel),
     [selectedContractModel?.category],
   );
   const selectedModelCategoryName = useMemo(
@@ -129,12 +124,10 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
           query: productQuery,
           itemsPerPage: selectedModelCategoryId ? 100 : 8,
         });
-        const normalizedResults = Array.isArray(results) ? results : [];
-        const filteredResults = selectedModelCategoryId
-          ? normalizedResults.filter(
-              product => normalizeCategoryId(product?.category) === selectedModelCategoryId,
-            )
-          : normalizedResults;
+        const filteredResults = filterProductsByModelCategory({
+          products: results,
+          selectedModelCategoryId,
+        });
 
         if (!cancelled) {
           setProductResults(filteredResults);
@@ -162,9 +155,10 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
     }
 
     setSelectedProducts(currentItems =>
-      currentItems.filter(
-        product => normalizeCategoryId(product?.category) === selectedModelCategoryId,
-      ),
+      filterProductsByModelCategory({
+        products: currentItems,
+        selectedModelCategoryId,
+      }),
     );
   }, [selectedModelCategoryId]);
 
