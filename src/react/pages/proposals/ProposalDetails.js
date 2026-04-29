@@ -70,7 +70,7 @@ const PropostaTab = ({ contract, fileContent, fileLoading, fileError, canEdit, h
 const ProposalDetails = () => {
   const navigation = useNavigation();
   const route = useRoute();
-  const { contractId } = route.params;
+  const { contractId, initialTab } = route.params;
 
   const { showSuccess, showError } = useMessage();
 
@@ -95,6 +95,15 @@ const ProposalDetails = () => {
       title: global.t?.t('contract', 'title', 'proposal') || 'Proposta',
     });
   }, [navigation]);
+
+  useEffect(() => {
+    if (String(initialTab || '').trim().toLowerCase() === 'products') {
+      setActiveTab(1);
+      requestAnimationFrame(() => {
+        scrollRef.current?.scrollTo({ x: width, animated: false });
+      });
+    }
+  }, [initialTab]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -141,7 +150,7 @@ const ProposalDetails = () => {
     }
   };
 
-  const handleTabPress = (index) => {
+  const handleTabPress = index => {
     setActiveTab(index);
     scrollRef.current?.scrollTo({ x: index * width, animated: true });
   };
