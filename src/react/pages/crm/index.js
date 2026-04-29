@@ -730,13 +730,35 @@ export default function CrmIndex() {
           name: getProviderName(opportunity?.client) || global.t?.t('people', 'label', 'client'),
         };
 
-      navigation.navigate('ClientDetails', { client: selectedClient });
+      const clientId = extractId(reference);
+      const isLegalEntity =
+        String(
+          selectedClient?.peopleType ||
+            matchedPerson?.peopleType ||
+            opportunity?.client?.peopleType ||
+            '',
+        ).trim().toUpperCase() === 'J';
+
+      if (!clientId) {
+        showError?.(
+          global.t?.t('people', 'toast', 'providerNotIdentified'),
+        );
+        return;
+      }
+
+      peopleActions?.setItem?.(selectedClient);
+      navigation.navigate('ClientDetails', {
+        clientId,
+        contextKey: 'client',
+        initialTab: isLegalEntity ? 'sellers' : 'general',
+      });
     },
     [
       getProviderName,
       getPersonByReference,
       navigation,
       normalizePeopleReference,
+      peopleActions,
       showError,
     ],
   );
