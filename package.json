@@ -6,7 +6,8 @@
   "license": "MIT",
   "main": "src/vue/index.js",
   "scripts": {
-    "test:crm-empty-state": "node --test src/tests/react/utils/opportunityEmptyState.test.js"
+    "test:crm-empty-state": "node --test src/tests/react/utils/opportunityEmptyState.test.js",
+    "test:opportunity-status-filter": "node --test src/tests/react/utils/opportunityStatusFilter.test.cjs"
   },
   "repository": {
     "type": "git",
