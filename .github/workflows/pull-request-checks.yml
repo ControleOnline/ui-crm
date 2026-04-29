@@ -1,0 +1,26 @@
+name: Pull Request Checks
+
+on:
+  pull_request:
+  push:
+    branches:
+      - task-*
+
+jobs:
+  proposal-product-category:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Validate diff formatting
+        run: git diff --check
+
+      - name: Run proposal product category test
+        run: npm run test:proposal-product-category

@@ -14,6 +14,10 @@ import {
   normalizeEntityId,
   searchCompanyProducts,
 } from '@controleonline/ui-common/src/react/utils/commercialDocumentOrders';
+const {
+  filterProductsByModelCategory,
+  getProposalModelCategoryId,
+} = require('../../utils/proposalProductSelection');
 
 import {
   inlineStyle_482_6,
@@ -85,6 +89,18 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
   const [productResults, setProductResults] = useState([]);
   const [productSearchLoading, setProductSearchLoading] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState([]);
+  const selectedContractModel = useMemo(
+    () => contractModels.find(model => model['@id'] === selectedModel) || null,
+    [contractModels, selectedModel],
+  );
+  const selectedModelCategoryId = useMemo(
+    () => getProposalModelCategoryId(selectedContractModel),
+    [selectedContractModel?.category],
+  );
+  const selectedModelCategoryName = useMemo(
+    () => String(selectedContractModel?.category?.name || '').trim(),
+    [selectedContractModel?.category?.name],
+  );
 
   useEffect(() => {
     if (visible) {
@@ -106,11 +122,15 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
         const results = await searchCompanyProducts({
           companyId: currentCompany.id,
           query: productQuery,
-          itemsPerPage: 8,
+          itemsPerPage: selectedModelCategoryId ? 100 : 8,
+        });
+        const filteredResults = filterProductsByModelCategory({
+          products: results,
+          selectedModelCategoryId,
         });
 
         if (!cancelled) {
-          setProductResults(results);
+          setProductResults(filteredResults);
         }
       } catch (error) {
         if (!cancelled) {
@@ -127,7 +147,20 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
       cancelled = true;
       clearTimeout(timeoutId);
     };
-  }, [visible, currentCompany?.id, productQuery]);
+  }, [visible, currentCompany?.id, productQuery, selectedModelCategoryId]);
+
+  useEffect(() => {
+    if (!selectedModelCategoryId) {
+      return;
+    }
+
+    setSelectedProducts(currentItems =>
+      filterProductsByModelCategory({
+        products: currentItems,
+        selectedModelCategoryId,
+      }),
+    );
+  }, [selectedModelCategoryId]);
 
   const selectedProductIds = useMemo(
     () => new Set(selectedProducts.map(product => normalizeEntityId(product))),
@@ -140,8 +173,8 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
   );
 
   const selectedModelName = useMemo(
-    () => contractModels.find(model => model['@id'] === selectedModel)?.model || '',
-    [contractModels, selectedModel],
+    () => selectedContractModel?.model || '',
+    [selectedContractModel],
   );
 
   const loadInitialData = async () => {
@@ -340,6 +373,9 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
                   style={[styles.selectOption, selectedModel === model['@id'] && styles.selectOptionActive]}
                   onPress={() => {
                     setSelectedModel(model['@id']);
+                    setProductQuery('');
+                    setProductResults([]);
+                    setSelectedProducts([]);
                     setModelPickerVisible(false);
                   }}>
                   <View style={styles.optionInfo}>
@@ -570,6 +606,11 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
                 <Text style={styles.helperText}>
                   Escolha os produtos que serao encaminhados agora. Voce podera ajustar depois na proposta.
                 </Text>
+                {selectedModelCategoryName ? (
+                  <Text style={styles.helperText}>
+                    Produtos filtrados pela categoria {selectedModelCategoryName}.
+                  </Text>
+                ) : null}
               </View>
               <View style={styles.selectedCountBadge}>
                 <Text style={styles.selectedCountText}>{selectedProducts.length}</Text>
@@ -582,7 +623,11 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
                 style={styles.searchInput}
                 value={productQuery}
                 onChangeText={setProductQuery}
-                placeholder="Buscar produto da empresa..."
+                placeholder={
+                  selectedModelCategoryName
+                    ? `Buscar produto em ${selectedModelCategoryName}...`
+                    : 'Buscar produto da empresa...'
+                }
                 placeholderTextColor="#94A3B8"
               />
               {productSearchLoading && <ActivityIndicator size="small" color="#2529a1" />}
