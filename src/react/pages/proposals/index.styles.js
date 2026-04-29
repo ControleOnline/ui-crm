@@ -176,13 +176,42 @@ const styles = StyleSheet.create({
   cardFooter: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-end',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  footerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  footerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: '#F8FAFC',
+  },
+  footerButtonPrimary: {
+    borderColor: colors.primary,
+    backgroundColor: '#E7F3FF',
+  },
+  footerButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    marginLeft: 6,
+  },
+  footerButtonTextPrimary: {
+    color: colors.primary,
   },
   viewDetailsText: {
     fontSize: 13,
     fontWeight: '600',
     color: colors.primary,
-    marginRight: 4,
   },
   loadingContainer: {
     padding: 32,
@@ -216,4 +245,3 @@ export default styles;
 export const inlineStyle_669_129 = {
   marginVertical: 20,
 };
-
