@@ -500,7 +500,7 @@ export default function HomePage({ navigation }) {
             style={styles.shortcutCard}
             activeOpacity={0.9}
             onPress={() => navigation.navigate('ComissionsPage')}>
-            <View style={[styles.shortcutIcon, { backgroundColor: '#D1FAE5' }]}> 
+            <View style={[styles.shortcutIcon, { backgroundColor: '#D1FAE5' }]}>
               <Icon name="trending-up" size={24} color="#10B981" />
             </View>
             <Text style={styles.shortcutLabel}>{global.t?.t('people', 'title', 'commissions')}</Text>
