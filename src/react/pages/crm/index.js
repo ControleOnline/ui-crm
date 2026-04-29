@@ -11,6 +11,10 @@ import { env } from '@env';
 import { useStore } from '@store';
 import { colors } from '@controleonline/../../src/styles/colors';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import {
+  getOpportunityStatusFilterKey,
+  resolveDefaultOpportunityStatusFilterKey,
+} from '../../utils/opportunityStatusFilter';
 import useToastMessage from '../../hooks/useToastMessage';
 import styles from './index.styles';
 
@@ -140,22 +144,7 @@ export default function CrmIndex() {
 
 
   const getStatusFilterKey = useCallback(item => {
-    if (!item) {
-      return '';
-    }
-
-    if (item['@id']) {
-      return item['@id'];
-    }
-
-    if (item.id != null) {
-      return `/statuses/${item.id}`;
-    }
-
-    const realStatus = String(item.realStatus || item.status || '')
-      .trim()
-      .toLowerCase();
-    return realStatus ? `realStatus:${realStatus}` : '';
+    return getOpportunityStatusFilterKey(item);
   }, []);
 
   const getStatusFilterLabel = useCallback(item => {
@@ -420,6 +409,20 @@ export default function CrmIndex() {
       setSelectedStatusFilterKey('');
     }
   }, [status, selectedStatusFilterKey, getStatusFilterKey]);
+
+  useEffect(() => {
+    if (selectedStatusFilterKey || status.length === 0) {
+      return;
+    }
+
+    const defaultStatusFilterKey = resolveDefaultOpportunityStatusFilterKey(
+      status,
+    );
+
+    if (defaultStatusFilterKey) {
+      setSelectedStatusFilterKey(defaultStatusFilterKey);
+    }
+  }, [status, selectedStatusFilterKey]);
 
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {

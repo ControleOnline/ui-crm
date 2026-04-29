@@ -1,0 +1,26 @@
+name: Pull Request Checks
+
+on:
+  pull_request:
+  push:
+    branches:
+      - task-*
+
+jobs:
+  validation:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Validate diff formatting
+        run: git diff --check
+
+      - name: Run focused opportunity status tests
+        run: node --test src/tests/react/utils/opportunityStatusFilter.test.cjs

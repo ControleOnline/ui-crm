@@ -5,7 +5,9 @@
   "description": "ControleOnline CRM Quasar UI Component",
   "license": "MIT",
   "main": "src/vue/index.js",
-  "scripts": {},
+  "scripts": {
+    "test:opportunity-status-filter": "node --test src/tests/react/utils/opportunityStatusFilter.test.cjs"
+  },
   "repository": {
     "type": "git",
 
