@@ -5,7 +5,9 @@
   "description": "ControleOnline CRM Quasar UI Component",
   "license": "MIT",
   "main": "src/vue/index.js",
-  "scripts": {},
+  "scripts": {
+    "test:crm-empty-state": "node --test src/tests/react/utils/opportunityEmptyState.test.js"
+  },
   "repository": {
     "type": "git",
 

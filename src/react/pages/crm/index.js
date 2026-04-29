@@ -14,6 +14,10 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import useToastMessage from '../../hooks/useToastMessage';
 import styles from './index.styles';
 
+const {
+  getOpportunityEmptyStateMode,
+} = require('../../utils/opportunityEmptyState');
+
 const FONT_AWESOME_GLYPH_MAP = Icon?.getRawGlyphMap
   ? Icon.getRawGlyphMap()
   : null;
@@ -552,9 +556,10 @@ export default function CrmIndex() {
     searchQuery,
   ]);
 
-  const hasActiveOpportunityFilters = Boolean(
-    normalizeSearchValue(searchQuery) || selectedStatusFilterKey,
-  );
+  const opportunityEmptyStateMode = getOpportunityEmptyStateMode({
+    searchQuery,
+    selectedStatusFilterKey,
+  });
 
   const showStatusFilterSkeleton =
     isStatusLoading || isStatusFilterBootstrapping;
@@ -2070,12 +2075,12 @@ export default function CrmIndex() {
                 <>
                   <Icon name="line-chart" size={64} color="#bdc3c7" />
                   <Text style={styles.emptyTitle}>
-                    {hasActiveOpportunityFilters
+                    {opportunityEmptyStateMode === 'filtered'
                       ? global.t?.t('people', 'state', 'noOpportunityFound')
                       : global.t?.t('people', 'state', 'noOpportunity')}
                   </Text>
                   <Text style={styles.emptySubtitle}>
-                    {hasActiveOpportunityFilters
+                    {opportunityEmptyStateMode === 'filtered'
                       ? global.t?.t('people', 'state', 'tryOtherTerms')
                       : global.t?.t('people', 'state', 'addFirstOpportunity')}
                   </Text>
