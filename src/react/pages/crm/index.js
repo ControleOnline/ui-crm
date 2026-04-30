@@ -12,6 +12,9 @@ import { useStore } from '@store';
 import { colors } from '@controleonline/../../src/styles/colors';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import useToastMessage from '../../hooks/useToastMessage';
+const {
+  resolveClientDetailsNavigation,
+} = require('../../utils/clientDetailsNavigation');
 import styles from './index.styles';
 
 const FONT_AWESOME_GLYPH_MAP = Icon?.getRawGlyphMap
@@ -711,32 +714,32 @@ export default function CrmIndex() {
   const handleEditProvider = useCallback(
     opportunity => {
       const reference = normalizePeopleReference(opportunity?.client);
-      if (!reference) {
+      const matchedPerson = getPersonByReference(opportunity?.client);
+      const navigationContext = resolveClientDetailsNavigation({
+        reference,
+        matchedPerson,
+        opportunityClient: opportunity?.client,
+        fallbackName:
+          getProviderName(opportunity?.client) ||
+          global.t?.t('people', 'label', 'client'),
+      });
+
+      if (!navigationContext) {
         showError?.(
           global.t?.t('people', 'toast', 'providerNotIdentified'),
         );
         return;
       }
 
-      const matchedPerson = getPersonByReference(opportunity?.client);
-      const selectedClient =
-        matchedPerson ||
-        (typeof opportunity?.client === 'object' && opportunity?.client
-          ? opportunity.client
-          : null) ||
-        {
-          id: extractId(reference),
-          '@id': reference,
-          name: getProviderName(opportunity?.client) || global.t?.t('people', 'label', 'client'),
-        };
-
-      navigation.navigate('ClientDetails', { client: selectedClient });
+      peopleActions?.setItem?.(navigationContext.selectedClient);
+      navigation.navigate('ClientDetails', navigationContext.params);
     },
     [
       getProviderName,
       getPersonByReference,
       navigation,
       normalizePeopleReference,
+      peopleActions,
       showError,
     ],
   );
