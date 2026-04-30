@@ -13,5 +13,9 @@
 - Abas tecnicas do configurador geral, como logs, rotinas e credenciais centrais, devem usar a `defaultCompany` como fonte real e nao podem aparecer para quem nao tem acesso a ela.
 - Na criacao e edicao de oportunidades, o seletor de cliente/provider deve oferecer busca textual e considerar tanto `client` quanto `prospect`.
 
+## Regras
+- Na criacao de propostas, a lista de produtos exibida ao operador deve respeitar a categoria do modelo selecionado e remover selecoes incompatíveis quando o modelo mudar.
+- Essa restricao de categoria e regra de negocio, nao apenas conveniencia de interface. Se existir endpoint ou fluxo de persistencia que aceite produtos fora da categoria do modelo, a API responsavel tambem precisa validar e rejeitar essa combinacao.
+
 ## Limites
 - Este modulo nao deve receber responsabilidades administrativas do `MANAGER` quando elas forem claramente de gestao.
