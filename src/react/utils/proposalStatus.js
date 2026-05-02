@@ -60,10 +60,10 @@ export const getProposalStatusTranslationKey = status => {
 export const getProposalStatusLabel = (status, translate) => {
   const translationKey = getProposalStatusTranslationKey(status);
   if (translationKey) {
-    return translate?.('contract', 'status', translationKey) || status;
+    return translate?.('contract', 'status', translationKey);
   }
 
-  return status || translate?.('contract', 'label', 'na');
+  return translate?.('contract', 'label', 'na') || '';
 };
 
 export const getProposalStatusFilterKey = item => {
@@ -87,19 +87,19 @@ export const buildProposalStatusFilterOptions = ({ contracts = [], translate } =
   const options = [
     {
       key: 'realStatus:open',
-      label: translate?.('contract', 'status', 'open') || 'Em aberto',
+      label: translate?.('contract', 'status', 'open'),
       color: getProposalStatusColor('open'),
       normalizedStatus: 'open',
     },
     {
       key: 'realStatus:pending',
-      label: translate?.('contract', 'status', 'pending') || 'Pendente',
+      label: translate?.('contract', 'status', 'pending'),
       color: getProposalStatusColor('pending'),
       normalizedStatus: 'pending',
     },
     {
       key: 'realStatus:closed',
-      label: translate?.('contract', 'status', 'closed') || 'Fechado',
+      label: translate?.('contract', 'status', 'closed'),
       color: getProposalStatusColor('closed'),
       normalizedStatus: 'closed',
     },
