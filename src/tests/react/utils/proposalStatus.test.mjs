@@ -8,7 +8,7 @@ import {
   getProposalStatusLabel,
   normalizeProposalStatusKey,
   proposalMatchesStatusFilter,
-} from '../../../react/utils/proposalStatus.js';
+} from '@controleonline/ui-crm/src/react/utils/proposalStatus';
 
 const translate = (store, type, key) => `${store}.${type}.${key}`;
 
@@ -27,8 +27,8 @@ test('getProposalStatusLabel translates known backend statuses', () => {
   );
 });
 
-test('getProposalStatusLabel falls back to the raw status when there is no mapping', () => {
-  assert.equal(getProposalStatusLabel('custom approval', translate), 'custom approval');
+test('getProposalStatusLabel falls back to the canonical empty-state label', () => {
+  assert.equal(getProposalStatusLabel('custom approval', translate), 'contract.label.na');
 });
 
 test('buildProposalStatusFilterOptions keeps fixed filters and appends API statuses', () => {
