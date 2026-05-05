@@ -189,7 +189,7 @@ const isMethodNotAllowedError = error => {
 
 export const useGeneralSettingsConfig = () => {
   const peopleStore = useStore('people');
-  const {currentCompany, defaultCompany} = peopleStore.getters;
+  const {companies, currentCompany, defaultCompany} = peopleStore.getters;
   const peopleActions = peopleStore.actions;
 
   const configsStore = useStore('configs');
@@ -217,6 +217,16 @@ export const useGeneralSettingsConfig = () => {
     () => normalizeEntityId(defaultCompany?.id || defaultCompany?.['@id']),
     [defaultCompany?.['@id'], defaultCompany?.id],
   );
+  const hasDefaultCompanyAccess = useMemo(() => {
+    if (defaultCompanyId === '') {
+      return false;
+    }
+
+    return (Array.isArray(companies) ? companies : []).some(
+      company =>
+        normalizeEntityId(company?.id || company?.['@id']) === defaultCompanyId,
+    );
+  }, [companies, defaultCompanyId]);
   const isMainCompanySelected =
     selectedCompanyId !== '' &&
     defaultCompanyId !== '' &&
@@ -371,11 +381,13 @@ export const useGeneralSettingsConfig = () => {
   );
 
   return {
+    companies,
     configActions,
     currentCompany,
     defaultCompany,
     defaultCompanyLabel,
     effectiveCompanyConfigs,
+    hasDefaultCompanyAccess,
     isMainCompanySelected,
     isSaving,
     peopleActions,

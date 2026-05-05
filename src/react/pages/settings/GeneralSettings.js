@@ -118,7 +118,9 @@ const SETTINGS_TABS = [
 const GeneralSettings = () => {
   const {styles} = css();
   const {
+    companies,
     currentCompany,
+    defaultCompany,
     hasDefaultCompanyAccess,
     isMainCompanySelected,
     peopleActions,
@@ -138,9 +140,14 @@ const GeneralSettings = () => {
 
   useFocusEffect(
     useCallback(() => {
-      peopleActions.myCompanies?.().catch(() => {});
-      peopleActions.defaultCompany().catch(() => {});
-    }, [peopleActions]),
+      if (!Array.isArray(companies) || companies.length === 0) {
+        peopleActions.myCompanies?.().catch(() => {});
+      }
+
+      if (!defaultCompany?.id) {
+        peopleActions.defaultCompany().catch(() => {});
+      }
+    }, [companies, defaultCompany?.id, peopleActions]),
   );
 
   useEffect(() => {
