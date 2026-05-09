@@ -6,8 +6,13 @@
   "license": "MIT",
   "main": "src/vue/index.js",
   "scripts": {
+    "test": "npm run test:crm-empty-state && npm run test:opportunity-status-filter",
     "test:crm-empty-state": "node --test src/tests/react/utils/opportunityEmptyState.test.js",
-    "test:opportunity-status-filter": "node --test src/tests/react/utils/opportunityStatusFilter.test.cjs"
+    "test:opportunity-status-filter": "node --test src/tests/react/utils/opportunityStatusFilter.test.cjs",
+    "test:coverage": "c8 --reporter=clover --report-dir coverage npm test"
+  },
+  "devDependencies": {
+    "c8": "^10.1.3"
   },
   "repository": {
     "type": "git",
