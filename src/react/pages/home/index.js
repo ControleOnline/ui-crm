@@ -1,20 +1,16 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { TouchableOpacity, View, ScrollView, ActivityIndicator, Image } from 'react-native';
+import { TouchableOpacity, View, ScrollView, ActivityIndicator } from 'react-native';
 import { Text } from 'react-native-animatable';
 import { colors } from '@controleonline/../../src/styles/colors';
 
-import {
-  buildAssetUrl,
-  resolveThemePalette,
-  withOpacity,
-} from '@controleonline/../../src/styles/branding';
+import { resolveThemePalette } from '@controleonline/../../src/styles/branding';
 
-import md5 from 'md5';
 import { env } from '@env';
 import Icon from 'react-native-vector-icons/Feather';
 import { useStore } from '@store';
 import { api } from '@controleonline/ui-common/src/api';
 import Formatter from '@controleonline/ui-common/src/utils/formatter';
+import AppMenuGrid from '@controleonline/ui-layout/src/react/components/AppMenuGrid';
 import styles from './index.styles';
 import { inlineStyle_562_72, inlineStyle_564_18, inlineStyle_565_20 } from './index.styles';
 
@@ -26,16 +22,9 @@ export default function HomePage({ navigation }) {
   const peopleGetters = peopleStore.getters;
   const authGetters = authStore.getters;
   const themeGetters = themeStore.getters;
-  const { currentCompany, companies } = peopleGetters;
+  const { currentCompany } = peopleGetters;
   const { user } = authGetters;
-
-  const currentUser = {
-    ...user,
-    name: String(
-      user?.realname || user?.name || user?.username || '',
-    ).trim(),
-  };
-  const { colors: themeColors } = themeGetters;
+  const { colors: themeColors, menus } = themeGetters;
 
   const [stats, setStats] = useState([
     { label: global.t?.t('people', 'title', 'opportunities'), value: '...', icon: 'trello', color: '#F59E0B', route: 'CrmIndex' },
@@ -49,9 +38,6 @@ export default function HomePage({ navigation }) {
   const normalizeDigits = value => String(value || '').replace(/\D/g, '');
   const normalizeText = value => String(value || '').trim();
 
-  const firstName = currentUser?.name?.split(' ')[0] || global.t?.t('people', 'title', 'user');
-  const canSwitchCompany = Array.isArray(companies) && companies.length > 1;
-
   const brandColors = useMemo(
     () =>
       resolveThemePalette(
@@ -63,23 +49,6 @@ export default function HomePage({ navigation }) {
       ),
     [themeColors, currentCompany?.id],
   );
-  const companyLogoUrl = buildAssetUrl(currentCompany?.logo);
-
-  const getAvatarUrl = () => {
-    if (typeof currentUser?.avatarUrl === 'string' && currentUser.avatarUrl) {
-      return currentUser.avatarUrl;
-    }
-
-    if (currentUser?.avatar?.url) {
-      const domain = currentUser?.avatar?.domain || '';
-      return `${domain}${currentUser.avatar.url}`;
-    }
-
-    if (!currentUser?.email) return 'https://www.gravatar.com/avatar/?d=identicon';
-    const emailHash = md5(currentUser.email.trim().toLowerCase());
-    return `https://www.gravatar.com/avatar/${emailHash}?s=200&d=identicon`;
-  };
-
   const extractPeopleId = person => {
     if (!person) {
       return '';
@@ -334,7 +303,7 @@ export default function HomePage({ navigation }) {
                   name: resolvePeopleName(person),
                   peopleType: String(person?.peopleType || '').trim().toUpperCase(),
                 };
-              } catch (fetchError) {
+              } catch {
                 return { personId, name: '', peopleType: '' };
               }
             }),
@@ -471,40 +440,7 @@ export default function HomePage({ navigation }) {
           ))}
         </View>
 
-        {/* Atalhos Clientes e Comissões */}
-        <View style={styles.shortcutsRow}>
-
-          <TouchableOpacity
-            style={styles.shortcutCard}
-            activeOpacity={0.9}
-            onPress={() => navigation.navigate('ProspectsIndex')}>
-            <View style={[styles.shortcutIcon, { backgroundColor: '#D1FAE5' }]}>
-              <Icon name="users" size={24} color={brandColors.primary} />
-            </View>
-            <Text style={styles.shortcutLabel}>{global.t?.t('people', 'title', 'prospects')}</Text>
-            <Text style={styles.shortcutSub}>{global.t?.t('people', 'title', 'viewProspects')}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.shortcutCard}
-            activeOpacity={0.9}
-            onPress={() => navigation.navigate('ClientsIndex')}>
-            <View style={[styles.shortcutIcon, { backgroundColor: withOpacity(brandColors.primary, 0.12) }]}>
-              <Icon name="users" size={24} color={brandColors.primary} />
-            </View>
-            <Text style={styles.shortcutLabel}>{global.t?.t('people', 'title', 'clients')}</Text>
-            <Text style={styles.shortcutSub}>{global.t?.t('people', 'title', 'viewClients')}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.shortcutCard}
-            activeOpacity={0.9}
-            onPress={() => navigation.navigate('ComissionsPage')}>
-            <View style={[styles.shortcutIcon, { backgroundColor: '#D1FAE5' }]}>
-              <Icon name="trending-up" size={24} color="#10B981" />
-            </View>
-            <Text style={styles.shortcutLabel}>{global.t?.t('people', 'title', 'commissions')}</Text>
-            <Text style={styles.shortcutSub}>{global.t?.t('people', 'title', 'financialReport')}</Text>
-          </TouchableOpacity>
-        </View>
+        <AppMenuGrid menus={menus} navigation={navigation} />
 
         {/* Recent Activity */}
         <View style={styles.sectionTitleRow}>
