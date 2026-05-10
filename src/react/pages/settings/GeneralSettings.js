@@ -35,7 +35,7 @@ const SETTINGS_TABS = [
   },
   {
     key: 'integrations',
-    label: 'Integracoes',
+    label: 'Integrações',
     icon: 'link',
     color: '#0284C7',
     stores: ['configs', 'people'],
@@ -59,7 +59,7 @@ const SETTINGS_TABS = [
   },
   {
     key: 'print',
-    label: 'Conferencia',
+    label: 'Conferência',
     icon: 'print',
     color: '#2563EB',
     stores: ['configs', 'printer', 'device_config'],
@@ -91,7 +91,7 @@ const SETTINGS_TABS = [
   },
   {
     key: 'operations',
-    label: 'Operacao',
+    label: 'Operações',
     icon: 'point-of-sale',
     color: '#166534',
     stores: ['configs', 'status', 'wallet'],
@@ -209,8 +209,8 @@ const GeneralSettings = () => {
           </ScrollView>
 
           <Text style={localStyles.tabHelper}>
-            Cada aba carrega apenas os dados da propria sessao para reduzir a
-            latencia inicial e deixar a tela mais organizada.
+            Cada aba carrega apenas os dados da própria sessão para reduzir a
+            latência inicial e deixar a tela mais organizada.
           </Text>
 
           <ActiveTabComponent />
