@@ -142,13 +142,13 @@ const OrderPrintSection = () => {
 
   return (
     <GeneralSettingsSection
-      description="Define quais devices da empresa recebem a copia completa do pedido para conferencia e qual texto livre sai no rodape usando as configs `order-print-devices` e `order-print-footer-text`."
+      description="Define quais devices da empresa recebem a cópia completa do pedido para conferência e qual texto livre sai no rodapé usando as configs `order-print-devices` e `order-print-footer-text`."
       icon="print"
       iconBackgroundColor="#DBEAFE"
       iconColor="#2563EB"
-      title="Impressao de conferencia">
+      title="Impressão de conferência">
       <View style={localStyles.statusRow}>
-        <Text style={localStyles.statusLabel}>Impressao padrao</Text>
+        <Text style={localStyles.statusLabel}>Impressão padrão</Text>
         <TouchableOpacity
           style={[
             localStyles.statusChip,
@@ -184,10 +184,10 @@ const OrderPrintSection = () => {
       ) : printerOptions.length === 0 ? (
         <View style={localStyles.emptyBox}>
           <Text style={localStyles.emptyTitle}>
-            Nenhum device com impressao disponivel
+            Nenhum device com impressão disponível
           </Text>
           <Text style={localStyles.emptyText}>
-            Cadastre e configure um equipamento com suporte a impressao, como
+            Cadastre e configure um equipamento com suporte a impressão, como
             uma Cielo, para a empresa ativa.
           </Text>
         </View>
@@ -235,11 +235,11 @@ const OrderPrintSection = () => {
           multiline
           numberOfLines={4}
           onChangeText={setOrderPrintFooterText}
-          placeholder="Mensagem exibida no rodape da impressao"
+          placeholder="Mensagem exibida no rodapé da impressão"
         />
         <Text style={localStyles.helperText}>
-          Esse conteudo e salvo na config da empresa e sai no rodape de todas as
-          impressoes de pedido.
+          Esse conteúdo é salvo na config da empresa e sai no rodapé de todas as
+          impressões de pedido.
         </Text>
       </View>
 
@@ -252,7 +252,7 @@ const OrderPrintSection = () => {
         disabled={!currentCompany?.id || isSaving}
         onPress={saveOrderPrintDevices}>
         <Text style={localStyles.primaryButtonText}>
-          Salvar configuracoes de impressao
+          Salvar configurações de impressão
         </Text>
       </TouchableOpacity>
     </GeneralSettingsSection>
