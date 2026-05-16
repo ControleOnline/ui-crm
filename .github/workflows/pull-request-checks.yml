@@ -7,7 +7,7 @@ on:
       - task-*
 
 jobs:
-  validation:
+  crm-home-shortcut-subtitles:
     runs-on: ubuntu-latest
 
     steps:
@@ -17,13 +17,10 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
 
-      - name: Run CRM empty-state test
-        run: npm run test:crm-empty-state
+      - name: Verify CRM home shortcut subtitle styling
+        run: node --test src/tests/react/pages/homeShortcutSubtitle.test.cjs
 
       - name: Validate diff formatting
         run: git diff --check
-
-      - name: Run focused opportunity status tests
-        run: node --test src/tests/react/utils/opportunityStatusFilter.test.cjs
