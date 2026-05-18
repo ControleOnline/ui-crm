@@ -27,3 +27,6 @@ jobs:
 
       - name: Run focused opportunity status tests
         run: node --test src/tests/react/utils/opportunityStatusFilter.test.cjs
+
+      - name: Run proposal products navigation tests
+        run: npm run test:proposal-products-navigation
