@@ -488,11 +488,7 @@ const ProposalsPage = () => {
     : allContracts;
 
   const renderProposal = ({ item: contract }) => (
-    <TouchableOpacity
-      style={styles.card}
-      onPress={() => navigation.navigate('ProposalDetails', { contractId: contract.id })}
-      activeOpacity={0.9}
-    >
+    <View style={styles.card}>
       <View style={styles.cardHeader}>
         <View style={styles.headerContent}>
           <Text style={styles.cardTitle}>
@@ -543,10 +539,32 @@ const ProposalsPage = () => {
       </View>
 
       <View style={styles.cardFooter}>
-        <Text style={styles.viewDetailsText}>{global.t?.t('contract','action', 'viewDetails')}</Text>
-        <Icon name="chevron-right" size={12} color={colors.primary} />
+        <View style={styles.footerActions}>
+          <TouchableOpacity
+            style={styles.footerButton}
+            onPress={() =>
+              navigation.navigate('ProposalDetails', {
+                contractId: contract.id,
+                initialTab: 'products',
+              })
+            }
+            activeOpacity={0.85}>
+            <MaterialIcon name="inventory-2" size={16} color="#64748B" />
+            <Text style={styles.footerButtonText}>Produtos</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.footerButton, styles.footerButtonPrimary]}
+            onPress={() => navigation.navigate('ProposalDetails', { contractId: contract.id })}
+            activeOpacity={0.85}>
+            <Text style={[styles.viewDetailsText, styles.footerButtonTextPrimary]}>
+              {global.t?.t('contract','action', 'viewDetails')}
+            </Text>
+            <Icon name="chevron-right" size={12} color={colors.primary} />
+          </TouchableOpacity>
+        </View>
       </View>
-    </TouchableOpacity>
+    </View>
   );
 
   return (
