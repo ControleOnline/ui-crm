@@ -37,7 +37,40 @@ const resolveOpportunityEditorOption = (value, options = []) => {
   );
 };
 
+const normalizeOpportunityEditorDraft = ({
+  opportunity,
+  statusOptions = [],
+  categoryOptions = [],
+  criticalityOptions = [],
+  reasonOptions = [],
+}) => {
+  if (!opportunity || typeof opportunity !== 'object') {
+    return opportunity || null;
+  }
+
+  return {
+    ...opportunity,
+    taskStatus: resolveOpportunityEditorOption(
+      opportunity.taskStatus,
+      statusOptions,
+    ),
+    category: resolveOpportunityEditorOption(
+      opportunity.category,
+      categoryOptions,
+    ),
+    criticality: resolveOpportunityEditorOption(
+      opportunity.criticality,
+      criticalityOptions,
+    ),
+    reason: resolveOpportunityEditorOption(
+      opportunity.reason,
+      reasonOptions,
+    ),
+  };
+};
+
 module.exports = {
   getOpportunityEditorReferenceValue,
+  normalizeOpportunityEditorDraft,
   resolveOpportunityEditorOption,
 };
