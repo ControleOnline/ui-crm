@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 
 const {
   getOpportunityEditorReferenceValue,
+  normalizeOpportunityEditorDraft,
   resolveOpportunityEditorOption,
 } = require('../../../react/utils/opportunityEditorReferences');
 
@@ -35,5 +36,35 @@ test('resolveOpportunityEditorOption preserves the original value when no expand
   assert.equal(
     resolveOpportunityEditorOption('/categories/99', [{ '@id': '/categories/4' }]),
     '/categories/99',
+  );
+});
+
+test('normalizeOpportunityEditorDraft resolves all relationship references against loaded options', () => {
+  const statusOptions = [{ '@id': '/statuses/3', status: 'Open' }];
+  const categoryOptions = [{ '@id': '/categories/8', name: 'Referral' }];
+  const criticalityOptions = [{ '@id': '/categories/5', name: 'Hot' }];
+  const reasonOptions = [{ '@id': '/categories/11', name: 'WhatsApp' }];
+
+  assert.deepEqual(
+    normalizeOpportunityEditorDraft({
+      opportunity: {
+        id: 13,
+        taskStatus: 3,
+        category: '/categories/8',
+        criticality: { id: 5 },
+        reason: '/categories/11',
+      },
+      statusOptions,
+      categoryOptions,
+      criticalityOptions,
+      reasonOptions,
+    }),
+    {
+      id: 13,
+      taskStatus: statusOptions[0],
+      category: categoryOptions[0],
+      criticality: criticalityOptions[0],
+      reason: reasonOptions[0],
+    },
   );
 });
