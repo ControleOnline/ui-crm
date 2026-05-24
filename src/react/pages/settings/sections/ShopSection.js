@@ -38,7 +38,6 @@ import {
   SHOP_HOME_OPTION_FRANCHISE_LOCATOR,
   SHOP_HOME_OPTION_LOYALTY,
   SHOP_HOME_OPTION_SALES,
-  SHOP_GOOGLE_MAPS_API_KEY_CONFIG_KEY,
   SHOP_LOYALTY_COUPONS_ENABLED_CONFIG_KEY,
   SHOP_LOYALTY_GIFT_PRODUCT_ID_CONFIG_KEY,
   SHOP_LOYALTY_PRODUCT_IDS_CONFIG_KEY,
@@ -495,7 +494,6 @@ const ShopSection = () => {
   const [franchiseLocatorEnabled, setFranchiseLocatorEnabled] = useState(false);
   const [bottomBarEnabled, setBottomBarEnabled] = useState(false);
   const [chargeOnDeliveryEnabled, setChargeOnDeliveryEnabled] = useState(false);
-  const [googleMapsApiKey, setGoogleMapsApiKey] = useState('');
   const [franchisePinIconUrl, setFranchisePinIconUrl] = useState('');
   const [primaryEntry, setPrimaryEntry] = useState('');
   const [visibleFranchiseCompanyIds, setVisibleFranchiseCompanyIds] = useState(
@@ -580,11 +578,6 @@ const ShopSection = () => {
     setChargeOnDeliveryEnabled(
       normalizeBooleanConfig(
         effectiveCompanyConfigs[SHOP_CHARGE_ON_DELIVERY_ENABLED_CONFIG_KEY],
-      ),
-    );
-    setGoogleMapsApiKey(
-      normalizeShopTextConfig(
-        effectiveCompanyConfigs[SHOP_GOOGLE_MAPS_API_KEY_CONFIG_KEY],
       ),
     );
     setFranchisePinIconUrl(
@@ -988,9 +981,6 @@ const ShopSection = () => {
     }
 
     await saveConfigs({
-      [SHOP_GOOGLE_MAPS_API_KEY_CONFIG_KEY]: normalizeShopTextConfig(
-        googleMapsApiKey,
-      ),
       [SHOP_FRANCHISE_PIN_ICON_URL_CONFIG_KEY]: normalizeShopTextConfig(
         franchisePinIconUrl,
       ),
@@ -1001,7 +991,6 @@ const ShopSection = () => {
     bottomBarEnabled,
     franchiseLocatorEnabled,
     franchisePinIconUrl,
-    googleMapsApiKey,
     loyaltyCouponsEnabled,
     primaryEntry,
     salesPageEnabled,
@@ -1118,23 +1107,6 @@ const ShopSection = () => {
           value={bottomBarEnabled}
           onToggle={() => setBottomBarEnabled(current => !current)}
         />
-
-        <View style={localStyles.fieldBlock}>
-          <Text style={localStyles.fieldLabel}>Chave do Google Maps</Text>
-          <Text style={localStyles.helperText}>
-            Essa chave passa a ser usada pelo localizador de franquias do shop
-            para carregar o mapa web e geocodificar enderecos sem coordenadas.
-          </Text>
-          <TextInput
-            value={googleMapsApiKey}
-            onChangeText={setGoogleMapsApiKey}
-            autoCapitalize="none"
-            autoCorrect={false}
-            placeholder="Cole a chave do Google Maps desta empresa"
-            placeholderTextColor="#94A3B8"
-            style={localStyles.input}
-          />
-        </View>
 
         <View style={localStyles.fieldBlock}>
           <Text style={localStyles.fieldLabel}>URL do icone dos pins</Text>

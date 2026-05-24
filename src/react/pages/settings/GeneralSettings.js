@@ -16,6 +16,7 @@ import MenuCatalogSection from './sections/MenuCatalogSection';
 import OrderPaymentSection from './sections/OrderPaymentSection';
 import OperationsSection from './sections/OperationsSection';
 import CrmSection from './sections/CrmSection';
+import MapsSection from './sections/MapsSection';
 import ShopSection from './sections/ShopSection';
 import IntegrationsSection from './sections/IntegrationsSection';
 import LogSection from './sections/LogSection';
@@ -104,6 +105,14 @@ const SETTINGS_TABS = [
     color: '#7C3AED',
     stores: ['configs'],
     Component: CrmSection,
+  },
+  {
+    key: 'maps',
+    label: 'Mapas',
+    icon: 'map',
+    color: '#0284C7',
+    stores: ['configs'],
+    Component: MapsSection,
   },
   {
     key: 'shop',
