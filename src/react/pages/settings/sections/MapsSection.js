@@ -39,7 +39,7 @@ const MapsSection = () => {
 
   return (
     <GeneralSettingsSection
-      description="Define as chaves do Google Maps usadas pelo display web e pelos aplicativos. As chaves ficam salvas em config publica da empresa e nao dependem de build."
+      description="Define as chaves do Google Maps salvas na config publica da empresa. O display de entregas usa a chave web em runtime, sem depender de build."
       icon="map"
       iconBackgroundColor="#E0F2FE"
       iconColor="#0369A1"
@@ -63,7 +63,7 @@ const MapsSection = () => {
       <View style={localStyles.fieldBlock}>
         <Text style={localStyles.fieldLabel}>Chave do Google Maps Android</Text>
         <Text style={localStyles.helperText}>
-          Usada pelos aplicativos nativos que exibem o mapa de entregas.
+          Reserve esta chave para fluxos nativos baseados no SDK do Google Maps. O display de entregas no Android usa a chave web, porque renderiza o mapa em WebView.
         </Text>
         <TextInput
           value={androidGoogleMapsApiKey}
