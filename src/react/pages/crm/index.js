@@ -11,6 +11,7 @@ import { env } from '@env';
 import { useStore } from '@store';
 import { colors } from '@controleonline/../../src/styles/colors';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { formatDisplayUppercase } from '@controleonline/ui-common/src/react/utils/entityDisplay';
 import {
   getOpportunityStatusFilterKey,
   resolveDefaultOpportunityStatusFilterKey,
@@ -1556,10 +1557,10 @@ export default function CrmIndex() {
                             styles.personAlias,
                             isSelected && styles.selectOptionTextActive,
                           ]}>
-                          {person.alias}
+                          {formatDisplayUppercase(person.alias)}
                         </Text>
                         <Text style={styles.personName}>
-                          {person.peopleType === 'J' ? ' (PJ)' : ' (PF)'} {person.name}
+                          {person.peopleType === 'J' ? ' (PJ)' : ' (PF)'} {formatDisplayUppercase(person.name)}
                         </Text>
                       </View>
                     </View>
