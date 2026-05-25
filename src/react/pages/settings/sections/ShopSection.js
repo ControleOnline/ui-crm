@@ -22,15 +22,21 @@ import {
 import {
   getEnabledShopHomeOptions,
   normalizeBooleanConfig,
+  normalizeShopCatalogProductTypes,
   normalizeShopEntityId,
   normalizeShopEntityIds,
   normalizeShopLoyaltyRequiredSales,
+  normalizeShopMoneyConfig,
   normalizeShopPrimaryEntry,
   normalizeShopProductId,
   normalizeShopProductIds,
   normalizeShopTextConfig,
   SHOP_BOTTOM_BAR_ENABLED_CONFIG_KEY,
+  SHOP_CATALOG_DEFAULT_PRODUCT_TYPES,
+  SHOP_CATALOG_PRODUCT_TYPES_CONFIG_KEY,
   SHOP_CHARGE_ON_DELIVERY_ENABLED_CONFIG_KEY,
+  SHOP_DELIVERY_FEE_ENABLED_CONFIG_KEY,
+  SHOP_DELIVERY_FEE_VALUE_CONFIG_KEY,
   SHOP_FRANCHISE_PIN_ICON_URL_CONFIG_KEY,
   SHOP_FRANCHISE_VISIBLE_ADDRESS_IDS_CONFIG_KEY,
   SHOP_FRANCHISE_VISIBLE_COMPANY_IDS_CONFIG_KEY,
@@ -38,6 +44,7 @@ import {
   SHOP_HOME_OPTION_FRANCHISE_LOCATOR,
   SHOP_HOME_OPTION_LOYALTY,
   SHOP_HOME_OPTION_SALES,
+  SHOP_GOOGLE_MAPS_API_KEY_CONFIG_KEY,
   SHOP_LOYALTY_COUPONS_ENABLED_CONFIG_KEY,
   SHOP_LOYALTY_GIFT_PRODUCT_ID_CONFIG_KEY,
   SHOP_LOYALTY_PRODUCT_IDS_CONFIG_KEY,
@@ -68,6 +75,29 @@ const SHOP_HOME_OPTIONS = [
     label: 'Cartao fidelidade',
     description:
       'Libera a entrada do shop para acompanhar a fidelidade e os brindes.',
+  },
+];
+
+const SHOP_CATALOG_PRODUCT_TYPE_OPTIONS = [
+  {
+    key: 'product',
+    label: 'Produtos',
+    description: 'Exibe produtos simples no cardapio do shop.',
+  },
+  {
+    key: 'manufactured',
+    label: 'Produtos fabricados',
+    description: 'Exibe itens produzidos ou montados pela loja.',
+  },
+  {
+    key: 'custom',
+    label: 'Produtos customizaveis',
+    description: 'Exibe itens com grupos de complementos e variacoes.',
+  },
+  {
+    key: 'service',
+    label: 'Servicos',
+    description: 'Exibe servicos quando a loja opera como shop de servicos.',
   },
 ];
 
@@ -494,6 +524,12 @@ const ShopSection = () => {
   const [franchiseLocatorEnabled, setFranchiseLocatorEnabled] = useState(false);
   const [bottomBarEnabled, setBottomBarEnabled] = useState(false);
   const [chargeOnDeliveryEnabled, setChargeOnDeliveryEnabled] = useState(false);
+  const [deliveryFeeEnabled, setDeliveryFeeEnabled] = useState(false);
+  const [deliveryFeeValue, setDeliveryFeeValue] = useState('');
+  const [catalogProductTypes, setCatalogProductTypes] = useState(
+    SHOP_CATALOG_DEFAULT_PRODUCT_TYPES,
+  );
+  const [googleMapsApiKey, setGoogleMapsApiKey] = useState('');
   const [franchisePinIconUrl, setFranchisePinIconUrl] = useState('');
   const [primaryEntry, setPrimaryEntry] = useState('');
   const [visibleFranchiseCompanyIds, setVisibleFranchiseCompanyIds] = useState(
@@ -578,6 +614,28 @@ const ShopSection = () => {
     setChargeOnDeliveryEnabled(
       normalizeBooleanConfig(
         effectiveCompanyConfigs[SHOP_CHARGE_ON_DELIVERY_ENABLED_CONFIG_KEY],
+      ),
+    );
+    setDeliveryFeeEnabled(
+      normalizeBooleanConfig(
+        effectiveCompanyConfigs[SHOP_DELIVERY_FEE_ENABLED_CONFIG_KEY],
+      ),
+    );
+    setDeliveryFeeValue(
+      String(
+        normalizeShopMoneyConfig(
+          effectiveCompanyConfigs[SHOP_DELIVERY_FEE_VALUE_CONFIG_KEY],
+        ) || '',
+      ),
+    );
+    setCatalogProductTypes(
+      normalizeShopCatalogProductTypes(
+        effectiveCompanyConfigs[SHOP_CATALOG_PRODUCT_TYPES_CONFIG_KEY],
+      ),
+    );
+    setGoogleMapsApiKey(
+      normalizeShopTextConfig(
+        effectiveCompanyConfigs[SHOP_GOOGLE_MAPS_API_KEY_CONFIG_KEY],
       ),
     );
     setFranchisePinIconUrl(
@@ -941,6 +999,19 @@ const ShopSection = () => {
     );
   }, []);
 
+  const toggleCatalogProductType = useCallback(productType => {
+    setCatalogProductTypes(currentTypes => {
+      const normalizedTypes = normalizeShopCatalogProductTypes(currentTypes);
+
+      if (normalizedTypes.includes(productType)) {
+        const nextTypes = normalizedTypes.filter(type => type !== productType);
+        return nextTypes.length > 0 ? nextTypes : normalizedTypes;
+      }
+
+      return [...normalizedTypes, productType];
+    });
+  }, []);
+
   const saveHomeSettings = useCallback(async () => {
     const normalizedPrimaryEntry = normalizeShopPrimaryEntry(primaryEntry, {
       salesPageEnabled,
@@ -1001,11 +1072,28 @@ const ShopSection = () => {
   ]);
 
   const saveCheckoutSettings = useCallback(async () => {
+    await saveConfigs({
+      [SHOP_CHARGE_ON_DELIVERY_ENABLED_CONFIG_KEY]: chargeOnDeliveryEnabled
+        ? '1'
+        : '0',
+      [SHOP_DELIVERY_FEE_ENABLED_CONFIG_KEY]: deliveryFeeEnabled ? '1' : '0',
+      [SHOP_DELIVERY_FEE_VALUE_CONFIG_KEY]: normalizeShopMoneyConfig(
+        deliveryFeeValue,
+      ),
+    });
+  }, [
+    chargeOnDeliveryEnabled,
+    deliveryFeeEnabled,
+    deliveryFeeValue,
+    saveConfigs,
+  ]);
+
+  const saveCatalogSettings = useCallback(async () => {
     await saveConfig(
-      SHOP_CHARGE_ON_DELIVERY_ENABLED_CONFIG_KEY,
-      chargeOnDeliveryEnabled ? '1' : '0',
+      SHOP_CATALOG_PRODUCT_TYPES_CONFIG_KEY,
+      normalizeShopCatalogProductTypes(catalogProductTypes),
     );
-  }, [chargeOnDeliveryEnabled, saveConfig]);
+  }, [catalogProductTypes, saveConfig]);
 
   const saveLoyaltySettings = useCallback(async () => {
     const normalizedRequiredSales = normalizeShopLoyaltyRequiredSales(
@@ -1432,6 +1520,55 @@ const ShopSection = () => {
       </GeneralSettingsSection>
 
       <GeneralSettingsSection
+        description="Define quais tipos de itens aparecem no cardapio. Use isso para separar shops de produtos, servicos ou lojas com itens customizaveis."
+        icon="category"
+        iconBackgroundColor="#E0F2FE"
+        iconColor="#0369A1"
+        title="Catalogo do shop">
+        <View style={localStyles.printerList}>
+          {SHOP_CATALOG_PRODUCT_TYPE_OPTIONS.map(option => {
+            const selected = catalogProductTypes.includes(option.key);
+
+            return (
+              <TouchableOpacity
+                key={`shop-catalog-type-${option.key}`}
+                style={[
+                  localStyles.printerItem,
+                  selected && localStyles.printerItemActive,
+                ]}
+                activeOpacity={0.85}
+                onPress={() => toggleCatalogProductType(option.key)}>
+                <Icon
+                  name={selected ? 'check-circle' : 'radio-button-unchecked'}
+                  size={20}
+                  color={selected ? '#2563EB' : '#94A3B8'}
+                />
+                <View style={localStyles.printerCopy}>
+                  <Text style={localStyles.printerName}>{option.label}</Text>
+                  <Text style={localStyles.printerDevice}>
+                    {option.description}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        <TouchableOpacity
+          style={[
+            globalStyles.button,
+            localStyles.primaryButton,
+            (!currentCompany?.id || isSaving) && localStyles.primaryButtonDisabled,
+          ]}
+          disabled={!currentCompany?.id || isSaving}
+          onPress={saveCatalogSettings}>
+          <Text style={localStyles.primaryButtonText}>
+            Salvar catalogo do shop
+          </Text>
+        </TouchableOpacity>
+      </GeneralSettingsSection>
+
+      <GeneralSettingsSection
         description="Controla como o shop apresenta a cobranca ao cliente. O checkout online continua usando as carteiras e meios integrados da empresa, como Asaas. Quando a opcao abaixo estiver ativa, o cliente tambem pode registrar o pedido para cobrar na entrega usando um meio manual da loja."
         icon="payments"
         iconBackgroundColor="#DBEAFE"
@@ -1449,6 +1586,28 @@ const ShopSection = () => {
             ? 'O checkout exibira a opcao para cobrar na entrega, usando as formas manuais cadastradas nas carteiras da empresa.'
             : 'Quando desativada, o shop oferece apenas as cobrancas online integradas no checkout.'}
         </Text>
+
+        <ConfigToggleRow
+          label="Taxa fixa de entrega"
+          description="Quando ativada, soma uma taxa de entrega configurada no checkout quando nao houver cotacao automatica."
+          value={deliveryFeeEnabled}
+          onToggle={() => setDeliveryFeeEnabled(current => !current)}
+        />
+
+        <View style={localStyles.fieldBlock}>
+          <Text style={localStyles.fieldLabel}>Valor da entrega</Text>
+          <TextInput
+            value={deliveryFeeValue}
+            onChangeText={setDeliveryFeeValue}
+            keyboardType="decimal-pad"
+            placeholder="Ex.: 8,90"
+            placeholderTextColor="#94A3B8"
+            style={localStyles.input}
+          />
+          <Text style={localStyles.helperText}>
+            Informe 0 ou deixe vazio para nao cobrar taxa fixa.
+          </Text>
+        </View>
 
         <TouchableOpacity
           style={[
