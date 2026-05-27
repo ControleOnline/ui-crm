@@ -16,6 +16,7 @@
 ## Regras
 - Na criacao de propostas, a lista de produtos exibida ao operador deve respeitar a categoria do modelo selecionado e remover selecoes incompatíveis quando o modelo mudar.
 - Essa restricao de categoria e regra de negocio, nao apenas conveniencia de interface. Se existir endpoint ou fluxo de persistencia que aceite produtos fora da categoria do modelo, a API responsavel tambem precisa validar e rejeitar essa combinacao.
+- No configurador do shop, listas de franquias e enderecos visiveis representam substituicao completa da configuracao. Ao salvar lista vazia, a API deve limpar a lista anterior, nunca fazer merge.
 
 ## Limites
 - Este modulo nao deve receber responsabilidades administrativas do `MANAGER` quando elas forem claramente de gestao.

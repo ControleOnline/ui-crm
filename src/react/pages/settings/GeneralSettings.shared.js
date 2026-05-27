@@ -152,6 +152,10 @@ export const toConfigRequestValue = value => {
     }
   }
 
+  if (Array.isArray(value)) {
+    return JSON.stringify(JSON.stringify(value));
+  }
+
   return JSON.stringify(value);
 };
 
