@@ -894,9 +894,14 @@ const ShopSection = () => {
       }),
     [selectedFranchiseCompanies, visibleFranchiseAddressIds],
   );
+  const hasFranchiseCompanySearch = String(franchiseCompanySearch || '').trim() !== '';
   const visibleFranchiseCompanyResults = useMemo(
-    () =>
-      filterSelectableItems({
+    () => {
+      if (!hasFranchiseCompanySearch) {
+        return [];
+      }
+
+      return filterSelectableItems({
         items: availableFranchiseCompanies.filter(
           company =>
             !visibleFranchiseCompanyIds.includes(normalizeShopEntityId(company)),
@@ -907,10 +912,12 @@ const ShopSection = () => {
             resolveCompanyLabel(company),
             resolveCompanyMeta(company),
           ),
-      }),
+      });
+    },
     [
       availableFranchiseCompanies,
       franchiseCompanySearch,
+      hasFranchiseCompanySearch,
       visibleFranchiseCompanyIds,
     ],
   );
@@ -936,6 +943,13 @@ const ShopSection = () => {
   );
 
   useEffect(() => {
+    if (visibleFranchiseCompanyIds.length === 0) {
+      setVisibleFranchiseAddressIds(currentIds =>
+        currentIds.length > 0 ? [] : currentIds,
+      );
+      return;
+    }
+
     if (Object.keys(franchiseAddressesById).length === 0) {
       return;
     }
