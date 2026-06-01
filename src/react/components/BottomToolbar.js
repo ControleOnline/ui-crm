@@ -32,6 +32,7 @@ const BottomToolbar = ({ navigation, currentRouteName }) => {
     ContractDetails: 'CrmIndex',
     ClientsIndex: 'ClientsIndex',
     ClientDetails: 'ClientsIndex',
+    FranchiseesIndex: 'ClientsIndex',
     ProfilePage: 'ProfilePage',
     SettingsPage: 'ProfilePage',
   };
