@@ -32,7 +32,7 @@ export default function CrmConversation() {
     opportunity?.['@id'] || (opportunity?.id ? `/tasks/${opportunity.id}` : null);
 
   const canSend = !!message.trim() && !!taskResource;
-  const primaryColor = colors.primary || '#26C865';
+  const primaryColor = colors.primary;
 
   const normalizePeopleReference = value => {
     if (!value) {

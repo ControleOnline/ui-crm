@@ -174,11 +174,11 @@ const ProposalDetails = () => {
           style={[
             styles.statusBox,
             {
-              backgroundColor: `${contract.status?.color || '#64748b'}20`,
-              borderColor: contract.status?.color || '#94a3b8',
+              backgroundColor: `${contract.status?.color}20`,
+              borderColor: contract.status?.color,
             },
           ]}>
-          <Text style={[styles.statusText, { color: contract.status?.color || '#334155' }]}>
+          <Text style={[styles.statusText, { color: contract.status?.color }]}>
             {contract.status?.status?.toUpperCase() || '—'}
           </Text>
         </View>

@@ -605,7 +605,7 @@ export default function CrmIndex() {
       pending: '#3498db',
       canceled: '#e74c3c',
     };
-    return colors[status] || '#95a5a6';
+    return colors[status];
   };
 
   const getStageLabel = status => {
