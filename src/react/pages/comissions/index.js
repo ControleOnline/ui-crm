@@ -5,7 +5,6 @@
  * - Esta pagina e a referencia ativa de comissoes em `src/react`.
  *
  * ## Estado
- * - Se existir `src/vue`, ela e apenas legado e nao deve receber este contrato.
  *
  * ## Limites
  * - Nao duplicar regra de comissao ou visao comercial em outro modulo.

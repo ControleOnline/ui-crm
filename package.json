@@ -4,7 +4,7 @@
   "author": "ControleOnline",
   "description": "ControleOnline CRM Quasar UI Component",
   "license": "MIT",
-  "main": "src/vue/index.js",
+  "main": "src/react/index.js",
   "scripts": {
     "test": "npm run test:crm-empty-state && npm run test:opportunity-status-filter",
     "test:crm-empty-state": "node --test src/tests/react/utils/opportunityEmptyState.test.js",
