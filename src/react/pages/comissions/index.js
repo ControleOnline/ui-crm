@@ -43,23 +43,21 @@ const Invoices = () => {
   const [selectedStatement, setSelectedStatement] = useState(null);
   const [detailsVisible, setDetailsVisible] = useState(false);
 
-  const monthOptions = useMemo(
-    () => [
-      { id: '0', label: global.t?.t('people','month', 'all') },
-      { id: '1', label: global.t?.t('people','month', 'jan') },
-      { id: '2', label: global.t?.t('people','month', 'feb') },
-      { id: '3', label: global.t?.t('people','month', 'mar') },
-      { id: '4', label: global.t?.t('people','month', 'apr') },
-      { id: '5', label: global.t?.t('people','month', 'may') },
-      { id: '6', label: global.t?.t('people','month', 'jun') },
-      { id: '7', label: global.t?.t('people','month', 'jul') },
-      { id: '8', label: global.t?.t('people','month', 'aug') },
-      { id: '9', label: global.t?.t('people','month', 'sep') },
-      { id: '10', label: global.t?.t('people','month', 'oct') },
-      { id: '11', label: global.t?.t('people','month', 'nov') },
-      { id: '12', label: global.t?.t('people','month', 'dec') },
-    ]
-  );
+  const monthOptions = [
+    { id: '0', label: global.t?.t('people','month', 'all') },
+    { id: '1', label: global.t?.t('people','month', 'jan') },
+    { id: '2', label: global.t?.t('people','month', 'feb') },
+    { id: '3', label: global.t?.t('people','month', 'mar') },
+    { id: '4', label: global.t?.t('people','month', 'apr') },
+    { id: '5', label: global.t?.t('people','month', 'may') },
+    { id: '6', label: global.t?.t('people','month', 'jun') },
+    { id: '7', label: global.t?.t('people','month', 'jul') },
+    { id: '8', label: global.t?.t('people','month', 'aug') },
+    { id: '9', label: global.t?.t('people','month', 'sep') },
+    { id: '10', label: global.t?.t('people','month', 'oct') },
+    { id: '11', label: global.t?.t('people','month', 'nov') },
+    { id: '12', label: global.t?.t('people','month', 'dec') },
+  ];
 
   const canLoad = useMemo(() => {
     return Boolean(

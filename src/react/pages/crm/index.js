@@ -359,11 +359,14 @@ export default function CrmIndex() {
     };
   }, []);
 
+  const headerTitle =
+    global.t?.t('people', 'header', 'opportunities') || 'Oportunidades';
+
   useLayoutEffect(() => {
     navigation.setOptions({
-      headerTitle: global.t?.t('people', 'header', 'opportunities'),
+      headerTitle,
     });
-  }, [navigation]);
+  }, [headerTitle, navigation]);
 
   useEffect(() => {
     setCurrentPage(1);

@@ -32,6 +32,8 @@ const ProposalsPage = () => {
   const [peopleNameById, setPeopleNameById] = useState({});
   const normalizeDigits = value => String(value || '').replace(/\D/g, '');
   const normalizeText = value => String(value || '').trim();
+  const pageTitle =
+    global.t?.t('contract', 'title', 'page') || 'Propostas';
 
   const extractPeopleId = person => {
     if (!person) {
@@ -256,9 +258,9 @@ const ProposalsPage = () => {
 
   useLayoutEffect(() => {
     navigation.setOptions({
-      headerTitle: global.t?.t('contract','title', 'page'),
+      headerTitle: pageTitle,
     });
-  }, [navigation]);
+  }, [navigation, pageTitle]);
 
   useEffect(() => {
     const t = setTimeout(() => {

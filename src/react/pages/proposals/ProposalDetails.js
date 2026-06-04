@@ -87,14 +87,16 @@ const ProposalDetails = () => {
   const scrollRef = useRef(null);
 
   const canEdit = contract?.status?.realStatus === 'open';
+  const proposalTitle =
+    global.t?.t('contract', 'title', 'proposal') || 'Proposta';
 
   useLayoutEffect(() => {
     navigation.setOptions({
       headerShown: true,
       headerBackVisible: true,
-      title: global.t?.t('contract', 'title', 'proposal') || 'Proposta',
+      title: proposalTitle,
     });
-  }, [navigation]);
+  }, [navigation, proposalTitle]);
 
   useEffect(() => {
     const loadData = async () => {
