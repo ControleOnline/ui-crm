@@ -328,10 +328,10 @@ const ProposalsPage = () => {
       case 'inactive':
       case 'cancelado':
       case 'canceled':
-        return '#EF4444'; // Red
+        return '#c10015'; // Red
       case 'pendente':
       case 'pending':
-        return '#F59E0B'; // Orange
+        return '#e67e22'; // Orange
       case 'open':
       case 'aberto':
         return '#3B82F6'; // Blue
@@ -651,7 +651,7 @@ const ProposalsPage = () => {
           if (error && allContracts.length === 0) {
             return (
               <View style={styles.emptyContainer}>
-                <MaterialIcon name="error-outline" size={48} color="#EF4444" />
+                <MaterialIcon name="error-outline" size={48} color="#c10015" />
                 <Text style={styles.emptyTitle}>
                   {global.t?.t('contract','state', 'errorTitle')}
                 </Text>

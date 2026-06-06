@@ -27,7 +27,7 @@ export default function HomePage({ navigation }) {
   const { colors: themeColors, menus } = themeGetters;
 
   const [stats, setStats] = useState([
-    { label: global.t?.t('people', 'title', 'opportunities'), value: '...', icon: 'trello', color: '#F59E0B', route: 'CrmIndex' },
+    { label: global.t?.t('people', 'title', 'opportunities'), value: '...', icon: 'trello', color: '#e67e22', route: 'CrmIndex' },
     { label: global.t?.t('people', 'title', 'proposals'), value: '...', icon: 'file-text', color: '#3B82F6', route: 'ProposalsIndex' },
     { label: global.t?.t('people', 'title', 'contracts'), value: '...', icon: 'briefcase', color: '#10B981', route: 'ContractsIndex' },
   ]);
@@ -318,7 +318,7 @@ export default function HomePage({ navigation }) {
 
         // Update Stats
         setStats([
-          { label: global.t?.t('people', 'title', 'opportunities'), value: String(opportunities.totalItems || 0), icon: 'trello', color: '#F59E0B', route: 'CrmIndex' },
+          { label: global.t?.t('people', 'title', 'opportunities'), value: String(opportunities.totalItems || 0), icon: 'trello', color: '#e67e22', route: 'CrmIndex' },
           { label: global.t?.t('people', 'title', 'proposals'), value: String(proposals.totalItems || 0), icon: 'file-text', color: '#3B82F6', route: 'ProposalsIndex' },
           { label: global.t?.t('people', 'title', 'contracts'), value: String(contracts.totalItems || 0), icon: 'briefcase', color: '#10B981', route: 'ContractsIndex' },
         ]);
