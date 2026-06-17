@@ -77,9 +77,9 @@ const OperationsSection = () => {
       return;
     }
 
-    statusActions.getItems({itemsPerPage: 200}).catch(() => {});
+    statusActions.getItems({}).catch(() => {});
     walletActions
-      .getItems({people: currentCompany.id, itemsPerPage: 200})
+      .getItems({people: currentCompany.id})
       .catch(() => {});
   }, [currentCompany?.id, statusActions, walletActions]);
 

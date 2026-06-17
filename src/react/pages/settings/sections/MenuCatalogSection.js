@@ -89,14 +89,12 @@ const MenuCatalogSection = () => {
       .getItems({
         context: 'products',
         company: currentCompany.id,
-        itemsPerPage: 200,
         'order[name]': 'ASC',
       })
       .catch(() => {});
     productGroupActions
       .getItems({
         'parentProduct.company': '/people/' + currentCompany.id,
-        itemsPerPage: 400,
         'order[groupOrder]': 'ASC',
         'order[productGroup]': 'ASC',
       })
@@ -107,7 +105,6 @@ const MenuCatalogSection = () => {
       .getItems({
         context: 'menu',
         people: currentCompany.id,
-        itemsPerPage: 100,
       })
       .then(response => {
         const currentCompanyId = normalizeEntityId(currentCompany.id);

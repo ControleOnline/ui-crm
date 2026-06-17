@@ -221,19 +221,16 @@ export default function HomePage({ navigation }) {
           type: 'relationship',
           provider: currentCompany.id, // Fixed: Added provider for correct count
           taskFor: env.APP_TYPE === 'CRM' && user?.people ? `/people/${user.people}` : null, //Tasks for this user only
-          itemsPerPage: 5,
           'order[id]': 'DESC' // Fetch latest
         };
         const proposalsParams = {
           'contractModel.context': 'proposal',
           provider: currentCompany.id,
-          itemsPerPage: 5,
           'order[id]': 'DESC'
         };
         const contractsParams = {
           'contractModel.context': 'contract',
           provider: currentCompany.id,
-          itemsPerPage: 5,
           'order[id]': 'DESC'
         };
 
@@ -510,3 +507,4 @@ export default function HomePage({ navigation }) {
     </View>
   );
 }
+// TODO(store-first): quando este arquivo for mexido, mover a leitura para stores, remover api.fetch e evitar repassar dados em objetos quando o store ja resolver isso.

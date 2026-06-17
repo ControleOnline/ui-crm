@@ -106,7 +106,6 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
         const results = await searchCompanyProducts({
           companyId: currentCompany.id,
           query: productQuery,
-          itemsPerPage: 8,
         });
 
         if (!cancelled) {
@@ -152,7 +151,6 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
 
       const clientParams = buildOwnedClientsParams({
         currentCompanyId: currentCompany.id,
-        itemsPerPage: 100,
       });
 
       await Promise.all([

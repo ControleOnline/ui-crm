@@ -236,7 +236,6 @@ const useShopProductBrowser = ({companyId, visible}) => {
         const items = await searchCompanyProducts({
           companyId,
           query: trimmedQuery,
-          itemsPerPage: trimmedQuery ? 80 : 60,
         });
 
         if (!cancelled) {
@@ -296,7 +295,6 @@ const useShopProductSearch = companyId => {
         const items = await searchCompanyProducts({
           companyId,
           query: trimmedQuery,
-          itemsPerPage: 8,
         });
 
         if (!cancelled) {

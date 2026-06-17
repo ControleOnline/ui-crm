@@ -111,7 +111,6 @@ export default function CrmIndex() {
     useState(true);
   const [isStatusFilterApplying, setIsStatusFilterApplying] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(50);
   const [allOpportunities, setAllOpportunities] = useState([]);
   const [dueDateDayPickerVisible, setDueDateDayPickerVisible] = useState(false);
   const [dueDateMonthPickerVisible, setDueDateMonthPickerVisible] =
@@ -241,7 +240,6 @@ export default function CrmIndex() {
         const params = {
           'link.company': `/people/${currentCompany.id}`,
           'link.linkType': ['client', 'prospect'],
-          itemsPerPage: 100,
         };
         const fetchKey = JSON.stringify({
           company: currentCompany.id,
@@ -293,7 +291,6 @@ export default function CrmIndex() {
       taskFor: env.APP_TYPE === 'CRM' && user?.people ? `/people/${user.people}` : null, //Tasks for this user only
       provider: currentCompany.id,
       page,
-      itemsPerPage: itemsPerPage,
     };
 
     if (query) {
@@ -315,7 +312,6 @@ export default function CrmIndex() {
   }, [
     currentCompany?.id,
     currentPage,
-    itemsPerPage,
     searchQuery,
     statusFilterParam,
   ]);
@@ -370,7 +366,7 @@ export default function CrmIndex() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, itemsPerPage, selectedStatusFilterKey]);
+  }, [searchQuery, selectedStatusFilterKey]);
 
   useEffect(() => {
     if (!hasInitializedStatusFilter.current) {

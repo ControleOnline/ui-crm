@@ -25,7 +25,6 @@ const ProposalsPage = () => {
   const [search, setSearch] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(50);
   const [refreshing, setRefreshing] = useState(false);
   const [allContracts, setAllContracts] = useState([]);
   const [selectedStatusFilterKey, setSelectedStatusFilterKey] = useState('');
@@ -229,7 +228,6 @@ const ProposalsPage = () => {
         provider: currentCompany.id,
         'contractModel.context': 'proposal',
         page: page ?? currentPage,
-        itemsPerPage,
       };
 
       if (String(query ?? searchQuery).trim()) {
@@ -250,7 +248,6 @@ const ProposalsPage = () => {
     [
       currentCompany?.id,
       currentPage,
-      itemsPerPage,
       searchQuery,
       selectedStatusFilterKey,
     ],
@@ -278,7 +275,7 @@ const ProposalsPage = () => {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [itemsPerPage, selectedStatusFilterKey]);
+  }, [selectedStatusFilterKey]);
 
   useEffect(() => {
     if (isLoading) return;
