@@ -57,13 +57,13 @@ const BottomToolbar = ({ navigation, currentRouteName }) => {
       ),
     [themeColors, currentCompany?.id],
   );
-  const styles = useMemo(() => createStyles(brandColors), [brandColors]);
+  const styles = useMemo(() => createStyles(brandColors, insets), [brandColors, insets]);
 
 
   return (
     <View pointerEvents="box-none" style={styles.overlay}>
-      <View style={[styles.wrapper, { paddingBottom: Math.max(insets.bottom, 8) }]}>
-        <View style={styles.toolbarShadow}>
+      <View style={styles.wrapper}>
+        <View accessibilityRole="navigation" style={styles.toolbarShadow} testID="bottom-navigation">
           <View style={styles.toolbar}>
             {TAB_ITEMS.map(item => {
               const isActive = activeTab === item.key;
