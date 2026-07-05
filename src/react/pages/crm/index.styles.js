@@ -347,7 +347,7 @@ const styles = StyleSheet.create({
   },
   editButton: {
     borderColor: '#e67e22',
-    backgroundColor: '#F59E0B10',
+    backgroundColor: '#e67e2210',
   },
   actionButtonText: {
     fontSize: 13,

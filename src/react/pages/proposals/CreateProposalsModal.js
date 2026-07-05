@@ -349,7 +349,7 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
                     </Text>
                   </View>
                   {selectedModel === model['@id'] && (
-                    <Icon name="check-circle" size={24} color="#4CAF50" />
+                    <Icon name="check-circle" size={24} color="#10b981" />
                   )}
                 </TouchableOpacity>
               ))
@@ -398,7 +398,7 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
                     </Text>
                   </View>
                   {selectedClient === person['@id'] && (
-                    <Icon name="check-circle" size={24} color="#4CAF50" />
+                    <Icon name="check-circle" size={24} color="#10b981" />
                   )}
                 </TouchableOpacity>
               ))
@@ -632,7 +632,7 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
                     <Icon
                       name={isSelected ? 'check-circle' : 'add-circle-outline'}
                       size={22}
-                      color={isSelected ? '#4CAF50' : '#2529a1'}
+                      color={isSelected ? '#10b981' : '#2529a1'}
                     />
                   </TouchableOpacity>
                 );

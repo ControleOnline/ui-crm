@@ -27,7 +27,7 @@ const Dropdown = ({ label, value, options, onChange }) => (
             {opt.label}
           </Text>
         </View>
-        {value === opt.value && <Icon name="check-circle" size={24} color="#4CAF50" />}
+        {value === opt.value && <Icon name="check-circle" size={24} color="#10b981" />}
       </TouchableOpacity>
     ))}
   </View>

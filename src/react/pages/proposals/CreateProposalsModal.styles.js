@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   productRowSelected: {
-    borderColor: '#4CAF50',
+    borderColor: '#10b981',
     backgroundColor: '#F5FFF7',
   },
   productName: {

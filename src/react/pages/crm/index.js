@@ -599,8 +599,8 @@ export default function CrmIndex() {
 
   const getStageColor = status => {
     const colors = {
-      open: '#f39c12',
-      closed: '#27ae60',
+      open: '#e67e22',
+      closed: '#10b981',
       pending: '#3498db',
       canceled: '#c10015',
     };
@@ -1226,8 +1226,8 @@ export default function CrmIndex() {
             <TouchableOpacity
               style={[styles.actionButton, styles.editButton]}
               onPress={() => handleEditOpportunity(opportunity)}>
-              <Icon name="edit" size={16} color="#f39c12" />
-              <Text style={[styles.actionButtonText, { color: '#f39c12' }]}>
+              <Icon name="edit" size={16} color="#e67e22" />
+              <Text style={[styles.actionButtonText, { color: '#e67e22' }]}>
                 {global.t?.t('people', 'action', 'edit')}
               </Text>
             </TouchableOpacity>
@@ -1412,7 +1412,7 @@ export default function CrmIndex() {
         <TouchableOpacity
           style={styles.addPhoneButton}
           onPress={() => addPhoneInput(isEdit)}>
-          <Icon name="plus" size={16} color="#27ae60" />
+          <Icon name="plus" size={16} color="#10b981" />
           <Text style={styles.addPhoneText}>{global.t?.t('people', 'action', 'addPhone')}</Text>
         </TouchableOpacity>
       )}
@@ -1440,7 +1440,7 @@ export default function CrmIndex() {
         <TouchableOpacity
           style={styles.addPhoneButton}
           onPress={() => addPhoneInput(isEdit)}>
-          <Icon name="plus" size={16} color="#27ae60" />
+          <Icon name="plus" size={16} color="#10b981" />
           <Text style={styles.addPhoneText}>{global.t?.t('people', 'action', 'addAnotherPhone')}</Text>
         </TouchableOpacity>
       )}
@@ -1564,7 +1564,7 @@ export default function CrmIndex() {
                       </View>
                     </View>
                     {isSelected && (
-                      <Icon name="check-circle" size={20} color="#27ae60" />
+                      <Icon name="check-circle" size={20} color="#10b981" />
                     )}
                   </TouchableOpacity>
                 );
