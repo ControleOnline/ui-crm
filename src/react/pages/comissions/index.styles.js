@@ -89,11 +89,11 @@ const styles = StyleSheet.create({
   errorTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#F44336',
+    color: '#c10015',
     marginBottom: 6,
   },
   errorSubtitle: {
-    color: '#F44336',
+    color: '#c10015',
     marginBottom: 14,
   },
   retryButton: {

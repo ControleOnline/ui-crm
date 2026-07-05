@@ -53,7 +53,7 @@ const styles = StyleSheet.create({
     color: '#64748B',
   },
   required: {
-    color: '#FF4444',
+    color: '#c10015',
   },
   selectInput: {
     flexDirection: 'row',

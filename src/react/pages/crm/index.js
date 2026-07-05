@@ -602,7 +602,7 @@ export default function CrmIndex() {
       open: '#f39c12',
       closed: '#27ae60',
       pending: '#3498db',
-      canceled: '#e74c3c',
+      canceled: '#c10015',
     };
     return colors[status];
   };
@@ -1431,7 +1431,7 @@ export default function CrmIndex() {
           <TouchableOpacity
             style={styles.removePhoneButton}
             onPress={() => removePhoneInput(index, isEdit)}>
-            <Icon name="trash" size={16} color="#e74c3c" />
+            <Icon name="trash" size={16} color="#c10015" />
           </TouchableOpacity>
         </View>
       ))}
@@ -2071,7 +2071,7 @@ export default function CrmIndex() {
             <View style={styles.emptyContainer}>
               {error ? (
                 <>
-                  <Icon name="exclamation-triangle" size={48} color="#e74c3c" />
+                  <Icon name="exclamation-triangle" size={48} color="#c10015" />
                   <Text style={styles.loadingText}>{global.t?.t('people', 'state', 'loadError')}</Text>
                 </>
               ) : (
