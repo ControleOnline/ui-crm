@@ -14,22 +14,27 @@ import AppMenuGrid from '@controleonline/ui-layout/src/react/components/AppMenuG
 import styles from './index.styles';
 import { inlineStyle_562_72, inlineStyle_564_18, inlineStyle_565_20 } from './index.styles';
 
+const translate = (store, type, key) => global.t?.t(store, type, key);
+
 export default function HomePage({ navigation }) {
   const peopleStore = useStore('people');
   const peopleActions = peopleStore.actions;
   const authStore = useStore('auth');
   const themeStore = useStore('theme');
+  const translateStore = useStore('translate');
   const peopleGetters = peopleStore.getters;
   const authGetters = authStore.getters;
   const themeGetters = themeStore.getters;
   const { currentCompany } = peopleGetters;
   const { user } = authGetters;
   const { colors: themeColors, menus } = themeGetters;
+  const translateMessages = translateStore?.getters?.messages || {};
+  const pendingTranslateMessages = translateStore?.getters?.pendingMessages || {};
 
-  const [stats, setStats] = useState([
-    { label: global.t?.t('people', 'title', 'opportunities'), value: '...', icon: 'trello', color: '#e67e22', route: 'CrmIndex' },
-    { label: global.t?.t('people', 'title', 'proposals'), value: '...', icon: 'file-text', color: '#3B82F6', route: 'ProposalsIndex' },
-    { label: global.t?.t('people', 'title', 'contracts'), value: '...', icon: 'briefcase', color: '#10B981', route: 'ContractsIndex' },
+  const [statValues, setStatValues] = useState([
+    { key: 'opportunities', value: '...' },
+    { key: 'proposals', value: '...' },
+    { key: 'contracts', value: '...' },
   ]);
 
   const [recentActivity, setRecentActivity] = useState([]);
@@ -46,9 +51,41 @@ export default function HomePage({ navigation }) {
           ...(currentCompany?.theme?.colors || {}),
         },
         colors,
-      ),
+    ),
     [themeColors, currentCompany?.id],
   );
+  const stats = useMemo(() => {
+    const valuesByKey = Object.fromEntries(
+      statValues.map(item => [item.key, item.value]),
+    );
+
+    return [
+      {
+        key: 'opportunities',
+        label: translate('people', 'title', 'opportunities'),
+        value: valuesByKey.opportunities || '...',
+        icon: 'trello',
+        color: '#e67e22',
+        route: 'CrmIndex',
+      },
+      {
+        key: 'proposals',
+        label: translate('people', 'title', 'proposals'),
+        value: valuesByKey.proposals || '...',
+        icon: 'file-text',
+        color: '#3B82F6',
+        route: 'ProposalsIndex',
+      },
+      {
+        key: 'contracts',
+        label: translate('people', 'title', 'contracts'),
+        value: valuesByKey.contracts || '...',
+        icon: 'briefcase',
+        color: '#10B981',
+        route: 'ContractsIndex',
+      },
+    ];
+  }, [statValues, translateMessages, pendingTranslateMessages]);
   const extractPeopleId = person => {
     if (!person) {
       return '';
@@ -314,10 +351,10 @@ export default function HomePage({ navigation }) {
         }
 
         // Update Stats
-        setStats([
-          { label: global.t?.t('people', 'title', 'opportunities'), value: String(opportunities.totalItems || 0), icon: 'trello', color: '#e67e22', route: 'CrmIndex' },
-          { label: global.t?.t('people', 'title', 'proposals'), value: String(proposals.totalItems || 0), icon: 'file-text', color: '#3B82F6', route: 'ProposalsIndex' },
-          { label: global.t?.t('people', 'title', 'contracts'), value: String(contracts.totalItems || 0), icon: 'briefcase', color: '#10B981', route: 'ContractsIndex' },
+        setStatValues([
+          { key: 'opportunities', value: String(opportunities.totalItems || 0) },
+          { key: 'proposals', value: String(proposals.totalItems || 0) },
+          { key: 'contracts', value: String(contracts.totalItems || 0) },
         ]);
 
         // Process Recent Activity
@@ -326,14 +363,13 @@ export default function HomePage({ navigation }) {
         // Add Opportunities
         opportunitiesList.forEach(item => {
           const sortDate = item.dueDate ? new Date(item.dueDate).getTime() : 0;
-          const clientName =
-            getOpportunityClientName(item, peopleMetaById) ||
-            global.t?.t('people', 'title', 'unknownClient');
+          const clientName = getOpportunityClientName(item, peopleMetaById);
           activities.push({
             id: item.id,
             originalId: item.id,
-            title: `${global.t?.t('people', 'title', 'newOpportunityPrefix')} ${clientName}`,
-            time: item.dueDate ? Formatter.formatDateYmdTodmY(item.dueDate) : global.t?.t('people', 'title', 'withoutDate'),
+            titleKey: 'newOpportunityPrefix',
+            titleValue: clientName,
+            timeValue: item.dueDate ? Formatter.formatDateYmdTodmY(item.dueDate) : '',
             clientName,
             type: 'lead',
             sortDate,
@@ -345,14 +381,14 @@ export default function HomePage({ navigation }) {
         // Add Proposals
         proposalsList.forEach(item => {
           const sortDate = item.startDate ? new Date(item.startDate).getTime() : 0;
-          const clientName =
-            getContractClientName(item, peopleMetaById) ||
-            global.t?.t('people', 'title', 'unknownClient');
+          const clientName = getContractClientName(item, peopleMetaById);
           activities.push({
             id: item.id,
             originalId: item.id,
-            title: `${global.t?.t('people', 'title', 'proposalPrefix')} ${item.contractModel?.model || global.t?.t('people', 'title', 'newProposal')}`,
-            time: item.startDate ? Formatter.formatDateYmdTodmY(item.startDate) : global.t?.t('people', 'title', 'withoutDate'),
+            titleKey: 'proposalPrefix',
+            titleValue: item.contractModel?.model || '',
+            titleFallbackKey: 'newProposal',
+            timeValue: item.startDate ? Formatter.formatDateYmdTodmY(item.startDate) : '',
             clientName,
             type: 'proposal',
             sortDate,
@@ -364,14 +400,14 @@ export default function HomePage({ navigation }) {
         // Add Contracts
         contractsList.forEach(item => {
           const sortDate = item.startDate ? new Date(item.startDate).getTime() : 0;
-          const clientName =
-            getContractClientName(item, peopleMetaById) ||
-            global.t?.t('people', 'title', 'unknownClient');
+          const clientName = getContractClientName(item, peopleMetaById);
           activities.push({
             id: item.id,
             originalId: item.id,
-            title: `${global.t?.t('people', 'title', 'contractPrefix')} ${item.contractModel?.model || global.t?.t('people', 'title', 'newContract')}`,
-            time: item.startDate ? Formatter.formatDateYmdTodmY(item.startDate) : global.t?.t('people', 'title', 'withoutDate'),
+            titleKey: 'contractPrefix',
+            titleValue: item.contractModel?.model || '',
+            titleFallbackKey: 'newContract',
+            timeValue: item.startDate ? Formatter.formatDateYmdTodmY(item.startDate) : '',
             clientName,
             type: 'calendar', // Using calendar icon for contracts
             sortDate,
@@ -411,6 +447,17 @@ export default function HomePage({ navigation }) {
     });
     return items.slice(0, 5);
   }, [recentActivity, activitySortDirection]);
+  const resolveActivityTitle = item =>
+    [
+      translate('people', 'title', item.titleKey),
+      item.titleValue || translate('people', 'title', item.titleFallbackKey),
+    ]
+      .filter(Boolean)
+      .join(' ');
+  const resolveActivityClient = item =>
+    item.clientName || translate('people', 'title', 'unknownClient');
+  const resolveActivityTime = item =>
+    item.timeValue || translate('people', 'title', 'withoutDate');
 
   return (
     <View style={[styles.container, { backgroundColor: brandColors.background }]}>
@@ -491,11 +538,13 @@ export default function HomePage({ navigation }) {
                   />
                 </View>
                 <View style={styles.activityContent}>
-                  <Text style={styles.activityTitle} numberOfLines={1}>{item.title}</Text>
-                  <Text style={styles.activityClient} numberOfLines={1}>
-                    {global.t?.t('people', 'title', 'client')}: {item.clientName || global.t?.t('people', 'title', 'unknownClient')}
+                  <Text style={styles.activityTitle} numberOfLines={1}>
+                    {resolveActivityTitle(item)}
                   </Text>
-                  <Text style={styles.activityTime}>{item.time}</Text>
+                  <Text style={styles.activityClient} numberOfLines={1}>
+                    {global.t?.t('people', 'title', 'client')}: {resolveActivityClient(item)}
+                  </Text>
+                  <Text style={styles.activityTime}>{resolveActivityTime(item)}</Text>
                 </View>
                 <Icon name="chevron-right" size={16} color="#CBD5E1" />
               </TouchableOpacity>
