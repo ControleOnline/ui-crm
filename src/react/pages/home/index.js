@@ -257,7 +257,7 @@ export default function HomePage({ navigation }) {
         const opportunitiesParams = {
           type: 'relationship',
           provider: currentCompany.id, // Fixed: Added provider for correct count
-          taskFor: env.APP_TYPE === 'CRM' && user?.people ? `/people/${user.people}` : null, //Tasks for this user only
+          taskFor: app_type === 'CRM' && user?.people ? `/people/${user.people}` : null, //Tasks for this user only
           'order[id]': 'DESC' // Fetch latest
         };
         const proposalsParams = {

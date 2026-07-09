@@ -288,7 +288,7 @@ export default function CrmIndex() {
 
     const params = {
       type: 'relationship',
-      taskFor: env.APP_TYPE === 'CRM' && user?.people ? `/people/${user.people}` : null, //Tasks for this user only
+      taskFor: app_type === 'CRM' && user?.people ? `/people/${user.people}` : null, //Tasks for this user only
       provider: currentCompany.id,
       page,
     };
