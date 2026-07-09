@@ -281,6 +281,31 @@ const localStyles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
   },
+  pinIconPreviewRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  pinIconPreviewInput: {
+    flex: 1,
+    marginTop: 0,
+  },
+  pinIconPreviewFrame: {
+    width: 48,
+    height: 48,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    backgroundColor: '#F8FAFC',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    flexShrink: 0,
+  },
+  pinIconPreviewImage: {
+    width: 48,
+    height: 48,
+  },
   selectorInput: {
     flex: 1,
     marginTop: 0,

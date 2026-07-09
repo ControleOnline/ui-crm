@@ -2,6 +2,7 @@ import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   ScrollView,
   Text,
   TextInput,
@@ -1214,15 +1215,28 @@ const ShopSection = () => {
             Informe a URL da imagem que deve ser usada nos pins das franquias.
             Se ficar vazia, o mapa usa o pin padrao do Google.
           </Text>
-          <TextInput
-            value={franchisePinIconUrl}
-            onChangeText={setFranchisePinIconUrl}
-            autoCapitalize="none"
-            autoCorrect={false}
-            placeholder="https://..."
-            placeholderTextColor="#94A3B8"
-            style={localStyles.input}
-          />
+          <View style={localStyles.pinIconPreviewRow}>
+            <TextInput
+              value={franchisePinIconUrl}
+              onChangeText={setFranchisePinIconUrl}
+              autoCapitalize="none"
+              autoCorrect={false}
+              placeholder="https://..."
+              placeholderTextColor="#94A3B8"
+              style={[localStyles.input, localStyles.pinIconPreviewInput]}
+            />
+            <View style={localStyles.pinIconPreviewFrame}>
+              {String(franchisePinIconUrl || '').trim() ? (
+                <Image
+                  source={{uri: String(franchisePinIconUrl || '').trim()}}
+                  style={localStyles.pinIconPreviewImage}
+                  resizeMode="contain"
+                />
+              ) : (
+                <Icon name="image-not-supported" size={20} color="#94A3B8" />
+              )}
+            </View>
+          </View>
         </View>
 
         <Text style={localStyles.helperText}>
