@@ -8,6 +8,7 @@ import IconWhatsApp from 'react-native-vector-icons/FontAwesome';
 import AnimatedModal from '../../components/AnimatedModal';
 import { FlatList } from 'react-native';
 import { env } from '@env';
+import {app_type} from '@appType';
 import { useStore } from '@store';
 import { colors } from '@controleonline/../../src/styles/colors';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
