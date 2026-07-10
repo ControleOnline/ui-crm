@@ -5,7 +5,6 @@ import { colors } from '@controleonline/../../src/styles/colors';
 
 import { resolveThemePalette } from '@controleonline/../../src/styles/branding';
 
-import { env } from '@env';
 import {app_type} from '@appType';
 import Icon from 'react-native-vector-icons/Feather';
 import { useStore } from '@store';
