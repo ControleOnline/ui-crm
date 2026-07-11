@@ -50,6 +50,7 @@ import {
   SHOP_LOYALTY_GIFT_PRODUCT_ID_CONFIG_KEY,
   SHOP_LOYALTY_PRODUCT_IDS_CONFIG_KEY,
   SHOP_LOYALTY_REQUIRED_SALES_CONFIG_KEY,
+  SHOP_LOYALTY_STAMP_ICON_URL_CONFIG_KEY,
   SHOP_PRIMARY_ENTRY_CONFIG_KEY,
   SHOP_SALES_PAGE_ENABLED_CONFIG_KEY,
 } from '@controleonline/ui-common/src/react/utils/shopConfig';
@@ -548,6 +549,7 @@ const ShopSection = () => {
   const [loyaltyRequiredSales, setLoyaltyRequiredSales] = useState('');
   const [loyaltyProductIds, setLoyaltyProductIds] = useState([]);
   const [loyaltyGiftProductId, setLoyaltyGiftProductId] = useState('');
+  const [loyaltyStampIconUrl, setLoyaltyStampIconUrl] = useState('');
 
   const [selectedLoyaltyProducts, setSelectedLoyaltyProducts] = useState([]);
   const [selectedGiftProduct, setSelectedGiftProduct] = useState(null);
@@ -681,6 +683,11 @@ const ShopSection = () => {
     setLoyaltyGiftProductId(
       normalizeShopProductId(
         effectiveCompanyConfigs[SHOP_LOYALTY_GIFT_PRODUCT_ID_CONFIG_KEY],
+      ),
+    );
+    setLoyaltyStampIconUrl(
+      normalizeShopTextConfig(
+        effectiveCompanyConfigs[SHOP_LOYALTY_STAMP_ICON_URL_CONFIG_KEY],
       ),
     );
   }, [effectiveCompanyConfigs]);
@@ -1118,7 +1125,7 @@ const ShopSection = () => {
       loyaltyCouponsEnabled ? '1' : '0',
     );
 
-    if (!loyaltyToggleSaved || !loyaltyCouponsEnabled) {
+    if (!loyaltyToggleSaved) {
       return;
     }
 
@@ -1150,12 +1157,16 @@ const ShopSection = () => {
       [SHOP_LOYALTY_PRODUCT_IDS_CONFIG_KEY]: loyaltyProductIds,
       [SHOP_LOYALTY_REQUIRED_SALES_CONFIG_KEY]: normalizedRequiredSales,
       [SHOP_LOYALTY_GIFT_PRODUCT_ID_CONFIG_KEY]: loyaltyGiftProductId,
+      [SHOP_LOYALTY_STAMP_ICON_URL_CONFIG_KEY]: normalizeShopTextConfig(
+        loyaltyStampIconUrl,
+      ),
     });
   }, [
     loyaltyCouponsEnabled,
     loyaltyGiftProductId,
     loyaltyProductIds,
     loyaltyRequiredSales,
+    loyaltyStampIconUrl,
     saveConfig,
     saveConfigs,
   ]);
@@ -1667,6 +1678,38 @@ const ShopSection = () => {
             ? 'Defina os produtos participantes, a quantidade de vendas e o produto que sera entregue como brinde.'
             : 'As configuracoes abaixo podem ficar preparadas agora e serao usadas quando a fidelidade for ativada.'}
         </Text>
+
+        <View style={localStyles.fieldBlock}>
+          <Text style={localStyles.fieldLabel}>
+            URL da imagem do carimbo
+          </Text>
+          <Text style={localStyles.helperText}>
+            Informe a URL da imagem que deve ser usada como carimbo no cartao
+            fidelidade. Se ficar vazia, o shop usa o carimbo padrao.
+          </Text>
+          <View style={localStyles.pinIconPreviewRow}>
+            <TextInput
+              value={loyaltyStampIconUrl}
+              onChangeText={setLoyaltyStampIconUrl}
+              autoCapitalize="none"
+              autoCorrect={false}
+              placeholder="https://..."
+              placeholderTextColor="#94A3B8"
+              style={[localStyles.input, localStyles.pinIconPreviewInput]}
+            />
+            <View style={localStyles.pinIconPreviewFrame}>
+              {String(loyaltyStampIconUrl || '').trim() ? (
+                <Image
+                  source={{uri: String(loyaltyStampIconUrl || '').trim()}}
+                  style={localStyles.pinIconPreviewImage}
+                  resizeMode="contain"
+                />
+              ) : (
+                <Icon name="image-not-supported" size={20} color="#94A3B8" />
+              )}
+            </View>
+          </View>
+        </View>
 
         <View style={localStyles.fieldBlock}>
           <Text style={localStyles.fieldLabel}>
