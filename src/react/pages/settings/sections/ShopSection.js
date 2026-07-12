@@ -495,7 +495,11 @@ const SelectionModal = ({
 
         {multiSelect && (
           <TouchableOpacity
-            style={[globalStyles.button, localStyles.primaryButton]}
+            style={[
+              globalStyles.button,
+              localStyles.primaryButton,
+              localStyles.selectionModalActionButton,
+            ]}
             onPress={onClose}>
             <Text style={localStyles.primaryButtonText}>Concluir selecao</Text>
           </TouchableOpacity>

@@ -441,6 +441,15 @@ const localStyles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 8,
   },
+  selectionModalActionButton: {
+    flex: 0,
+    minHeight: 52,
+    marginHorizontal: 16,
+    marginTop: 16,
+    paddingHorizontal: 20,
+    borderRadius: 16,
+    alignSelf: 'stretch',
+  },
   selectionModalItem: {
     flexDirection: 'row',
     alignItems: 'center',
