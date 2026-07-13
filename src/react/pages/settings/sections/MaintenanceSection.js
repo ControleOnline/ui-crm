@@ -1,5 +1,5 @@
 import React, {useCallback, useEffect, useState} from 'react';
-import {Switch, Text, TextInput, TouchableOpacity, View} from 'react-native';
+import {Switch, Text, TextInput, View} from 'react-native';
 
 import useToastMessage from '@controleonline/ui-crm/src/react/hooks/useToastMessage';
 import {

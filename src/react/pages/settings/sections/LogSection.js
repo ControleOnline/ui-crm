@@ -1,7 +1,6 @@
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
-import {Switch, Text, TextInput, TouchableOpacity, View} from 'react-native';
+import {Switch, Text, TextInput, View} from 'react-native';
 
-import css from '@controleonline/ui-orders/src/react/css/orders';
 import useToastMessage from '@controleonline/ui-crm/src/react/hooks/useToastMessage';
 import {
   DEFAULT_LOG_POLICY,
@@ -23,6 +22,7 @@ const LogPolicyRow = ({
   editable,
   item,
   onChange,
+  onCommit,
   policy,
 }) => {
   const keepForever = policy.retentionDays === null;
@@ -36,7 +36,7 @@ const LogPolicyRow = ({
         </View>
         <Switch
           value={!!policy.enabled}
-          onValueChange={value => onChange(item.key, {enabled: value})}
+          onValueChange={value => onCommit(item.key, {enabled: value})}
           disabled={!editable}
         />
       </View>
@@ -51,7 +51,7 @@ const LogPolicyRow = ({
         <Switch
           value={keepForever}
           onValueChange={value =>
-            onChange(item.key, {retentionDays: value ? null : 30})
+            onCommit(item.key, {retentionDays: value ? null : 30})
           }
           disabled={!editable}
         />
@@ -71,6 +71,7 @@ const LogPolicyRow = ({
                     : Number(value.replace(/\D+/g, '')),
               })
             }
+            onBlur={() => onCommit(item.key)}
             editable={editable}
             keyboardType="numeric"
             placeholder="30"
@@ -82,7 +83,6 @@ const LogPolicyRow = ({
 };
 
 const LogSection = () => {
-  const {globalStyles} = css();
   const {showError, showSuccess} = useToastMessage();
   const {
     currentCompany,
@@ -122,7 +122,71 @@ const LogSection = () => {
 
   const editable = !!currentCompany?.id && isMainCompanySelected && !isSaving;
 
-  const handlePolicyChange = useCallback((policyKey, patch) => {
+  const saveLogSettings = useCallback(
+    async ({
+      nextEmailAlertsEnabled = emailAlertsEnabled,
+      nextLogPolicy = logPolicy,
+      nextRecipientInput = recipientInput,
+    } = {}) => {
+      if (!defaultCompany?.id || !isMainCompanySelected) {
+        showError(
+          `Abra a empresa principal (${defaultCompanyLabel}) para editar as configuracoes de log.`,
+        );
+        return false;
+      }
+
+      const invalidRecipients = findInvalidLogAlertRecipients(
+        nextRecipientInput,
+      );
+      if (invalidRecipients.length > 0) {
+        showError(
+          `Existem e-mails invalidos na lista: ${invalidRecipients.join(', ')}`,
+        );
+        return false;
+      }
+
+      const normalizedRecipients = normalizeLogAlertRecipients(
+        nextRecipientInput,
+      );
+      if (nextEmailAlertsEnabled && normalizedRecipients.length === 0) {
+        showError(
+          'Informe ao menos um e-mail valido ou desabilite o aviso por e-mail.',
+        );
+        return false;
+      }
+
+      const success = await saveConfigs({
+        [LOG_ERROR_EMAIL_ENABLED_KEY]: nextEmailAlertsEnabled,
+        [LOG_ERROR_EMAIL_RECIPIENTS_KEY]: normalizedRecipients,
+        [LOG_POLICY_CONFIG_KEY]: nextLogPolicy,
+      });
+
+      if (!success) {
+        return false;
+      }
+
+      try {
+        await peopleActions.defaultCompany();
+      } catch {}
+
+      showSuccess('Configuracoes de log salvas com sucesso.');
+      return true;
+    },
+    [
+      defaultCompany?.id,
+      defaultCompanyLabel,
+      emailAlertsEnabled,
+      isMainCompanySelected,
+      logPolicy,
+      peopleActions,
+      recipientInput,
+      saveConfigs,
+      showError,
+      showSuccess,
+    ],
+  );
+
+  const updatePolicy = useCallback((policyKey, patch) => {
     setLogPolicy(currentValue => ({
       ...currentValue,
       [policyKey]: {
@@ -132,57 +196,21 @@ const LogSection = () => {
     }));
   }, []);
 
-  const saveLogSettings = useCallback(async () => {
-    if (!defaultCompany?.id || !isMainCompanySelected) {
-      showError(
-        `Abra a empresa principal (${defaultCompanyLabel}) para editar as configuracoes de log.`,
-      );
-      return;
-    }
+  const commitPolicyChange = useCallback(
+    (policyKey, patch = {}) => {
+      const nextLogPolicy = {
+        ...logPolicy,
+        [policyKey]: {
+          ...(logPolicy[policyKey] || DEFAULT_LOG_POLICY[policyKey]),
+          ...patch,
+        },
+      };
 
-    const invalidRecipients = findInvalidLogAlertRecipients(recipientInput);
-    if (invalidRecipients.length > 0) {
-      showError(
-        `Existem e-mails invalidos na lista: ${invalidRecipients.join(', ')}`,
-      );
-      return;
-    }
-
-    const normalizedRecipients = normalizeLogAlertRecipients(recipientInput);
-    if (emailAlertsEnabled && normalizedRecipients.length === 0) {
-      showError(
-        'Informe ao menos um e-mail valido ou desabilite o aviso por e-mail.',
-      );
-      return;
-    }
-
-    const success = await saveConfigs({
-      [LOG_ERROR_EMAIL_ENABLED_KEY]: emailAlertsEnabled,
-      [LOG_ERROR_EMAIL_RECIPIENTS_KEY]: normalizedRecipients,
-      [LOG_POLICY_CONFIG_KEY]: logPolicy,
-    });
-
-    if (!success) {
-      return;
-    }
-
-    try {
-      await peopleActions.defaultCompany();
-    } catch {}
-
-    showSuccess('Configuracoes de log salvas com sucesso.');
-  }, [
-    defaultCompany?.id,
-    defaultCompanyLabel,
-    emailAlertsEnabled,
-    isMainCompanySelected,
-    logPolicy,
-    peopleActions,
-    recipientInput,
-    saveConfigs,
-    showError,
-    showSuccess,
-  ]);
+      setLogPolicy(nextLogPolicy);
+      saveLogSettings({nextLogPolicy});
+    },
+    [logPolicy, saveLogSettings],
+  );
 
   return (
     <GeneralSettingsSection
@@ -211,7 +239,10 @@ const LogSection = () => {
         </View>
         <Switch
           value={emailAlertsEnabled}
-          onValueChange={setEmailAlertsEnabled}
+          onValueChange={value => {
+            setEmailAlertsEnabled(value);
+            saveLogSettings({nextEmailAlertsEnabled: value});
+          }}
           disabled={!editable}
         />
       </View>
@@ -226,6 +257,7 @@ const LogSection = () => {
           ]}
           value={recipientInput}
           onChangeText={setRecipientInput}
+          onBlur={() => saveLogSettings()}
           editable={editable && emailAlertsEnabled}
           multiline
           placeholder={'ops@empresa.com.br\nsuporte@empresa.com.br'}
@@ -248,22 +280,12 @@ const LogSection = () => {
             key={item.key}
             editable={editable}
             item={item}
-            onChange={handlePolicyChange}
+            onChange={updatePolicy}
+            onCommit={commitPolicyChange}
             policy={logPolicy[item.key] || DEFAULT_LOG_POLICY[item.key]}
           />
         ))}
       </View>
-
-      <TouchableOpacity
-        style={[
-          globalStyles.button,
-          localStyles.primaryButton,
-          !editable && localStyles.primaryButtonDisabled,
-        ]}
-        disabled={!editable}
-        onPress={saveLogSettings}>
-        <Text style={localStyles.primaryButtonText}>Salvar logs e alertas</Text>
-      </TouchableOpacity>
     </GeneralSettingsSection>
   );
 };

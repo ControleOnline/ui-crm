@@ -6,6 +6,9 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 
 import css from '@controleonline/ui-orders/src/react/css/orders';
 import StateStore from '@controleonline/ui-layout/src/react/components/StateStore';
+import {colors as defaultThemeColors} from '@controleonline/../../src/styles/colors';
+import {resolveThemePalette} from '@controleonline/../../src/styles/branding';
+import {useStore} from '@store';
 
 import localStyles from './GeneralSettings.styles';
 import {
@@ -37,7 +40,7 @@ const SETTINGS_TABS = [
     key: 'devices',
     label: 'Devices',
     icon: 'dvr',
-    color: '#0369A1',
+    colorToken: 'info',
     stores: ['configs', 'people'],
     Component: DeviceRuntimeFooterSection,
   },
@@ -45,7 +48,7 @@ const SETTINGS_TABS = [
     key: 'integrations',
     label: 'Integrações',
     icon: 'link',
-    color: '#0284C7',
+    colorToken: 'primary',
     stores: ['configs', 'people'],
     Component: IntegrationsSection,
   },
@@ -53,7 +56,7 @@ const SETTINGS_TABS = [
     key: 'logs',
     label: 'Logs',
     icon: 'bug-report',
-    color: '#B91C1C',
+    colorToken: 'error',
     stores: ['configs', 'people'],
     Component: LogSection,
   },
@@ -61,7 +64,7 @@ const SETTINGS_TABS = [
     key: 'maintenance',
     label: 'Rotinas',
     icon: 'schedule',
-    color: '#0F766E',
+    colorToken: 'success',
     stores: ['configs', 'people'],
     Component: MaintenanceSection,
   },
@@ -69,7 +72,7 @@ const SETTINGS_TABS = [
     key: 'print',
     label: 'Conferência',
     icon: 'print',
-    color: '#2563EB',
+    colorToken: 'info',
     stores: ['configs', 'printer', 'device_config'],
     Component: OrderPrintSection,
   },
@@ -77,7 +80,7 @@ const SETTINGS_TABS = [
     key: 'preparation',
     label: 'Preparo',
     icon: 'receipt-long',
-    color: '#B45309',
+    colorToken: 'warning',
     stores: ['device_config'],
     Component: DisplayPreparationSection,
   },
@@ -85,7 +88,7 @@ const SETTINGS_TABS = [
     key: 'menu',
     label: 'Cardapio PDF',
     icon: 'restaurant-menu',
-    color: '#B45309',
+    colorToken: 'warning',
     stores: ['configs', 'categories', 'product_group', 'models'],
     Component: MenuCatalogSection,
   },
@@ -93,7 +96,7 @@ const SETTINGS_TABS = [
     key: 'payment',
     label: 'Pagamento',
     icon: 'credit-card',
-    color: '#7C3AED',
+    colorToken: 'primary',
     stores: ['configs', 'device_config'],
     Component: OrderPaymentSection,
   },
@@ -101,7 +104,7 @@ const SETTINGS_TABS = [
     key: 'operations',
     label: 'Operações',
     icon: 'point-of-sale',
-    color: '#166534',
+    colorToken: 'success',
     stores: ['configs', 'status', 'wallet'],
     Component: OperationsSection,
   },
@@ -109,7 +112,7 @@ const SETTINGS_TABS = [
     key: 'crm',
     label: 'CRM',
     icon: 'groups',
-    color: '#7C3AED',
+    colorToken: 'primary',
     stores: ['configs'],
     Component: CrmSection,
   },
@@ -117,7 +120,7 @@ const SETTINGS_TABS = [
     key: 'maps',
     label: 'Mapas',
     icon: 'map',
-    color: '#0284C7',
+    colorToken: 'info',
     stores: ['configs'],
     Component: MapsSection,
   },
@@ -125,7 +128,7 @@ const SETTINGS_TABS = [
     key: 'shop',
     label: 'Shop',
     icon: 'shopping-bag',
-    color: '#0F766E',
+    colorToken: 'success',
     stores: ['configs', 'products'],
     Component: ShopSection,
   },
@@ -133,6 +136,7 @@ const SETTINGS_TABS = [
 
 const GeneralSettings = () => {
   const {styles} = css();
+  const themeStore = useStore('theme');
   const {
     companies,
     currentCompany,
@@ -142,6 +146,18 @@ const GeneralSettings = () => {
     peopleActions,
   } =
     useGeneralSettingsConfig();
+  const themeColors = themeStore.getters.colors;
+  const themePalette = useMemo(
+    () =>
+      resolveThemePalette(
+        {
+          ...themeColors,
+          ...(currentCompany?.theme?.colors || {}),
+        },
+        defaultThemeColors,
+      ),
+    [currentCompany?.theme?.colors, themeColors],
+  );
   const [storedActiveTab] = useState(() => readGeneralSettingsActiveTab());
   const [activeTab, setActiveTab] = useState(
     () => storedActiveTab || SETTINGS_TABS[0].key,
@@ -223,20 +239,24 @@ const GeneralSettings = () => {
                   style={[
                     localStyles.tabItem,
                     active && localStyles.tabItemActive,
-                    active && {borderBottomColor: tab.color},
+                    active && {borderBottomColor: themePalette[tab.colorToken]},
                   ]}
                   activeOpacity={0.85}
                   onPress={() => setActiveTab(tab.key)}>
                   <Icon
                     name={tab.icon}
                     size={18}
-                    color={active ? tab.color : '#94A3B8'}
+                    color={
+                      active
+                        ? themePalette[tab.colorToken]
+                        : themePalette.textSecondary
+                    }
                   />
                   <Text
                     style={[
                       localStyles.tabLabel,
                       active && localStyles.tabLabelActive,
-                      active && {color: tab.color},
+                      active && {color: themePalette[tab.colorToken]},
                     ]}>
                     {tab.label}
                   </Text>
