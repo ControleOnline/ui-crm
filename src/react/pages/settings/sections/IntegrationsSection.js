@@ -1,7 +1,6 @@
 import React, {useCallback, useEffect, useState} from 'react';
-import {ActivityIndicator, Text, TextInput, TouchableOpacity} from 'react-native';
+import {ActivityIndicator, Text, TextInput} from 'react-native';
 
-import css from '@controleonline/ui-orders/src/react/css/orders';
 import useToastMessage from '@controleonline/ui-crm/src/react/hooks/useToastMessage';
 import {api} from '@controleonline/ui-common/src/api';
 import {
@@ -35,6 +34,7 @@ const buildConfigUpdater = (setState, fieldKey) => value => {
 const IntegrationField = ({
   editable,
   fieldKey,
+  onBlur,
   onChangeText,
   placeholder,
   sectionState,
@@ -45,6 +45,7 @@ const IntegrationField = ({
       style={[localStyles.input, !editable && localStyles.inputDisabled]}
       value={sectionState[fieldKey]}
       onChangeText={onChangeText}
+      onBlur={onBlur}
       editable={editable}
       autoCapitalize="none"
       autoCorrect={false}
@@ -54,7 +55,6 @@ const IntegrationField = ({
 );
 
 const IntegrationsSection = () => {
-  const {globalStyles} = css();
   const {showError, showSuccess} = useToastMessage();
   const {
     configActions,
@@ -243,6 +243,7 @@ const IntegrationsSection = () => {
         <IntegrationField
           editable={editable}
           fieldKey="ACCESS_TOKEN"
+          onBlur={saveCieloConfig}
           onChangeText={buildConfigUpdater(setCieloConfig, 'ACCESS_TOKEN')}
           placeholder="Token da integracao Cielo"
           sectionState={cieloConfig}
@@ -250,6 +251,7 @@ const IntegrationsSection = () => {
         <IntegrationField
           editable={editable}
           fieldKey="CLIENT_ID"
+          onBlur={saveCieloConfig}
           onChangeText={buildConfigUpdater(setCieloConfig, 'CLIENT_ID')}
           placeholder="Client ID da Cielo"
           sectionState={cieloConfig}
@@ -257,21 +259,11 @@ const IntegrationsSection = () => {
         <IntegrationField
           editable={editable}
           fieldKey="EMAIL"
+          onBlur={saveCieloConfig}
           onChangeText={buildConfigUpdater(setCieloConfig, 'EMAIL')}
           placeholder="financeiro@empresa.com.br"
           sectionState={cieloConfig}
         />
-
-        <TouchableOpacity
-          style={[
-            globalStyles.button,
-            localStyles.primaryButton,
-            !editable && localStyles.primaryButtonDisabled,
-          ]}
-          disabled={!editable}
-          onPress={saveCieloConfig}>
-          <Text style={localStyles.primaryButtonText}>Salvar Cielo</Text>
-        </TouchableOpacity>
       </GeneralSettingsSection>
 
       <GeneralSettingsSection
@@ -288,6 +280,7 @@ const IntegrationsSection = () => {
         <IntegrationField
           editable={editable}
           fieldKey="LICENSE_KEY"
+          onBlur={saveNewRelicConfig}
           onChangeText={buildConfigUpdater(setNewRelicConfig, 'LICENSE_KEY')}
           placeholder="License key"
           sectionState={newRelicConfig}
@@ -295,6 +288,7 @@ const IntegrationsSection = () => {
         <IntegrationField
           editable={editable}
           fieldKey="APPLICATION_ID"
+          onBlur={saveNewRelicConfig}
           onChangeText={buildConfigUpdater(
             setNewRelicConfig,
             'APPLICATION_ID',
@@ -305,6 +299,7 @@ const IntegrationsSection = () => {
         <IntegrationField
           editable={editable}
           fieldKey="ACCOUNT_ID"
+          onBlur={saveNewRelicConfig}
           onChangeText={buildConfigUpdater(setNewRelicConfig, 'ACCOUNT_ID')}
           placeholder="Account ID"
           sectionState={newRelicConfig}
@@ -312,6 +307,7 @@ const IntegrationsSection = () => {
         <IntegrationField
           editable={editable}
           fieldKey="TRUST_KEY"
+          onBlur={saveNewRelicConfig}
           onChangeText={buildConfigUpdater(setNewRelicConfig, 'TRUST_KEY')}
           placeholder="Trust key"
           sectionState={newRelicConfig}
@@ -319,6 +315,7 @@ const IntegrationsSection = () => {
         <IntegrationField
           editable={editable}
           fieldKey="BEACON"
+          onBlur={saveNewRelicConfig}
           onChangeText={buildConfigUpdater(setNewRelicConfig, 'BEACON')}
           placeholder="bam.nr-data.net"
           sectionState={newRelicConfig}
@@ -326,21 +323,11 @@ const IntegrationsSection = () => {
         <IntegrationField
           editable={editable}
           fieldKey="ERROR_BEACON"
+          onBlur={saveNewRelicConfig}
           onChangeText={buildConfigUpdater(setNewRelicConfig, 'ERROR_BEACON')}
           placeholder="bam.nr-data.net"
           sectionState={newRelicConfig}
         />
-
-        <TouchableOpacity
-          style={[
-            globalStyles.button,
-            localStyles.primaryButton,
-            !editable && localStyles.primaryButtonDisabled,
-          ]}
-          disabled={!editable}
-          onPress={saveNewRelicConfig}>
-          <Text style={localStyles.primaryButtonText}>Salvar New Relic</Text>
-        </TouchableOpacity>
       </GeneralSettingsSection>
 
       <GeneralSettingsSection
@@ -356,6 +343,7 @@ const IntegrationsSection = () => {
         <IntegrationField
           editable={editable}
           fieldKey="CLIENT_ID"
+          onBlur={saveSpotifyConfig}
           onChangeText={buildConfigUpdater(setSpotifyConfig, 'CLIENT_ID')}
           placeholder="Client ID do Spotify"
           sectionState={spotifyConfig}
@@ -363,21 +351,11 @@ const IntegrationsSection = () => {
         <IntegrationField
           editable={editable}
           fieldKey="CLIENT_SECRET"
+          onBlur={saveSpotifyConfig}
           onChangeText={buildConfigUpdater(setSpotifyConfig, 'CLIENT_SECRET')}
           placeholder="Client secret do Spotify"
           sectionState={spotifyConfig}
         />
-
-        <TouchableOpacity
-          style={[
-            globalStyles.button,
-            localStyles.primaryButton,
-            !editable && localStyles.primaryButtonDisabled,
-          ]}
-          disabled={!editable}
-          onPress={saveSpotifyConfig}>
-          <Text style={localStyles.primaryButtonText}>Salvar Spotify</Text>
-        </TouchableOpacity>
       </GeneralSettingsSection>
     </>
   );

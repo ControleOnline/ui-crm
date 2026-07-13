@@ -8,7 +8,14 @@ import css from '@controleonline/ui-orders/src/react/css/orders';
 import StateStore from '@controleonline/ui-layout/src/react/components/StateStore';
 
 import localStyles from './GeneralSettings.styles';
-import {useGeneralSettingsConfig} from './GeneralSettings.shared';
+import {
+  useGeneralSettingsConfig,
+} from './GeneralSettings.shared';
+import {
+  readGeneralSettingsActiveTab,
+  resolveGeneralSettingsActiveTab,
+  writeGeneralSettingsActiveTab,
+} from './generalSettingsActiveTab';
 import DeviceRuntimeFooterSection from './sections/DeviceRuntimeFooterSection';
 import OrderPrintSection from './sections/OrderPrintSection';
 import DisplayPreparationSection from './sections/DisplayPreparationSection';
@@ -135,7 +142,10 @@ const GeneralSettings = () => {
     peopleActions,
   } =
     useGeneralSettingsConfig();
-  const [activeTab, setActiveTab] = useState(SETTINGS_TABS[0].key);
+  const [storedActiveTab] = useState(() => readGeneralSettingsActiveTab());
+  const [activeTab, setActiveTab] = useState(
+    () => storedActiveTab || SETTINGS_TABS[0].key,
+  );
 
   const availableTabs = useMemo(
     () =>
@@ -160,10 +170,21 @@ const GeneralSettings = () => {
   );
 
   useEffect(() => {
-    if (!availableTabs.some(tab => tab.key === activeTab)) {
-      setActiveTab(availableTabs[0]?.key || SETTINGS_TABS[0].key);
+    const nextActiveTab = resolveGeneralSettingsActiveTab({
+      activeTab,
+      availableTabs,
+      fallbackTab: SETTINGS_TABS[0].key,
+      storedTab: storedActiveTab,
+    });
+
+    if (nextActiveTab !== activeTab) {
+      setActiveTab(nextActiveTab);
     }
-  }, [activeTab, availableTabs]);
+  }, [activeTab, availableTabs, storedActiveTab]);
+
+  useEffect(() => {
+    writeGeneralSettingsActiveTab(activeTab);
+  }, [activeTab]);
 
   const activeTabConfig = useMemo(
     () =>

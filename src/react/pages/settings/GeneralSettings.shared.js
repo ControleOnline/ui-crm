@@ -2,6 +2,12 @@ import {useCallback, useMemo} from 'react';
 import {Alert} from 'react-native';
 
 import {useStore} from '@store';
+export {
+  GENERAL_SETTINGS_ACTIVE_TAB_STORAGE_KEY,
+  readGeneralSettingsActiveTab,
+  resolveGeneralSettingsActiveTab,
+  writeGeneralSettingsActiveTab,
+} from './generalSettingsActiveTab';
 
 export const ORDER_PRINT_DEVICES_CONFIG_KEY = 'order-print-devices';
 export const ORDER_PRINT_FOOTER_TEXT_CONFIG_KEY = 'order-print-footer-text';
@@ -13,7 +19,6 @@ export const MENU_CATALOG_HIDDEN_CATEGORY_IDS_CONFIG_KEY =
 export const MENU_CATALOG_HIDDEN_GROUP_IDS_CONFIG_KEY =
   'menu-catalog-hidden-group-ids';
 export const GENERAL_SETTINGS_PICKER_MODE = 'dropdown';
-
 export const DEFAULT_AFTER_SALES_PROFILES = [
   {maxRevenue: 10000, days: 30},
   {maxRevenue: 1000, days: 60},

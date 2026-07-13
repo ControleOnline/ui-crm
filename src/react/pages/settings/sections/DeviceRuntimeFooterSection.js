@@ -1,7 +1,6 @@
 import React, {useCallback, useEffect, useState} from 'react';
-import {Alert, Text, TextInput, TouchableOpacity} from 'react-native';
+import {Alert, Text, TextInput} from 'react-native';
 
-import css from '@controleonline/ui-orders/src/react/css/orders';
 import {
   DEVICE_RUNTIME_FOOTER_TEXT_CONFIG_KEY,
   normalizeRuntimeFooterText,
@@ -18,7 +17,6 @@ const DeviceRuntimeFooterSection = () => {
     defaultCompany,
     defaultCompanyLabel,
     isMainCompanySelected,
-    isSaving,
     peopleActions,
   } = useGeneralSettingsConfig();
 
@@ -113,6 +111,7 @@ const DeviceRuntimeFooterSection = () => {
         ]}
         value={deviceRuntimeFooterText}
         onChangeText={setDeviceRuntimeFooterText}
+        onBlur={saveDeviceRuntimeFooter}
         editable={!!defaultCompany?.id && isMainCompanySelected}
         placeholder="Ex.: www.seusite.com.br • (11) 99999-9999"
       />
@@ -120,20 +119,6 @@ const DeviceRuntimeFooterSection = () => {
         No rodape pequeno, o app alterna entre nome do device / versao e esse
         texto.
       </Text>
-
-      <TouchableOpacity
-        style={[
-          globalStyles.button,
-          localStyles.primaryButton,
-          (!defaultCompany?.id || !isMainCompanySelected || isSaving) &&
-            localStyles.primaryButtonDisabled,
-        ]}
-        disabled={!defaultCompany?.id || !isMainCompanySelected || isSaving}
-        onPress={saveDeviceRuntimeFooter}>
-        <Text style={localStyles.primaryButtonText}>
-          Salvar rodape dos devices
-        </Text>
-      </TouchableOpacity>
     </GeneralSettingsSection>
   );
 };

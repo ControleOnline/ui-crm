@@ -28,11 +28,10 @@ import {
 } from '../GeneralSettings.shared';
 
 const MenuCatalogSection = () => {
-  const {styles, globalStyles} = css();
+  const {styles} = css();
   const {
     currentCompany,
     effectiveCompanyConfigs,
-    isSaving,
     saveConfigs,
   } = useGeneralSettingsConfig();
 
@@ -148,39 +147,54 @@ const MenuCatalogSection = () => {
     [menuModels],
   );
 
-  const toggleMenuHiddenCategory = useCallback(categoryId => {
-    const normalizedId = String(categoryId || '').replace(/\D+/g, '').trim();
-    if (!normalizedId) {
-      return;
-    }
+  const saveMenuCatalogConfigs = useCallback(
+    async ({
+      hiddenCategoryIds = menuHiddenCategoryIds,
+      hiddenGroupIds = menuHiddenGroupIds,
+      model = menuCatalogModel,
+    } = {}) => {
+      await saveConfigs({
+        [MENU_CATALOG_MODEL_CONFIG_KEY]: normalizeModelReference(model),
+        [MENU_CATALOG_HIDDEN_CATEGORY_IDS_CONFIG_KEY]: hiddenCategoryIds,
+        [MENU_CATALOG_HIDDEN_GROUP_IDS_CONFIG_KEY]: hiddenGroupIds,
+      });
+    },
+    [menuCatalogModel, menuHiddenCategoryIds, menuHiddenGroupIds, saveConfigs],
+  );
 
-    setMenuHiddenCategoryIds(current =>
-      current.includes(normalizedId)
-        ? current.filter(item => item !== normalizedId)
-        : [...current, normalizedId],
-    );
-  }, []);
+  const toggleMenuHiddenCategory = useCallback(
+    categoryId => {
+      const normalizedId = String(categoryId || '').replace(/\D+/g, '').trim();
+      if (!normalizedId) {
+        return;
+      }
 
-  const toggleMenuHiddenGroup = useCallback(groupId => {
-    const normalizedId = String(groupId || '').replace(/\D+/g, '').trim();
-    if (!normalizedId) {
-      return;
-    }
+      const nextValue = menuHiddenCategoryIds.includes(normalizedId)
+        ? menuHiddenCategoryIds.filter(item => item !== normalizedId)
+        : [...menuHiddenCategoryIds, normalizedId];
 
-    setMenuHiddenGroupIds(current =>
-      current.includes(normalizedId)
-        ? current.filter(item => item !== normalizedId)
-        : [...current, normalizedId],
-    );
-  }, []);
+      setMenuHiddenCategoryIds(nextValue);
+      saveMenuCatalogConfigs({hiddenCategoryIds: nextValue});
+    },
+    [menuHiddenCategoryIds, saveMenuCatalogConfigs],
+  );
 
-  const saveMenuCatalogConfigs = useCallback(async () => {
-    await saveConfigs({
-      [MENU_CATALOG_MODEL_CONFIG_KEY]: normalizeModelReference(menuCatalogModel),
-      [MENU_CATALOG_HIDDEN_CATEGORY_IDS_CONFIG_KEY]: menuHiddenCategoryIds,
-      [MENU_CATALOG_HIDDEN_GROUP_IDS_CONFIG_KEY]: menuHiddenGroupIds,
-    });
-  }, [menuCatalogModel, menuHiddenCategoryIds, menuHiddenGroupIds, saveConfigs]);
+  const toggleMenuHiddenGroup = useCallback(
+    groupId => {
+      const normalizedId = String(groupId || '').replace(/\D+/g, '').trim();
+      if (!normalizedId) {
+        return;
+      }
+
+      const nextValue = menuHiddenGroupIds.includes(normalizedId)
+        ? menuHiddenGroupIds.filter(item => item !== normalizedId)
+        : [...menuHiddenGroupIds, normalizedId];
+
+      setMenuHiddenGroupIds(nextValue);
+      saveMenuCatalogConfigs({hiddenGroupIds: nextValue});
+    },
+    [menuHiddenGroupIds, saveMenuCatalogConfigs],
+  );
 
   return (
     <GeneralSettingsSection
@@ -212,9 +226,11 @@ const MenuCatalogSection = () => {
           <Picker
             selectedValue={menuCatalogModel}
             mode={GENERAL_SETTINGS_PICKER_MODE}
-            onValueChange={value =>
-              setMenuCatalogModel(normalizeModelReference(value))
-            }
+            onValueChange={value => {
+              const nextModel = normalizeModelReference(value);
+              setMenuCatalogModel(nextModel);
+              saveMenuCatalogConfigs({model: nextModel});
+            }}
             style={styles.Settings.picker}>
             <Picker.Item
               label="Selecione o modelo do cardapio"
@@ -353,18 +369,6 @@ const MenuCatalogSection = () => {
         )}
       </View>
 
-      <TouchableOpacity
-        style={[
-          globalStyles.button,
-          localStyles.primaryButton,
-          (!currentCompany?.id || isSaving) && localStyles.primaryButtonDisabled,
-        ]}
-        disabled={!currentCompany?.id || isSaving}
-        onPress={saveMenuCatalogConfigs}>
-        <Text style={localStyles.primaryButtonText}>
-          Salvar configuracoes do cardapio
-        </Text>
-      </TouchableOpacity>
     </GeneralSettingsSection>
   );
 };

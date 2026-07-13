@@ -1,7 +1,6 @@
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Image,
   ScrollView,
   Text,
@@ -53,6 +52,7 @@ import {
   SHOP_LOYALTY_STAMP_ICON_URL_CONFIG_KEY,
   SHOP_PRIMARY_ENTRY_CONFIG_KEY,
   SHOP_SALES_PAGE_ENABLED_CONFIG_KEY,
+  saveAndUpdateConfigValue,
   toggleAndSaveBooleanConfig,
 } from '@controleonline/ui-common/src/react/utils/shopConfig';
 
@@ -518,7 +518,6 @@ const ShopSection = () => {
     defaultCompanyLabel,
     effectiveCompanyConfigs,
     isMainCompanySelected,
-    isSaving,
     saveConfig,
     saveConfigs,
   } = useGeneralSettingsConfig();
@@ -698,14 +697,27 @@ const ShopSection = () => {
   }, [effectiveCompanyConfigs]);
 
   useEffect(() => {
-    setPrimaryEntry(currentValue =>
-      normalizeShopPrimaryEntry(currentValue, {
-        salesPageEnabled,
-        franchiseLocatorEnabled,
-        loyaltyCouponsEnabled,
-      }),
+    const nextPrimaryEntry = normalizeShopPrimaryEntry(primaryEntry, {
+      salesPageEnabled,
+      franchiseLocatorEnabled,
+      loyaltyCouponsEnabled,
+    });
+
+    if (nextPrimaryEntry === primaryEntry) {
+      return;
+    }
+
+    setPrimaryEntry(nextPrimaryEntry);
+    saveConfig(SHOP_PRIMARY_ENTRY_CONFIG_KEY, nextPrimaryEntry).catch(
+      () => {},
     );
-  }, [franchiseLocatorEnabled, loyaltyCouponsEnabled, salesPageEnabled]);
+  }, [
+    franchiseLocatorEnabled,
+    loyaltyCouponsEnabled,
+    primaryEntry,
+    salesPageEnabled,
+    saveConfig,
+  ]);
 
   useEffect(() => {
     if (!currentCompany?.id) {
@@ -955,9 +967,16 @@ const ShopSection = () => {
 
   useEffect(() => {
     if (visibleFranchiseCompanyIds.length === 0) {
-      setVisibleFranchiseAddressIds(currentIds =>
-        currentIds.length > 0 ? [] : currentIds,
-      );
+      if (visibleFranchiseAddressIds.length === 0) {
+        return;
+      }
+
+      setVisibleFranchiseAddressIds([]);
+      saveConfigs({
+        [SHOP_FRANCHISE_VISIBLE_COMPANY_IDS_CONFIG_KEY]:
+          visibleFranchiseCompanyIds,
+        [SHOP_FRANCHISE_VISIBLE_ADDRESS_IDS_CONFIG_KEY]: [],
+      });
       return;
     }
 
@@ -965,183 +984,174 @@ const ShopSection = () => {
       return;
     }
 
-    setVisibleFranchiseAddressIds(currentIds =>
-      currentIds.filter(addressId => {
-        const address = franchiseAddressesById[addressId];
-        if (!address) {
-          return false;
-        }
-
-        return visibleFranchiseCompanyIds.includes(
-          normalizeShopEntityId(address?.linkedCompany),
-        );
-      }),
-    );
-  }, [franchiseAddressesById, visibleFranchiseCompanyIds]);
-
-  const toggleLoyaltyProduct = useCallback(product => {
-    const productId = normalizeShopProductId(product);
-    if (!productId) {
-      return;
-    }
-
-    setLoyaltyProductIds(currentIds =>
-      currentIds.includes(productId)
-        ? currentIds.filter(item => item !== productId)
-        : [...currentIds, productId],
-    );
-  }, []);
-
-  const selectGiftProduct = useCallback(product => {
-    const productId = normalizeShopProductId(product);
-    setLoyaltyGiftProductId(productId);
-    setGiftSelectorVisible(false);
-  }, []);
-
-  const toggleFranchiseCompany = useCallback(company => {
-    const companyId = normalizeShopEntityId(company);
-    if (!companyId) {
-      return;
-    }
-
-    setVisibleFranchiseCompanyIds(currentIds =>
-      currentIds.includes(companyId)
-        ? currentIds.filter(item => item !== companyId)
-        : [...currentIds, companyId],
-    );
-  }, []);
-
-  const toggleFranchiseAddress = useCallback(address => {
-    const addressId = normalizeShopEntityId(address);
-    if (!addressId) {
-      return;
-    }
-
-    setVisibleFranchiseAddressIds(currentIds =>
-      currentIds.includes(addressId)
-        ? currentIds.filter(item => item !== addressId)
-        : [...currentIds, addressId],
-    );
-  }, []);
-
-  const toggleCatalogProductType = useCallback(productType => {
-    setCatalogProductTypes(currentTypes => {
-      const normalizedTypes = normalizeShopCatalogProductTypes(currentTypes);
-
-      if (normalizedTypes.includes(productType)) {
-        const nextTypes = normalizedTypes.filter(type => type !== productType);
-        return nextTypes.length > 0 ? nextTypes : normalizedTypes;
+    const nextAddressIds = visibleFranchiseAddressIds.filter(addressId => {
+      const address = franchiseAddressesById[addressId];
+      if (!address) {
+        return false;
       }
 
-      return [...normalizedTypes, productType];
-    });
-  }, []);
-
-  const saveHomeSettings = useCallback(async () => {
-    const normalizedPrimaryEntry = normalizeShopPrimaryEntry(primaryEntry, {
-      salesPageEnabled,
-      franchiseLocatorEnabled,
-      loyaltyCouponsEnabled,
+      return visibleFranchiseCompanyIds.includes(
+        normalizeShopEntityId(address?.linkedCompany),
+      );
     });
 
-    await saveConfigs({
-      [SHOP_PRIMARY_ENTRY_CONFIG_KEY]: normalizedPrimaryEntry,
-      [SHOP_FRANCHISE_PIN_ICON_URL_CONFIG_KEY]: normalizeShopTextConfig(
-        franchisePinIconUrl,
-      ),
-      [SHOP_FRANCHISE_VISIBLE_COMPANY_IDS_CONFIG_KEY]: visibleFranchiseCompanyIds,
-      [SHOP_FRANCHISE_VISIBLE_ADDRESS_IDS_CONFIG_KEY]: visibleFranchiseAddressIds,
+    if (
+      nextAddressIds.length === visibleFranchiseAddressIds.length &&
+      nextAddressIds.every(
+        (addressId, index) => addressId === visibleFranchiseAddressIds[index],
+      )
+    ) {
+      return;
+    }
+
+    setVisibleFranchiseAddressIds(nextAddressIds);
+    saveConfigs({
+      [SHOP_FRANCHISE_VISIBLE_COMPANY_IDS_CONFIG_KEY]:
+        visibleFranchiseCompanyIds,
+      [SHOP_FRANCHISE_VISIBLE_ADDRESS_IDS_CONFIG_KEY]: nextAddressIds,
     });
   }, [
-    franchiseLocatorEnabled,
-    franchisePinIconUrl,
-    loyaltyCouponsEnabled,
-    primaryEntry,
-    salesPageEnabled,
+    franchiseAddressesById,
     saveConfigs,
     visibleFranchiseAddressIds,
     visibleFranchiseCompanyIds,
   ]);
 
-  const saveCheckoutSettings = useCallback(async () => {
-    await saveConfigs({
-      [SHOP_CHARGE_ON_DELIVERY_ENABLED_CONFIG_KEY]: chargeOnDeliveryEnabled
-        ? '1'
-        : '0',
-      [SHOP_DELIVERY_FEE_ENABLED_CONFIG_KEY]: deliveryFeeEnabled ? '1' : '0',
-      [SHOP_DELIVERY_FEE_VALUE_CONFIG_KEY]: normalizeShopMoneyConfig(
-        deliveryFeeValue,
-      ),
+  const saveFranchiseVisibility = useCallback(
+    (nextCompanyIds, nextAddressIds) => {
+      setVisibleFranchiseCompanyIds(nextCompanyIds);
+      setVisibleFranchiseAddressIds(nextAddressIds);
+
+      return saveConfigs({
+        [SHOP_FRANCHISE_VISIBLE_COMPANY_IDS_CONFIG_KEY]: nextCompanyIds,
+        [SHOP_FRANCHISE_VISIBLE_ADDRESS_IDS_CONFIG_KEY]: nextAddressIds,
+      });
+    },
+    [saveConfigs],
+  );
+
+  const toggleLoyaltyProduct = useCallback(
+    product => {
+      const productId = normalizeShopProductId(product);
+      if (!productId) {
+        return;
+      }
+
+      const nextProductIds = loyaltyProductIds.includes(productId)
+        ? loyaltyProductIds.filter(item => item !== productId)
+        : [...loyaltyProductIds, productId];
+
+      saveAndUpdateConfigValue({
+        configKey: SHOP_LOYALTY_PRODUCT_IDS_CONFIG_KEY,
+        nextValue: nextProductIds,
+        saveConfig,
+        setValue: setLoyaltyProductIds,
+      });
+    },
+    [loyaltyProductIds, saveConfig],
+  );
+
+  const selectGiftProduct = useCallback(
+    product => {
+      const productId = normalizeShopProductId(product);
+
+      saveAndUpdateConfigValue({
+        configKey: SHOP_LOYALTY_GIFT_PRODUCT_ID_CONFIG_KEY,
+        nextValue: productId,
+        saveConfig,
+        setValue: setLoyaltyGiftProductId,
+      });
+      setGiftSelectorVisible(false);
+    },
+    [saveConfig],
+  );
+
+  const clearGiftProduct = useCallback(() => {
+    saveAndUpdateConfigValue({
+      configKey: SHOP_LOYALTY_GIFT_PRODUCT_ID_CONFIG_KEY,
+      nextValue: '',
+      saveConfig,
+      setValue: setLoyaltyGiftProductId,
     });
-  }, [
-    chargeOnDeliveryEnabled,
-    deliveryFeeEnabled,
-    deliveryFeeValue,
-    saveConfigs,
-  ]);
+  }, [saveConfig]);
 
-  const saveCatalogSettings = useCallback(async () => {
-    await saveConfig(
-      SHOP_CATALOG_PRODUCT_TYPES_CONFIG_KEY,
-      normalizeShopCatalogProductTypes(catalogProductTypes),
-    );
-  }, [catalogProductTypes, saveConfig]);
+  const toggleFranchiseCompany = useCallback(
+    company => {
+      const companyId = normalizeShopEntityId(company);
+      if (!companyId) {
+        return;
+      }
 
-  const saveLoyaltySettings = useCallback(async () => {
-    const normalizedRequiredSales = normalizeShopLoyaltyRequiredSales(
-      loyaltyRequiredSales,
-    );
+      const nextCompanyIds = visibleFranchiseCompanyIds.includes(companyId)
+        ? visibleFranchiseCompanyIds.filter(item => item !== companyId)
+        : [...visibleFranchiseCompanyIds, companyId];
+      const nextAddressIds = visibleFranchiseAddressIds.filter(addressId => {
+        const address = franchiseAddressesById[addressId];
+        if (!address) {
+          return false;
+        }
 
-    const loyaltyToggleSaved = await saveConfig(
-      SHOP_LOYALTY_COUPONS_ENABLED_CONFIG_KEY,
-      loyaltyCouponsEnabled ? '1' : '0',
-    );
+        return nextCompanyIds.includes(
+          normalizeShopEntityId(address?.linkedCompany),
+        );
+      });
 
-    if (!loyaltyToggleSaved) {
-      return;
-    }
+      saveFranchiseVisibility(nextCompanyIds, nextAddressIds);
+    },
+    [
+      franchiseAddressesById,
+      saveFranchiseVisibility,
+      visibleFranchiseAddressIds,
+      visibleFranchiseCompanyIds,
+    ],
+  );
 
-    if (loyaltyCouponsEnabled && loyaltyProductIds.length === 0) {
-      Alert.alert(
-        'Cupons de fidelidade',
-        'Selecione pelo menos um produto participante antes de salvar.',
+  const toggleFranchiseAddress = useCallback(
+    address => {
+      const addressId = normalizeShopEntityId(address);
+      if (!addressId) {
+        return;
+      }
+
+      const nextAddressIds = visibleFranchiseAddressIds.includes(addressId)
+        ? visibleFranchiseAddressIds.filter(item => item !== addressId)
+        : [...visibleFranchiseAddressIds, addressId];
+
+      saveFranchiseVisibility(visibleFranchiseCompanyIds, nextAddressIds);
+    },
+    [saveFranchiseVisibility, visibleFranchiseAddressIds, visibleFranchiseCompanyIds],
+  );
+
+  const toggleCatalogProductType = useCallback(
+    productType => {
+      const normalizedTypes = normalizeShopCatalogProductTypes(
+        catalogProductTypes,
       );
-      return;
-    }
+      const nextTypes = normalizedTypes.includes(productType)
+        ? normalizedTypes.filter(type => type !== productType)
+        : [...normalizedTypes, productType];
 
-    if (loyaltyCouponsEnabled && normalizedRequiredSales < 1) {
-      Alert.alert(
-        'Cupons de fidelidade',
-        'Informe quantas compras sao necessarias para liberar o brinde.',
-      );
-      return;
-    }
+      saveAndUpdateConfigValue({
+        configKey: SHOP_CATALOG_PRODUCT_TYPES_CONFIG_KEY,
+        nextValue: nextTypes,
+        saveConfig,
+        setValue: setCatalogProductTypes,
+      });
+    },
+    [catalogProductTypes, saveConfig],
+  );
 
-    if (loyaltyCouponsEnabled && !loyaltyGiftProductId) {
-      Alert.alert(
-        'Cupons de fidelidade',
-        'Selecione o produto que sera entregue como brinde.',
-      );
-      return;
-    }
-
-    await saveConfigs({
-      [SHOP_LOYALTY_PRODUCT_IDS_CONFIG_KEY]: loyaltyProductIds,
-      [SHOP_LOYALTY_REQUIRED_SALES_CONFIG_KEY]: normalizedRequiredSales,
-      [SHOP_LOYALTY_GIFT_PRODUCT_ID_CONFIG_KEY]: loyaltyGiftProductId,
-      [SHOP_LOYALTY_STAMP_ICON_URL_CONFIG_KEY]: normalizeShopTextConfig(
-        loyaltyStampIconUrl,
-      ),
-    });
-  }, [
-    loyaltyCouponsEnabled,
-    loyaltyGiftProductId,
-    loyaltyProductIds,
-    loyaltyRequiredSales,
-    loyaltyStampIconUrl,
-    saveConfig,
-    saveConfigs,
-  ]);
+  const selectPrimaryEntry = useCallback(
+    optionKey => {
+      saveAndUpdateConfigValue({
+        configKey: SHOP_PRIMARY_ENTRY_CONFIG_KEY,
+        nextValue: optionKey,
+        saveConfig,
+        setValue: setPrimaryEntry,
+      });
+    },
+    [saveConfig],
+  );
 
   if (!isMainCompanySelected) {
     return (
@@ -1223,6 +1233,12 @@ const ShopSection = () => {
             <TextInput
               value={franchisePinIconUrl}
               onChangeText={setFranchisePinIconUrl}
+              onBlur={() =>
+                saveConfig(
+                  SHOP_FRANCHISE_PIN_ICON_URL_CONFIG_KEY,
+                  normalizeShopTextConfig(franchisePinIconUrl),
+                )
+              }
               autoCapitalize="none"
               autoCorrect={false}
               placeholder="https://..."
@@ -1277,7 +1293,7 @@ const ShopSection = () => {
                     ]}
                     activeOpacity={0.85}
                     disabled={locked}
-                    onPress={() => setPrimaryEntry(option.key)}>
+                    onPress={() => selectPrimaryEntry(option.key)}>
                     <Icon
                       name={active ? 'star' : 'star-border'}
                       size={20}
@@ -1535,18 +1551,6 @@ const ShopSection = () => {
           </Text>
         </View>
 
-        <TouchableOpacity
-          style={[
-            globalStyles.button,
-            localStyles.primaryButton,
-            (!currentCompany?.id || isSaving) && localStyles.primaryButtonDisabled,
-          ]}
-          disabled={!currentCompany?.id || isSaving}
-          onPress={saveHomeSettings}>
-          <Text style={localStyles.primaryButtonText}>
-            Salvar home do shop
-          </Text>
-        </TouchableOpacity>
       </GeneralSettingsSection>
 
       <GeneralSettingsSection
@@ -1583,19 +1587,6 @@ const ShopSection = () => {
             );
           })}
         </View>
-
-        <TouchableOpacity
-          style={[
-            globalStyles.button,
-            localStyles.primaryButton,
-            (!currentCompany?.id || isSaving) && localStyles.primaryButtonDisabled,
-          ]}
-          disabled={!currentCompany?.id || isSaving}
-          onPress={saveCatalogSettings}>
-          <Text style={localStyles.primaryButtonText}>
-            Salvar catalogo do shop
-          </Text>
-        </TouchableOpacity>
       </GeneralSettingsSection>
 
       <GeneralSettingsSection
@@ -1608,7 +1599,14 @@ const ShopSection = () => {
           label="Cobrar na entrega"
           description="Libera uma acao no checkout para registrar pedidos que serao pagos manualmente na entrega."
           value={chargeOnDeliveryEnabled}
-          onToggle={() => setChargeOnDeliveryEnabled(current => !current)}
+          onToggle={() =>
+            toggleAndSaveBooleanConfig({
+              configKey: SHOP_CHARGE_ON_DELIVERY_ENABLED_CONFIG_KEY,
+              currentValue: chargeOnDeliveryEnabled,
+              saveConfig,
+              setValue: setChargeOnDeliveryEnabled,
+            })
+          }
         />
 
         <Text style={localStyles.helperText}>
@@ -1621,7 +1619,14 @@ const ShopSection = () => {
           label="Taxa fixa de entrega"
           description="Quando ativada, soma uma taxa de entrega configurada no checkout quando nao houver cotacao automatica."
           value={deliveryFeeEnabled}
-          onToggle={() => setDeliveryFeeEnabled(current => !current)}
+          onToggle={() =>
+            toggleAndSaveBooleanConfig({
+              configKey: SHOP_DELIVERY_FEE_ENABLED_CONFIG_KEY,
+              currentValue: deliveryFeeEnabled,
+              saveConfig,
+              setValue: setDeliveryFeeEnabled,
+            })
+          }
         />
 
         <View style={localStyles.fieldBlock}>
@@ -1629,6 +1634,12 @@ const ShopSection = () => {
           <TextInput
             value={deliveryFeeValue}
             onChangeText={setDeliveryFeeValue}
+            onBlur={() =>
+              saveConfig(
+                SHOP_DELIVERY_FEE_VALUE_CONFIG_KEY,
+                normalizeShopMoneyConfig(deliveryFeeValue),
+              )
+            }
             keyboardType="decimal-pad"
             placeholder="Ex.: 8,90"
             placeholderTextColor="#94A3B8"
@@ -1639,18 +1650,6 @@ const ShopSection = () => {
           </Text>
         </View>
 
-        <TouchableOpacity
-          style={[
-            globalStyles.button,
-            localStyles.primaryButton,
-            (!currentCompany?.id || isSaving) && localStyles.primaryButtonDisabled,
-          ]}
-          disabled={!currentCompany?.id || isSaving}
-          onPress={saveCheckoutSettings}>
-          <Text style={localStyles.primaryButtonText}>
-            Salvar checkout do shop
-          </Text>
-        </TouchableOpacity>
       </GeneralSettingsSection>
 
       <GeneralSettingsSection
@@ -1663,7 +1662,14 @@ const ShopSection = () => {
           label="Cupons de fidelidade"
           description="Ativa a regra de acumulo de vendas para liberar um brinde no shop."
           value={loyaltyCouponsEnabled}
-          onToggle={() => setLoyaltyCouponsEnabled(current => !current)}
+          onToggle={() =>
+            toggleAndSaveBooleanConfig({
+              configKey: SHOP_LOYALTY_COUPONS_ENABLED_CONFIG_KEY,
+              currentValue: loyaltyCouponsEnabled,
+              saveConfig,
+              setValue: setLoyaltyCouponsEnabled,
+            })
+          }
         />
 
         <Text style={localStyles.helperText}>
@@ -1684,6 +1690,12 @@ const ShopSection = () => {
             <TextInput
               value={loyaltyStampIconUrl}
               onChangeText={setLoyaltyStampIconUrl}
+              onBlur={() =>
+                saveConfig(
+                  SHOP_LOYALTY_STAMP_ICON_URL_CONFIG_KEY,
+                  normalizeShopTextConfig(loyaltyStampIconUrl),
+                )
+              }
               autoCapitalize="none"
               autoCorrect={false}
               placeholder="https://..."
@@ -1712,6 +1724,12 @@ const ShopSection = () => {
             value={loyaltyRequiredSales}
             onChangeText={value =>
               setLoyaltyRequiredSales(value.replace(/\D+/g, ''))
+            }
+            onBlur={() =>
+              saveConfig(
+                SHOP_LOYALTY_REQUIRED_SALES_CONFIG_KEY,
+                normalizeShopLoyaltyRequiredSales(loyaltyRequiredSales),
+              )
             }
             keyboardType="number-pad"
             placeholder="Ex.: 10"
@@ -1912,7 +1930,7 @@ const ShopSection = () => {
                 localStyles.printerItemActive,
               ]}
               activeOpacity={0.85}
-              onPress={() => setLoyaltyGiftProductId('')}>
+              onPress={clearGiftProduct}>
               <Icon name="card-giftcard" size={20} color="#B45309" />
               <View style={localStyles.printerCopy}>
                 <Text style={localStyles.printerName}>
@@ -1936,18 +1954,6 @@ const ShopSection = () => {
           )}
         </View>
 
-        <TouchableOpacity
-          style={[
-            globalStyles.button,
-            localStyles.primaryButton,
-            (!currentCompany?.id || isSaving) && localStyles.primaryButtonDisabled,
-          ]}
-          disabled={!currentCompany?.id || isSaving}
-          onPress={saveLoyaltySettings}>
-          <Text style={localStyles.primaryButtonText}>
-            Salvar fidelidade do shop
-          </Text>
-        </TouchableOpacity>
       </GeneralSettingsSection>
 
       <SelectionModal

@@ -1,6 +1,5 @@
 import React, {useCallback, useEffect, useState} from 'react';
-import {Text, TextInput, TouchableOpacity, View} from 'react-native';
-import css from '@controleonline/ui-orders/src/react/css/orders';
+import {Text, TextInput, View} from 'react-native';
 
 import localStyles from '../GeneralSettings.styles';
 import GeneralSettingsSection from '../GeneralSettingsSection';
@@ -12,8 +11,7 @@ import {
 } from '@controleonline/ui-common/src/react/utils/googleMapsConfig';
 
 const MapsSection = () => {
-  const {globalStyles} = css();
-  const {currentCompany, effectiveCompanyConfigs, isSaving, saveConfigs} =
+  const {currentCompany, effectiveCompanyConfigs, saveConfigs} =
     useGeneralSettingsConfig();
 
   const [webGoogleMapsApiKey, setWebGoogleMapsApiKey] = useState('');
@@ -52,6 +50,7 @@ const MapsSection = () => {
         <TextInput
           value={webGoogleMapsApiKey}
           onChangeText={setWebGoogleMapsApiKey}
+          onBlur={saveMapsSettings}
           autoCapitalize="none"
           autoCorrect={false}
           placeholder="Cole a chave do Google Maps para web"
@@ -68,6 +67,7 @@ const MapsSection = () => {
         <TextInput
           value={androidGoogleMapsApiKey}
           onChangeText={setAndroidGoogleMapsApiKey}
+          onBlur={saveMapsSettings}
           autoCapitalize="none"
           autoCorrect={false}
           placeholder="Cole a chave do Google Maps para Android"
@@ -75,17 +75,6 @@ const MapsSection = () => {
           style={localStyles.input}
         />
       </View>
-
-      <TouchableOpacity
-        style={[
-          globalStyles.button,
-          localStyles.primaryButton,
-          (!currentCompany?.id || isSaving) && localStyles.primaryButtonDisabled,
-        ]}
-        disabled={!currentCompany?.id || isSaving}
-        onPress={saveMapsSettings}>
-        <Text style={localStyles.primaryButtonText}>Salvar chaves do mapa</Text>
-      </TouchableOpacity>
     </GeneralSettingsSection>
   );
 };

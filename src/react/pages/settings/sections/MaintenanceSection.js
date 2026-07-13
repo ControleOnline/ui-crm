@@ -1,7 +1,6 @@
 import React, {useCallback, useEffect, useState} from 'react';
 import {Switch, Text, TextInput, TouchableOpacity, View} from 'react-native';
 
-import css from '@controleonline/ui-orders/src/react/css/orders';
 import useToastMessage from '@controleonline/ui-crm/src/react/hooks/useToastMessage';
 import {
   isLikelyCronExpression,
@@ -15,7 +14,6 @@ import GeneralSettingsSection from '../GeneralSettingsSection';
 import {useGeneralSettingsConfig} from '../GeneralSettings.shared';
 
 const MaintenanceSection = () => {
-  const {globalStyles} = css();
   const {showError, showSuccess} = useToastMessage();
   const {
     defaultCompany,
@@ -46,17 +44,8 @@ const MaintenanceSection = () => {
     isMainCompanySelected &&
     !isSaving;
 
-  const updateRoutine = useCallback((routineKey, patch) => {
-    setRoutines(currentValue => ({
-      ...currentValue,
-      [routineKey]: {
-        ...(currentValue[routineKey] || {}),
-        ...patch,
-      },
-    }));
-  }, []);
-
-  const saveRoutines = useCallback(async () => {
+  const saveRoutines = useCallback(
+    async (nextRoutines = routines) => {
     if (!hasDefaultCompanyAccess || !defaultCompany?.id || !isMainCompanySelected) {
       showError(
         `Abra a empresa principal (${defaultCompanyLabel}) para editar as rotinas.`,
@@ -64,9 +53,9 @@ const MaintenanceSection = () => {
       return;
     }
 
-    const invalidRoutine = MAINTENANCE_ROUTINE_ITEMS.find(item => {
+      const invalidRoutine = MAINTENANCE_ROUTINE_ITEMS.find(item => {
       const cronExpression = String(
-        routines?.[item.key]?.cronExpression || '',
+          nextRoutines?.[item.key]?.cronExpression || '',
       ).trim();
 
       return !isLikelyCronExpression(cronExpression);
@@ -79,30 +68,52 @@ const MaintenanceSection = () => {
       return;
     }
 
-    const success = await saveConfigs({
-      [MAINTENANCE_ROUTINES_CONFIG_KEY]: routines,
-    });
+      const success = await saveConfigs({
+        [MAINTENANCE_ROUTINES_CONFIG_KEY]: nextRoutines,
+      });
 
-    if (!success) {
-      return;
-    }
+      if (!success) {
+        return false;
+      }
 
-    try {
-      await peopleActions.defaultCompany();
-    } catch {}
+      try {
+        await peopleActions.defaultCompany();
+      } catch {}
 
-    showSuccess('Rotinas de manutencao salvas com sucesso.');
-  }, [
-    defaultCompany?.id,
-    defaultCompanyLabel,
-    hasDefaultCompanyAccess,
-    isMainCompanySelected,
-    peopleActions,
-    routines,
-    saveConfigs,
-    showError,
-    showSuccess,
-  ]);
+      showSuccess('Rotinas de manutencao salvas com sucesso.');
+      return true;
+    },
+    [
+      defaultCompany?.id,
+      defaultCompanyLabel,
+      hasDefaultCompanyAccess,
+      isMainCompanySelected,
+      peopleActions,
+      routines,
+      saveConfigs,
+      showError,
+      showSuccess,
+    ],
+  );
+
+  const updateRoutine = useCallback(
+    (routineKey, patch, shouldSave = false) => {
+      const nextRoutines = {
+        ...routines,
+        [routineKey]: {
+          ...(routines[routineKey] || {}),
+          ...patch,
+        },
+      };
+
+      setRoutines(nextRoutines);
+
+      if (shouldSave) {
+        saveRoutines(nextRoutines);
+      }
+    },
+    [routines, saveRoutines],
+  );
 
   return (
     <GeneralSettingsSection
@@ -140,7 +151,7 @@ const MaintenanceSection = () => {
               <Switch
                 value={!!routine.enabled}
                 onValueChange={value =>
-                  updateRoutine(item.key, {enabled: value})
+                  updateRoutine(item.key, {enabled: value}, true)
                 }
                 disabled={!editable}
               />
@@ -157,6 +168,7 @@ const MaintenanceSection = () => {
                 onChangeText={value =>
                   updateRoutine(item.key, {cronExpression: value})
                 }
+                onBlur={() => saveRoutines()}
                 editable={editable}
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -171,16 +183,6 @@ const MaintenanceSection = () => {
         );
       })}
 
-      <TouchableOpacity
-        style={[
-          globalStyles.button,
-          localStyles.primaryButton,
-          !editable && localStyles.primaryButtonDisabled,
-        ]}
-        disabled={!editable}
-        onPress={saveRoutines}>
-        <Text style={localStyles.primaryButtonText}>Salvar rotinas</Text>
-      </TouchableOpacity>
     </GeneralSettingsSection>
   );
 };

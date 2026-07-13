@@ -1,11 +1,5 @@
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
-import {
-  ActivityIndicator,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import {ActivityIndicator, Text, TextInput, View} from 'react-native';
 import {Picker} from '@react-native-picker/picker';
 
 import css from '@controleonline/ui-orders/src/react/css/orders';
@@ -20,13 +14,9 @@ import {
 } from '../GeneralSettings.shared';
 
 const OperationsSection = () => {
-  const {styles, globalStyles} = css();
-  const {
-    currentCompany,
-    effectiveCompanyConfigs,
-    isSaving,
-    saveConfigs,
-  } = useGeneralSettingsConfig();
+  const {styles} = css();
+  const {currentCompany, effectiveCompanyConfigs, saveConfigs} =
+    useGeneralSettingsConfig();
 
   const statusStore = useStore('status');
   const {
@@ -92,28 +82,39 @@ const OperationsSection = () => {
     [wallets],
   );
 
-  const saveOperationalConfigs = useCallback(async () => {
-    await saveConfigs({
-      'pos-default-status': String(posDefaultStatus || '').trim(),
-      'pos-paid-status': String(posPaidStatus || '').trim(),
-      'pos-cash-wallet': String(posCashWallet || '').trim(),
-      'pos-withdrawl-wallet': String(posWithdrawWallet || '').trim(),
-      'pos-cielo-wallet': String(posCieloWallet || '').trim(),
-      'pos-infinite-pay-wallet': String(posInfinitePayWallet || '').trim(),
-      'cash-register-notifications': normalizeNotificationTargets(
-        cashRegisterNotifications,
-      ),
-    });
-  }, [
-    cashRegisterNotifications,
-    posCashWallet,
-    posCieloWallet,
-    posDefaultStatus,
-    posInfinitePayWallet,
-    posPaidStatus,
-    posWithdrawWallet,
-    saveConfigs,
-  ]);
+  const saveOperationalConfigs = useCallback(
+    async ({
+      nextCashRegisterNotifications = cashRegisterNotifications,
+      nextPosCashWallet = posCashWallet,
+      nextPosCieloWallet = posCieloWallet,
+      nextPosDefaultStatus = posDefaultStatus,
+      nextPosInfinitePayWallet = posInfinitePayWallet,
+      nextPosPaidStatus = posPaidStatus,
+      nextPosWithdrawWallet = posWithdrawWallet,
+    } = {}) => {
+      await saveConfigs({
+        'pos-default-status': String(nextPosDefaultStatus || '').trim(),
+        'pos-paid-status': String(nextPosPaidStatus || '').trim(),
+        'pos-cash-wallet': String(nextPosCashWallet || '').trim(),
+        'pos-withdrawl-wallet': String(nextPosWithdrawWallet || '').trim(),
+        'pos-cielo-wallet': String(nextPosCieloWallet || '').trim(),
+        'pos-infinite-pay-wallet': String(nextPosInfinitePayWallet || '').trim(),
+        'cash-register-notifications': normalizeNotificationTargets(
+          nextCashRegisterNotifications,
+        ),
+      });
+    },
+    [
+      cashRegisterNotifications,
+      posCashWallet,
+      posCieloWallet,
+      posDefaultStatus,
+      posInfinitePayWallet,
+      posPaidStatus,
+      posWithdrawWallet,
+      saveConfigs,
+    ],
+  );
 
   return (
     <GeneralSettingsSection
@@ -127,7 +128,11 @@ const OperationsSection = () => {
         <Picker
           selectedValue={posDefaultStatus}
           mode={GENERAL_SETTINGS_PICKER_MODE}
-          onValueChange={value => setPosDefaultStatus(String(value || ''))}
+          onValueChange={value => {
+            const nextValue = String(value || '');
+            setPosDefaultStatus(nextValue);
+            saveOperationalConfigs({nextPosDefaultStatus: nextValue});
+          }}
           style={styles.Settings.picker}>
           <Picker.Item label="Selecione um status" value="" />
           {normalizedStatusOptions.map(statusOption => (
@@ -145,7 +150,11 @@ const OperationsSection = () => {
         <Picker
           selectedValue={posPaidStatus}
           mode={GENERAL_SETTINGS_PICKER_MODE}
-          onValueChange={value => setPosPaidStatus(String(value || ''))}
+          onValueChange={value => {
+            const nextValue = String(value || '');
+            setPosPaidStatus(nextValue);
+            saveOperationalConfigs({nextPosPaidStatus: nextValue});
+          }}
           style={styles.Settings.picker}>
           <Picker.Item label="Selecione um status" value="" />
           {normalizedStatusOptions.map(statusOption => (
@@ -163,7 +172,11 @@ const OperationsSection = () => {
         <Picker
           selectedValue={posCashWallet}
           mode={GENERAL_SETTINGS_PICKER_MODE}
-          onValueChange={value => setPosCashWallet(String(value || ''))}
+          onValueChange={value => {
+            const nextValue = String(value || '');
+            setPosCashWallet(nextValue);
+            saveOperationalConfigs({nextPosCashWallet: nextValue});
+          }}
           style={styles.Settings.picker}>
           <Picker.Item label="Selecione uma carteira" value="" />
           {normalizedWalletOptions.map(walletOption => (
@@ -181,7 +194,11 @@ const OperationsSection = () => {
         <Picker
           selectedValue={posWithdrawWallet}
           mode={GENERAL_SETTINGS_PICKER_MODE}
-          onValueChange={value => setPosWithdrawWallet(String(value || ''))}
+          onValueChange={value => {
+            const nextValue = String(value || '');
+            setPosWithdrawWallet(nextValue);
+            saveOperationalConfigs({nextPosWithdrawWallet: nextValue});
+          }}
           style={styles.Settings.picker}>
           <Picker.Item label="Selecione uma carteira" value="" />
           {normalizedWalletOptions.map(walletOption => (
@@ -199,7 +216,11 @@ const OperationsSection = () => {
         <Picker
           selectedValue={posCieloWallet}
           mode={GENERAL_SETTINGS_PICKER_MODE}
-          onValueChange={value => setPosCieloWallet(String(value || ''))}
+          onValueChange={value => {
+            const nextValue = String(value || '');
+            setPosCieloWallet(nextValue);
+            saveOperationalConfigs({nextPosCieloWallet: nextValue});
+          }}
           style={styles.Settings.picker}>
           <Picker.Item label="Selecione uma carteira" value="" />
           {normalizedWalletOptions.map(walletOption => (
@@ -217,7 +238,11 @@ const OperationsSection = () => {
         <Picker
           selectedValue={posInfinitePayWallet}
           mode={GENERAL_SETTINGS_PICKER_MODE}
-          onValueChange={value => setPosInfinitePayWallet(String(value || ''))}
+          onValueChange={value => {
+            const nextValue = String(value || '');
+            setPosInfinitePayWallet(nextValue);
+            saveOperationalConfigs({nextPosInfinitePayWallet: nextValue});
+          }}
           style={styles.Settings.picker}>
           <Picker.Item label="Selecione uma carteira" value="" />
           {normalizedWalletOptions.map(walletOption => (
@@ -240,6 +265,7 @@ const OperationsSection = () => {
           multiline
           numberOfLines={4}
           onChangeText={setCashRegisterNotifications}
+          onBlur={() => saveOperationalConfigs()}
           placeholder="Um numero por linha ou separado por virgula"
         />
       </View>
@@ -248,18 +274,6 @@ const OperationsSection = () => {
         <ActivityIndicator size="small" style={localStyles.sectionLoader} />
       )}
 
-      <TouchableOpacity
-        style={[
-          globalStyles.button,
-          localStyles.primaryButton,
-          (!currentCompany?.id || isSaving) && localStyles.primaryButtonDisabled,
-        ]}
-        disabled={!currentCompany?.id || isSaving}
-        onPress={saveOperationalConfigs}>
-        <Text style={localStyles.primaryButtonText}>
-          Salvar configuracoes do PDV
-        </Text>
-      </TouchableOpacity>
     </GeneralSettingsSection>
   );
 };

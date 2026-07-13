@@ -9,7 +9,6 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
-import css from '@controleonline/ui-orders/src/react/css/orders';
 import {
   filterDeviceConfigsByCompany,
   normalizeDeviceIds,
@@ -32,13 +31,8 @@ import {
 } from '../GeneralSettings.shared';
 
 const OrderPrintSection = () => {
-  const {globalStyles} = css();
-  const {
-    currentCompany,
-    effectiveCompanyConfigs,
-    isSaving,
-    saveConfigs,
-  } = useGeneralSettingsConfig();
+  const {currentCompany, effectiveCompanyConfigs, saveConfigs} =
+    useGeneralSettingsConfig();
 
   const printerStore = useStore('printer');
   const {
@@ -100,28 +94,51 @@ const OrderPrintSection = () => {
 
   const selectedPrinterCount = orderPrintDevices.length;
 
-  const toggleOrderPrintDevice = useCallback(deviceId => {
-    if (!deviceId) {
-      return;
-    }
-
-    setOrderPrintDevices(current =>
-      current.includes(deviceId)
-        ? current.filter(item => item !== deviceId)
-        : [...current, deviceId],
-    );
-  }, []);
-
-  const saveOrderPrintDevices = useCallback(async () => {
+  const saveOrderPrintDevices = useCallback(
+    async ({
+      nextEnabled = orderPrintEnabled,
+      nextDevices = orderPrintDevices,
+      nextFooterText = orderPrintFooterText,
+    } = {}) => {
     const normalizedDevices = Array.from(
       new Set(
-        orderPrintDevices
+          nextDevices
           .map(item => String(item || '').trim())
           .filter(Boolean),
       ),
     );
 
-    if (orderPrintEnabled && normalizedDevices.length === 0) {
+      if (nextEnabled && normalizedDevices.length === 0) {
+      Alert.alert(
+        'Impressora padrao',
+        'Selecione pelo menos um device para ativar a impressao remota de pedidos.',
+      );
+        return false;
+    }
+
+    await saveConfigs({
+        [ORDER_PRINT_DEVICES_CONFIG_KEY]: nextEnabled ? normalizedDevices : [],
+        [ORDER_PRINT_FOOTER_TEXT_CONFIG_KEY]: nextFooterText,
+    });
+      return true;
+    },
+    [orderPrintDevices, orderPrintEnabled, orderPrintFooterText, saveConfigs],
+  );
+
+  const toggleOrderPrintEnabled = useCallback(() => {
+    const nextEnabled = !orderPrintEnabled;
+
+    if (!nextEnabled) {
+      setOrderPrintEnabled(false);
+      setOrderPrintDevices([]);
+      saveOrderPrintDevices({
+        nextDevices: [],
+        nextEnabled: false,
+      });
+      return;
+    }
+
+    if (orderPrintDevices.length === 0) {
       Alert.alert(
         'Impressora padrao',
         'Selecione pelo menos um device para ativar a impressao remota de pedidos.',
@@ -129,16 +146,32 @@ const OrderPrintSection = () => {
       return;
     }
 
-    await saveConfigs({
-      [ORDER_PRINT_DEVICES_CONFIG_KEY]: orderPrintEnabled ? normalizedDevices : [],
-      [ORDER_PRINT_FOOTER_TEXT_CONFIG_KEY]: orderPrintFooterText,
+    setOrderPrintEnabled(true);
+    saveOrderPrintDevices({
+      nextEnabled: true,
     });
-  }, [
-    orderPrintDevices,
-    orderPrintEnabled,
-    orderPrintFooterText,
-    saveConfigs,
-  ]);
+  }, [orderPrintDevices.length, orderPrintEnabled, saveOrderPrintDevices]);
+
+  const toggleOrderPrintDevice = useCallback(
+    deviceId => {
+      if (!deviceId) {
+        return;
+      }
+
+      const nextDevices = orderPrintDevices.includes(deviceId)
+        ? orderPrintDevices.filter(item => item !== deviceId)
+        : [...orderPrintDevices, deviceId];
+      const nextEnabled = nextDevices.length > 0;
+
+      setOrderPrintDevices(nextDevices);
+      setOrderPrintEnabled(nextEnabled);
+      saveOrderPrintDevices({
+        nextDevices,
+        nextEnabled,
+      });
+    },
+    [orderPrintDevices, saveOrderPrintDevices],
+  );
 
   return (
     <GeneralSettingsSection
@@ -157,7 +190,7 @@ const OrderPrintSection = () => {
               : localStyles.statusChipDisabled,
           ]}
           activeOpacity={0.85}
-          onPress={() => setOrderPrintEnabled(current => !current)}>
+          onPress={toggleOrderPrintEnabled}>
           <Icon
             name={orderPrintEnabled ? 'check-circle' : 'block'}
             size={16}
@@ -235,6 +268,7 @@ const OrderPrintSection = () => {
           multiline
           numberOfLines={4}
           onChangeText={setOrderPrintFooterText}
+          onBlur={() => saveOrderPrintDevices()}
           placeholder="Mensagem exibida no rodapé da impressão"
         />
         <Text style={localStyles.helperText}>
@@ -242,19 +276,6 @@ const OrderPrintSection = () => {
           impressões de pedido.
         </Text>
       </View>
-
-      <TouchableOpacity
-        style={[
-          globalStyles.button,
-          localStyles.primaryButton,
-          (!currentCompany?.id || isSaving) && localStyles.primaryButtonDisabled,
-        ]}
-        disabled={!currentCompany?.id || isSaving}
-        onPress={saveOrderPrintDevices}>
-        <Text style={localStyles.primaryButtonText}>
-          Salvar configurações de impressão
-        </Text>
-      </TouchableOpacity>
     </GeneralSettingsSection>
   );
 };

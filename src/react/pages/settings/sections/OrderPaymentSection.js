@@ -8,7 +8,6 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
-import css from '@controleonline/ui-orders/src/react/css/orders';
 import {
   filterDeviceConfigsByCompany,
   getCompanyPaymentDeviceOptions,
@@ -26,13 +25,8 @@ import GeneralSettingsSection from '../GeneralSettingsSection';
 import {useGeneralSettingsConfig} from '../GeneralSettings.shared';
 
 const OrderPaymentSection = () => {
-  const {globalStyles} = css();
-  const {
-    currentCompany,
-    effectiveCompanyConfigs,
-    isSaving,
-    saveConfigs,
-  } = useGeneralSettingsConfig();
+  const {currentCompany, effectiveCompanyConfigs, saveConfigs} =
+    useGeneralSettingsConfig();
 
   const deviceConfigStore = useStore('device_config');
   const {
@@ -84,24 +78,60 @@ const OrderPaymentSection = () => {
 
   const selectedPaymentDeviceCount = orderPaymentDevices.length;
 
-  const toggleOrderPaymentDevice = useCallback(deviceId => {
-    if (!deviceId) {
+  const saveOrderPaymentSettings = useCallback(
+    async ({
+      nextAllowPaymentDeviceChange = allowPaymentDeviceChange,
+      nextChargeOnDeliveryEnabled = chargeOnDeliveryEnabled,
+      nextOrderPaymentDevices = orderPaymentDevices,
+      nextOrderPaymentEnabled = orderPaymentEnabled,
+    } = {}) => {
+      const normalizedDevices = nextOrderPaymentDevices
+        .map(item => String(item || '').trim())
+        .filter(Boolean);
+
+      if (nextOrderPaymentEnabled && normalizedDevices.length === 0) {
+        Alert.alert(
+          'Pagamento remoto',
+          'Selecione pelo menos um device para ativar o pagamento remoto de pedidos.',
+        );
+        return false;
+      }
+
+      await saveConfigs({
+        [ORDER_PAYMENT_DEVICES_CONFIG_KEY]: nextOrderPaymentEnabled
+          ? normalizedDevices
+          : [],
+        [ORDER_PAYMENT_DEVICE_CHANGE_ALLOWED_CONFIG_KEY]:
+          nextAllowPaymentDeviceChange,
+        [ORDER_CHARGE_ON_DELIVERY_ENABLED_CONFIG_KEY]:
+          nextChargeOnDeliveryEnabled,
+      });
+
+      return true;
+    },
+    [
+      allowPaymentDeviceChange,
+      chargeOnDeliveryEnabled,
+      orderPaymentDevices,
+      orderPaymentEnabled,
+      saveConfigs,
+    ],
+  );
+
+  const toggleOrderPaymentEnabled = useCallback(() => {
+    const nextEnabled = !orderPaymentEnabled;
+
+    if (!nextEnabled) {
+      setOrderPaymentEnabled(false);
+      setOrderPaymentDevices([]);
+      saveOrderPaymentSettings({
+        nextOrderPaymentDevices: [],
+        nextOrderPaymentEnabled: false,
+      });
       return;
     }
 
-    setOrderPaymentDevices(current =>
-      current.includes(deviceId)
-        ? current.filter(item => item !== deviceId)
-        : [...current, deviceId],
-    );
-  }, []);
-
-  const saveOrderPaymentSettings = useCallback(async () => {
-    const normalizedDevices = orderPaymentDevices
-      .map(item => String(item || '').trim())
-      .filter(Boolean);
-
-    if (orderPaymentEnabled && normalizedDevices.length === 0) {
+    if (orderPaymentDevices.length === 0) {
       Alert.alert(
         'Pagamento remoto',
         'Selecione pelo menos um device para ativar o pagamento remoto de pedidos.',
@@ -109,21 +139,32 @@ const OrderPaymentSection = () => {
       return;
     }
 
-    await saveConfigs({
-      [ORDER_PAYMENT_DEVICES_CONFIG_KEY]: orderPaymentEnabled
-        ? normalizedDevices
-        : [],
-      [ORDER_PAYMENT_DEVICE_CHANGE_ALLOWED_CONFIG_KEY]:
-        allowPaymentDeviceChange,
-      [ORDER_CHARGE_ON_DELIVERY_ENABLED_CONFIG_KEY]: chargeOnDeliveryEnabled,
+    setOrderPaymentEnabled(true);
+    saveOrderPaymentSettings({
+      nextOrderPaymentEnabled: true,
     });
-  }, [
-    allowPaymentDeviceChange,
-    chargeOnDeliveryEnabled,
-    orderPaymentDevices,
-    orderPaymentEnabled,
-    saveConfigs,
-  ]);
+  }, [orderPaymentDevices.length, orderPaymentEnabled, saveOrderPaymentSettings]);
+
+  const toggleOrderPaymentDevice = useCallback(
+    deviceId => {
+      if (!deviceId) {
+        return;
+      }
+
+      const nextOrderPaymentDevices = orderPaymentDevices.includes(deviceId)
+        ? orderPaymentDevices.filter(item => item !== deviceId)
+        : [...orderPaymentDevices, deviceId];
+      const nextOrderPaymentEnabled = nextOrderPaymentDevices.length > 0;
+
+      setOrderPaymentDevices(nextOrderPaymentDevices);
+      setOrderPaymentEnabled(nextOrderPaymentEnabled);
+      saveOrderPaymentSettings({
+        nextOrderPaymentDevices,
+        nextOrderPaymentEnabled,
+      });
+    },
+    [orderPaymentDevices, saveOrderPaymentSettings],
+  );
 
   return (
     <GeneralSettingsSection
@@ -142,7 +183,7 @@ const OrderPaymentSection = () => {
               : localStyles.statusChipDisabled,
           ]}
           activeOpacity={0.85}
-          onPress={() => setOrderPaymentEnabled(current => !current)}>
+          onPress={toggleOrderPaymentEnabled}>
           <Icon
             name={orderPaymentEnabled ? 'check-circle' : 'block'}
             size={16}
@@ -183,7 +224,13 @@ const OrderPaymentSection = () => {
               : localStyles.statusChipDisabled,
           ]}
           activeOpacity={0.85}
-          onPress={() => setAllowPaymentDeviceChange(current => !current)}>
+          onPress={() => {
+            const nextValue = !allowPaymentDeviceChange;
+            setAllowPaymentDeviceChange(nextValue);
+            saveOrderPaymentSettings({
+              nextAllowPaymentDeviceChange: nextValue,
+            });
+          }}>
           <Icon
             name={allowPaymentDeviceChange ? 'check-circle' : 'block'}
             size={16}
@@ -215,7 +262,13 @@ const OrderPaymentSection = () => {
               : localStyles.statusChipDisabled,
           ]}
           activeOpacity={0.85}
-          onPress={() => setChargeOnDeliveryEnabled(current => !current)}>
+          onPress={() => {
+            const nextValue = !chargeOnDeliveryEnabled;
+            setChargeOnDeliveryEnabled(nextValue);
+            saveOrderPaymentSettings({
+              nextChargeOnDeliveryEnabled: nextValue,
+            });
+          }}>
           <Icon
             name={chargeOnDeliveryEnabled ? 'check-circle' : 'block'}
             size={16}
@@ -278,18 +331,6 @@ const OrderPaymentSection = () => {
         </View>
       )}
 
-      <TouchableOpacity
-        style={[
-          globalStyles.button,
-          localStyles.primaryButton,
-          (!currentCompany?.id || isSaving) && localStyles.primaryButtonDisabled,
-        ]}
-        disabled={!currentCompany?.id || isSaving}
-        onPress={saveOrderPaymentSettings}>
-        <Text style={localStyles.primaryButtonText}>
-          Salvar regras de pagamento
-        </Text>
-      </TouchableOpacity>
     </GeneralSettingsSection>
   );
 };

@@ -1,7 +1,6 @@
 import React, {useCallback, useEffect, useState} from 'react';
-import {Text, TextInput, TouchableOpacity} from 'react-native';
+import {Text, TextInput} from 'react-native';
 
-import css from '@controleonline/ui-orders/src/react/css/orders';
 import useToastMessage from '@controleonline/ui-crm/src/react/hooks/useToastMessage';
 import {
   OAUTH_GOOGLE_CLIENT_ID_CONFIG_KEY,
@@ -13,7 +12,6 @@ import GeneralSettingsSection from '../GeneralSettingsSection';
 import {toConfigRequestValue, useGeneralSettingsConfig} from '../GeneralSettings.shared';
 
 const LoginSection = () => {
-  const {globalStyles} = css();
   const {showError, showSuccess} = useToastMessage();
   const {
     configActions,
@@ -21,7 +19,6 @@ const LoginSection = () => {
     defaultCompanyLabel,
     hasDefaultCompanyAccess,
     isMainCompanySelected,
-    isSaving,
     peopleActions,
   } = useGeneralSettingsConfig();
 
@@ -114,6 +111,7 @@ const LoginSection = () => {
         ]}
         value={googleClientId}
         onChangeText={setGoogleClientId}
+        onBlur={saveGoogleOauthConfig}
         editable={!!defaultCompany?.id && isMainCompanySelected}
         autoCapitalize="none"
         autoCorrect={false}
@@ -123,20 +121,6 @@ const LoginSection = () => {
         Deixe vazio para ocultar o login Google no React sem depender de
         variavel de ambiente.
       </Text>
-
-      <TouchableOpacity
-        style={[
-          globalStyles.button,
-          localStyles.primaryButton,
-          (!defaultCompany?.id || !isMainCompanySelected || isSaving) &&
-            localStyles.primaryButtonDisabled,
-        ]}
-        disabled={!defaultCompany?.id || !isMainCompanySelected || isSaving}
-        onPress={saveGoogleOauthConfig}>
-        <Text style={localStyles.primaryButtonText}>
-          Salvar Google OAuth
-        </Text>
-      </TouchableOpacity>
     </GeneralSettingsSection>
   );
 };
