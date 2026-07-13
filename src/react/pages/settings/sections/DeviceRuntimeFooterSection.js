@@ -1,16 +1,20 @@
 import React, {useCallback, useEffect, useState} from 'react';
 import {Alert, Text, TextInput} from 'react-native';
 
+import {useStore} from '@store';
 import {
   DEVICE_RUNTIME_FOOTER_TEXT_CONFIG_KEY,
   normalizeRuntimeFooterText,
 } from '@controleonline/ui-common/src/react/utils/runtimeFooter';
+import {colors as defaultThemeColors} from '@controleonline/../../src/styles/colors';
+import {resolveThemePalette, withOpacity} from '@controleonline/../../src/styles/branding';
 
 import localStyles from '../GeneralSettings.styles';
 import GeneralSettingsSection from '../GeneralSettingsSection';
 import {toConfigRequestValue, useGeneralSettingsConfig} from '../GeneralSettings.shared';
 
 const DeviceRuntimeFooterSection = () => {
+  const themeStore = useStore('theme');
   const {
     configActions,
     defaultCompany,
@@ -18,6 +22,10 @@ const DeviceRuntimeFooterSection = () => {
     isMainCompanySelected,
     peopleActions,
   } = useGeneralSettingsConfig();
+  const themePalette = resolveThemePalette(
+    themeStore.getters.colors,
+    defaultThemeColors,
+  );
 
   const [deviceRuntimeFooterText, setDeviceRuntimeFooterText] = useState('');
 
@@ -88,8 +96,8 @@ const DeviceRuntimeFooterSection = () => {
     <GeneralSettingsSection
       description="Exibe o nome do device e a versao do software em uma linha fina no rodape. Quando existir texto livre na empresa principal, ele entra na mesma linha ou alterna em telas pequenas."
       icon="dvr"
-      iconBackgroundColor="#E0F2FE"
-      iconColor="#0369A1"
+      iconBackgroundColor={withOpacity(themePalette.info, 0.12)}
+      iconColor={themePalette.info}
       title="Rodape dos devices">
       <Text style={localStyles.helperText}>
         {`Esse texto livre e salvo na empresa principal (${defaultCompanyLabel}) e compartilhado com todos os devices.`}
