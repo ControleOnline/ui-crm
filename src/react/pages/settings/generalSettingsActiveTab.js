@@ -1,6 +1,10 @@
 export const GENERAL_SETTINGS_ACTIVE_TAB_STORAGE_KEY =
   'controleonline.general-settings.active-tab';
 
+/*
+ * @agents This storage helper remembers the last visible settings tab.
+ * The page still validates the stored value against the current available tabs.
+ */
 const getGeneralSettingsStorage = () => {
   const storage = globalThis?.localStorage;
 
@@ -56,6 +60,10 @@ export const resolveGeneralSettingsActiveTab = ({
   fallbackTab = '',
   storedTab = '',
 }) => {
+  /*
+   * @agents The stored tab is only a preference.
+   * If it is no longer available, the current tab or the first valid tab wins.
+   */
   const availableTabKeys = availableTabs
     .map(tab => String(tab?.key || '').trim())
     .filter(Boolean);

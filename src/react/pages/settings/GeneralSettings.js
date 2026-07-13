@@ -184,8 +184,10 @@ const GeneralSettings = () => {
     }, [companies, defaultCompany?.id, peopleActions]),
   );
 
-  // Validate the current tab after mount, then only correct the selection when
-  // the active tab stops being available because of company or permission changes.
+  /*
+   * @agents Validate the current tab after mount, then only correct the selection when
+   * the active tab stops being available because of company or permission changes.
+   */
   useEffect(() => {
     const nextActiveTab = resolveGeneralSettingsActiveTab({
       activeTab,
@@ -198,8 +200,10 @@ const GeneralSettings = () => {
     }
   }, [activeTab, availableTabs]);
 
-  // Persist the current tab for the next visit, but never use storage to
-  // override a valid in-session click.
+  /*
+   * @agents Persist the current tab for the next visit, but never use storage to
+   * override a valid in-session click.
+   */
   useEffect(() => {
     writeGeneralSettingsActiveTab(activeTab);
   }, [activeTab]);
