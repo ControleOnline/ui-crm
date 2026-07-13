@@ -53,6 +53,7 @@ import {
   SHOP_LOYALTY_STAMP_ICON_URL_CONFIG_KEY,
   SHOP_PRIMARY_ENTRY_CONFIG_KEY,
   SHOP_SALES_PAGE_ENABLED_CONFIG_KEY,
+  toggleAndSaveBooleanConfig,
 } from '@controleonline/ui-common/src/react/utils/shopConfig';
 
 import localStyles from '../GeneralSettings.styles';
@@ -1043,39 +1044,8 @@ const ShopSection = () => {
       loyaltyCouponsEnabled,
     });
 
-    const salesSaved = await saveConfig(
-      SHOP_SALES_PAGE_ENABLED_CONFIG_KEY,
-      salesPageEnabled ? '1' : '0',
-    );
-    if (!salesSaved) {
-      return;
-    }
-
-    const franchiseSaved = await saveConfig(
-      SHOP_FRANCHISE_LOCATOR_ENABLED_CONFIG_KEY,
-      franchiseLocatorEnabled ? '1' : '0',
-    );
-    if (!franchiseSaved) {
-      return;
-    }
-
-    const bottomBarSaved = await saveConfig(
-      SHOP_BOTTOM_BAR_ENABLED_CONFIG_KEY,
-      bottomBarEnabled ? '1' : '0',
-    );
-    if (!bottomBarSaved) {
-      return;
-    }
-
-    const primaryEntrySaved = await saveConfig(
-      SHOP_PRIMARY_ENTRY_CONFIG_KEY,
-      normalizedPrimaryEntry,
-    );
-    if (!primaryEntrySaved) {
-      return;
-    }
-
     await saveConfigs({
+      [SHOP_PRIMARY_ENTRY_CONFIG_KEY]: normalizedPrimaryEntry,
       [SHOP_FRANCHISE_PIN_ICON_URL_CONFIG_KEY]: normalizeShopTextConfig(
         franchisePinIconUrl,
       ),
@@ -1083,13 +1053,11 @@ const ShopSection = () => {
       [SHOP_FRANCHISE_VISIBLE_ADDRESS_IDS_CONFIG_KEY]: visibleFranchiseAddressIds,
     });
   }, [
-    bottomBarEnabled,
     franchiseLocatorEnabled,
     franchisePinIconUrl,
     loyaltyCouponsEnabled,
     primaryEntry,
     salesPageEnabled,
-    saveConfig,
     saveConfigs,
     visibleFranchiseAddressIds,
     visibleFranchiseCompanyIds,
@@ -1207,21 +1175,42 @@ const ShopSection = () => {
           label="Pagina de vendas"
           description="Ativa a vitrine principal do shop."
           value={salesPageEnabled}
-          onToggle={() => setSalesPageEnabled(current => !current)}
+          onToggle={() =>
+            toggleAndSaveBooleanConfig({
+              configKey: SHOP_SALES_PAGE_ENABLED_CONFIG_KEY,
+              currentValue: salesPageEnabled,
+              saveConfig,
+              setValue: setSalesPageEnabled,
+            })
+          }
         />
 
         <ConfigToggleRow
           label="Localizador de franquias"
           description="Ativa a entrada do shop para localizar unidades ou franquias."
           value={franchiseLocatorEnabled}
-          onToggle={() => setFranchiseLocatorEnabled(current => !current)}
+          onToggle={() =>
+            toggleAndSaveBooleanConfig({
+              configKey: SHOP_FRANCHISE_LOCATOR_ENABLED_CONFIG_KEY,
+              currentValue: franchiseLocatorEnabled,
+              saveConfig,
+              setValue: setFranchiseLocatorEnabled,
+            })
+          }
         />
 
         <ConfigToggleRow
           label="Barra inferior no shop"
           description="Quando ativada, o shop pode mostrar uma barra inferior para alternar entre entradas. Quando desativada, a troca fica apenas no menu suspenso acima das categorias."
           value={bottomBarEnabled}
-          onToggle={() => setBottomBarEnabled(current => !current)}
+          onToggle={() =>
+            toggleAndSaveBooleanConfig({
+              configKey: SHOP_BOTTOM_BAR_ENABLED_CONFIG_KEY,
+              currentValue: bottomBarEnabled,
+              saveConfig,
+              setValue: setBottomBarEnabled,
+            })
+          }
         />
 
         <View style={localStyles.fieldBlock}>
