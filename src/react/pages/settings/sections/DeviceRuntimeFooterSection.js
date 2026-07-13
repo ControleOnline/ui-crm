@@ -1,3 +1,7 @@
+/*
+ * @agents This section controls the runtime footer text shown in shared device contexts.
+ * Keep writes tied to the shared config key and the current company store.
+ */
 import React, {useCallback, useEffect, useState} from 'react';
 import {Alert, Text, TextInput} from 'react-native';
 

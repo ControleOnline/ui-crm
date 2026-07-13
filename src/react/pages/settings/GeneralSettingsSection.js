@@ -1,3 +1,7 @@
+/*
+ * @agents This wrapper keeps the settings section chrome consistent.
+ * Individual sections only provide content, labels, and contextual metadata.
+ */
 import React from 'react';
 import {View, Text} from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';

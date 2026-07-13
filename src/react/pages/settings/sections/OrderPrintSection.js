@@ -1,3 +1,7 @@
+/*
+ * @agents This section controls the order printing targets and footer text.
+ * Keep printer selection and config persistence in sync with the shared settings hook.
+ */
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {
   ActivityIndicator,

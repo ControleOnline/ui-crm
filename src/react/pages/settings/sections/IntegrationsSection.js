@@ -1,3 +1,7 @@
+/*
+ * @agents This section owns the integration-specific settings for the CRM page.
+ * Keep remote reads and config writes routed through the shared settings contract.
+ */
 import React, {useCallback, useEffect, useState} from 'react';
 import {ActivityIndicator, Text, TextInput} from 'react-native';
 
@@ -72,6 +76,10 @@ const IntegrationsSection = () => {
   const [newRelicConfig, setNewRelicConfig] = useState(DEFAULT_NEW_RELIC_CONFIG);
   const [spotifyConfig, setSpotifyConfig] = useState(DEFAULT_SPOTIFY_CONFIG);
 
+  /*
+   * @agents Keep private integration config loading here until the store exposes the same contract.
+   * This is the only place in the section that reads the company-scoped private payload remotely.
+   */
   useEffect(() => {
     if (!hasDefaultCompanyAccess || !defaultCompany?.id) {
       setPrivateConfigs({});
@@ -362,4 +370,3 @@ const IntegrationsSection = () => {
 };
 
 export default IntegrationsSection;
-// TODO(store-first): quando este arquivo for mexido, mover a leitura para stores, remover api.fetch e evitar repassar dados em objetos quando o store ja resolver isso.

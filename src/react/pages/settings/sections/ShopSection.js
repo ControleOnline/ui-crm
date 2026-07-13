@@ -1,3 +1,7 @@
+/*
+ * @agents This section controls the shop home, entry, franchise, and loyalty settings.
+ * Keep the visible toggles and persistence routed through shared config values.
+ */
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {
   ActivityIndicator,
@@ -1474,7 +1478,7 @@ const ShopSection = () => {
                         </Text>
                       </View>
                       
-                      {/* botao  para cadastrar endereco quando nao ha nenhum */}
+                      {/* @agents Show the address creation action only when there are no addresses yet. */}
                       {addresses.length === 0 && (
                         <TouchableOpacity
                           style={localStyles.franchiseAddressAddBtn}

@@ -1,3 +1,7 @@
+/*
+ * @agents This section owns the maintenance settings for the CRM page.
+ * Keep the actions and toggles wired to the shared config layer instead of local-only state.
+ */
 import React, {useCallback, useEffect, useState} from 'react';
 import {Switch, Text, TextInput, View} from 'react-native';
 

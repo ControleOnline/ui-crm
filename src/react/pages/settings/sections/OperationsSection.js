@@ -1,3 +1,7 @@
+/*
+ * @agents This section controls the POS defaults for statuses, wallets, and notifications.
+ * The visible options must come from the shared stores and save back through the config contract.
+ */
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {ActivityIndicator, Text, TextInput, View} from 'react-native';
 import {Picker} from '@react-native-picker/picker';

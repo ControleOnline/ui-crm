@@ -1,3 +1,7 @@
+/*
+ * @agents Keep shared settings parsing and persistence helpers in one place.
+ * The individual sections should reuse this contract instead of duplicating config logic.
+ */
 import {useCallback, useMemo} from 'react';
 import {Alert} from 'react-native';
 

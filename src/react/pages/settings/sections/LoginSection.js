@@ -1,3 +1,7 @@
+/*
+ * @agents This section controls the Google login gate for the main company.
+ * The save action must stay tied to the shared config contract and the current company context.
+ */
 import React, {useCallback, useEffect, useState} from 'react';
 import {Text, TextInput} from 'react-native';
 

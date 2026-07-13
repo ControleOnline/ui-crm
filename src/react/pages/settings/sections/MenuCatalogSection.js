@@ -1,3 +1,7 @@
+/*
+ * @agents This section controls the menu catalog visibility rules for groups and categories.
+ * Keep the visible lists and persisted ids aligned with the shared config contract.
+ */
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {
   ActivityIndicator,

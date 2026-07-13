@@ -161,6 +161,11 @@ const GeneralSettings = () => {
   const [activeTab, setActiveTab] = useState(
     () => readGeneralSettingsActiveTab() || SETTINGS_TABS[0].key,
   );
+  /*
+   * @agents Wait for the company context before correcting the tab selection.
+   * Without this guard the screen can briefly snap back to the first tab during bootstrap.
+   */
+  const [isCompanyContextReady, setIsCompanyContextReady] = useState(false);
 
   const availableTabs = useMemo(
     () =>
@@ -174,13 +179,38 @@ const GeneralSettings = () => {
 
   useFocusEffect(
     useCallback(() => {
+      let cancelled = false;
+      const requests = [];
+
+      setIsCompanyContextReady(false);
+
       if (!Array.isArray(companies) || companies.length === 0) {
-        peopleActions.myCompanies?.().catch(() => {});
+        const companiesRequest = peopleActions.myCompanies?.();
+        if (companiesRequest?.then) {
+          requests.push(companiesRequest.catch(() => {}));
+        }
       }
 
       if (!defaultCompany?.id) {
-        peopleActions.defaultCompany().catch(() => {});
+        const defaultCompanyRequest = peopleActions.defaultCompany?.();
+        if (defaultCompanyRequest?.then) {
+          requests.push(defaultCompanyRequest.catch(() => {}));
+        }
       }
+
+      Promise.allSettled(requests).finally(() => {
+        if (!cancelled) {
+          setIsCompanyContextReady(true);
+        }
+      });
+
+      if (requests.length === 0) {
+        setIsCompanyContextReady(true);
+      }
+
+      return () => {
+        cancelled = true;
+      };
     }, [companies, defaultCompany?.id, peopleActions]),
   );
 
@@ -189,6 +219,10 @@ const GeneralSettings = () => {
    * the active tab stops being available because of company or permission changes.
    */
   useEffect(() => {
+    if (!isCompanyContextReady) {
+      return;
+    }
+
     const nextActiveTab = resolveGeneralSettingsActiveTab({
       activeTab,
       availableTabs,
@@ -198,7 +232,7 @@ const GeneralSettings = () => {
     if (nextActiveTab !== activeTab) {
       setActiveTab(nextActiveTab);
     }
-  }, [activeTab, availableTabs]);
+  }, [activeTab, availableTabs, isCompanyContextReady]);
 
   /*
    * @agents Persist the current tab for the next visit, but never use storage to
@@ -211,6 +245,7 @@ const GeneralSettings = () => {
   const activeTabConfig = useMemo(
     () =>
       availableTabs.find(tab => tab.key === activeTab) ||
+      SETTINGS_TABS.find(tab => tab.key === activeTab) ||
       availableTabs[0] ||
       SETTINGS_TABS[0],
     [activeTab, availableTabs],

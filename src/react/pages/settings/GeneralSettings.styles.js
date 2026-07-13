@@ -1,3 +1,7 @@
+/*
+ * @agents Keep the visual tokens for the settings page centralized here.
+ * The screen and its sections should share the same spacing, radius, and typography rhythm.
+ */
 import { StyleSheet } from 'react-native';
 
 const localStyles = StyleSheet.create({
@@ -224,7 +228,7 @@ const localStyles = StyleSheet.create({
     marginLeft: 10,
   },
 
-  /* botão para abrir cadastro de endereco */
+  /* @agents Button used to open the address creation flow. */
   franchiseAddressAddBtn: {
     width: 30,
     height: 30,

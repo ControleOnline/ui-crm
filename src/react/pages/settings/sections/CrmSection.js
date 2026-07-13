@@ -1,3 +1,7 @@
+/*
+ * @agents This section owns CRM operational settings like sales routing and after-sales profiles.
+ * Keep persistence centralized in the shared settings hook instead of local state writes.
+ */
 import React, {useCallback, useEffect, useState} from 'react';
 import {Text, TextInput, TouchableOpacity, View} from 'react-native';
 import {Picker} from '@react-native-picker/picker';

@@ -1,3 +1,7 @@
+/*
+ * @agents This section controls the copy and device mapping for display preparation output.
+ * Keep persistence routed through shared config and store-backed device options.
+ */
 import React, {useEffect, useMemo} from 'react';
 import {ActivityIndicator, Text, View} from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';

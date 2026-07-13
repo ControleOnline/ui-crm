@@ -1,3 +1,7 @@
+/*
+ * @agents This section controls remote payment routing and terminal ordering.
+ * Keep the visible list and save behavior tied to the shared device config store.
+ */
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {
   ActivityIndicator,

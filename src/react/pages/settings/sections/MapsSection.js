@@ -1,3 +1,7 @@
+/*
+ * @agents This section controls the map and location settings for the CRM page.
+ * Keep the address and location behavior tied to shared config keys and company context.
+ */
 import React, {useCallback, useEffect, useState} from 'react';
 import {Text, TextInput, View} from 'react-native';
 

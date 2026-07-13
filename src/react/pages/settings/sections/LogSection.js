@@ -1,3 +1,7 @@
+/*
+ * @agents This section exposes the runtime logs and log-related controls.
+ * It should remain read-oriented and avoid duplicating queue or transport logic locally.
+ */
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {Switch, Text, TextInput, View} from 'react-native';
 
