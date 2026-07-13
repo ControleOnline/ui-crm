@@ -40,13 +40,20 @@ const CrmSection = () => {
     setProfiles(normalizeProfiles(effectiveCompanyConfigs['after-sales-profiles']));
   }, [effectiveCompanyConfigs]);
 
-  const saveProfiles = useCallback(() => {
-    saveConfig('after-sales-profiles', profiles);
-  }, [profiles, saveConfig]);
+  const saveProfiles = useCallback(
+    nextProfiles => {
+      const value = Array.isArray(nextProfiles) ? nextProfiles : profiles;
+      return saveConfig('after-sales-profiles', value);
+    },
+    [profiles, saveConfig],
+  );
 
   const addProfile = useCallback(() => {
-    setProfiles(current => [...current, {maxRevenue: 0, days: 30}]);
-  }, []);
+    const nextProfiles = [...profiles, {maxRevenue: 0, days: 30}];
+
+    setProfiles(nextProfiles);
+    saveProfiles(nextProfiles);
+  }, [profiles, saveProfiles]);
 
   const updateProfile = useCallback((index, key, value) => {
     setProfiles(current => {
@@ -60,8 +67,13 @@ const CrmSection = () => {
   }, []);
 
   const removeProfile = useCallback(index => {
-    setProfiles(current => current.filter((_, profileIndex) => profileIndex !== index));
-  }, []);
+    const nextProfiles = profiles.filter(
+      (_, profileIndex) => profileIndex !== index,
+    );
+
+    setProfiles(nextProfiles);
+    saveProfiles(nextProfiles);
+  }, [profiles, saveProfiles]);
 
   const formatRevenueDisplay = value => Formatter.formatMoney(value || 0);
 
@@ -83,13 +95,19 @@ const CrmSection = () => {
   };
 
   const handleRevenueBlur = index => {
-    updateProfile(
-      index,
-      'maxRevenue',
-      Formatter.formatFloat(editingRevenueValue),
+    const nextProfiles = profiles.map((profile, profileIndex) =>
+      profileIndex === index
+        ? {
+            ...profile,
+            maxRevenue: Formatter.formatFloat(editingRevenueValue),
+          }
+        : profile,
     );
+
+    setProfiles(nextProfiles);
     setEditingRevenueIndex(null);
     setEditingRevenueValue('');
+    saveProfiles(nextProfiles);
   };
 
   const formatDaysDisplay = value => {
@@ -205,6 +223,7 @@ const CrmSection = () => {
                   parseInt(Formatter.onlyNumbers(value), 10) || 0,
                 )
               }
+              onBlur={() => saveProfiles()}
             />
 
             <TouchableOpacity
@@ -228,18 +247,6 @@ const CrmSection = () => {
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[
-            globalStyles.button,
-            localStyles.secondaryButton,
-            (!currentCompany?.id || isSaving) && localStyles.primaryButtonDisabled,
-          ]}
-          disabled={!currentCompany?.id || isSaving}
-          onPress={saveProfiles}>
-          <Text style={localStyles.primaryButtonText}>
-            {global.t?.t('configs', 'button', 'saveProfiles')}
-          </Text>
-        </TouchableOpacity>
       </View>
     </GeneralSettingsSection>
   );

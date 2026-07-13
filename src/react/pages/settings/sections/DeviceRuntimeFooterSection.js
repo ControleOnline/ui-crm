@@ -11,7 +11,6 @@ import GeneralSettingsSection from '../GeneralSettingsSection';
 import {toConfigRequestValue, useGeneralSettingsConfig} from '../GeneralSettings.shared';
 
 const DeviceRuntimeFooterSection = () => {
-  const {globalStyles} = css();
   const {
     configActions,
     defaultCompany,
