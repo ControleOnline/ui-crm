@@ -79,6 +79,13 @@ const localStyles = StyleSheet.create({
     fontWeight: '700',
     color: '#0F172A',
   },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  sectionTitleHelp: {
+    marginLeft: 8,
+  },
   sectionDescription: {
     fontSize: 13,
     lineHeight: 18,
