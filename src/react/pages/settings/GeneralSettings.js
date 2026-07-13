@@ -184,8 +184,8 @@ const GeneralSettings = () => {
     }, [companies, defaultCompany?.id, peopleActions]),
   );
 
-  // Restore the saved tab on mount, then only correct the selection when the
-  // current tab stops being available because of company or permission changes.
+  // Validate the current tab after mount, then only correct the selection when
+  // the active tab stops being available because of company or permission changes.
   useEffect(() => {
     const nextActiveTab = resolveGeneralSettingsActiveTab({
       activeTab,
