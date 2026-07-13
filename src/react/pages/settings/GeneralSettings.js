@@ -158,9 +158,8 @@ const GeneralSettings = () => {
       ),
     [currentCompany?.theme?.colors, themeColors],
   );
-  const [storedActiveTab] = useState(() => readGeneralSettingsActiveTab());
   const [activeTab, setActiveTab] = useState(
-    () => storedActiveTab || SETTINGS_TABS[0].key,
+    () => readGeneralSettingsActiveTab() || SETTINGS_TABS[0].key,
   );
 
   const availableTabs = useMemo(
@@ -185,19 +184,22 @@ const GeneralSettings = () => {
     }, [companies, defaultCompany?.id, peopleActions]),
   );
 
+  // Restore the saved tab on mount, then only correct the selection when the
+  // current tab stops being available because of company or permission changes.
   useEffect(() => {
     const nextActiveTab = resolveGeneralSettingsActiveTab({
       activeTab,
       availableTabs,
       fallbackTab: SETTINGS_TABS[0].key,
-      storedTab: storedActiveTab,
     });
 
     if (nextActiveTab !== activeTab) {
       setActiveTab(nextActiveTab);
     }
-  }, [activeTab, availableTabs, storedActiveTab]);
+  }, [activeTab, availableTabs]);
 
+  // Persist the current tab for the next visit, but never use storage to
+  // override a valid in-session click.
   useEffect(() => {
     writeGeneralSettingsActiveTab(activeTab);
   }, [activeTab]);
