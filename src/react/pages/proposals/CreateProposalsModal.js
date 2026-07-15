@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Keyboard, Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useStore } from '@store';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import AnimatedModal from '@controleonline/ui-crm/src/react/components/AnimatedModal';
+import AnimatedModal from '@controleonline/ui-common/src/react/components/AnimatedModal';
 import useToastMessage from '../../hooks/useToastMessage';
 import Formatter from '@controleonline/ui-common/src/utils/formatter';
 import { buildOwnedClientsParams, getPeopleDisplayName } from '@controleonline/ui-common/src/react/utils/peopleDisplay';

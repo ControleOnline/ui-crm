@@ -15,7 +15,7 @@ import {
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import {useNavigation} from '@react-navigation/native';
 import css from '@controleonline/ui-orders/src/react/css/orders';
-import AnimatedModal from '@controleonline/ui-crm/src/react/components/AnimatedModal';
+import AnimatedModal from '@controleonline/ui-common/src/react/components/AnimatedModal';
 import {useStore} from '@store';
 import {searchCompanyProducts} from '@controleonline/ui-common/src/react/utils/commercialDocumentOrders';
 import {buildAddressOptionSummary} from '@controleonline/ui-common/src/react/utils/entityDisplay';

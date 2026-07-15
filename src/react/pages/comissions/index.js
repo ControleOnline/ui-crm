@@ -16,7 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useStore } from '@store';
-import AnimatedModal from '../../components/AnimatedModal';
+import AnimatedModal from '@controleonline/ui-common/src/react/components/AnimatedModal';
 import styles from './index.styles';
 import { inlineStyle_353_8 } from './index.styles';
 import { inlineStyle_365_47 } from './index.styles';

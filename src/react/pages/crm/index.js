@@ -5,7 +5,7 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 import IconAdd from 'react-native-vector-icons/MaterialIcons';
 import IconWhatsApp from 'react-native-vector-icons/FontAwesome';
 
-import AnimatedModal from '../../components/AnimatedModal';
+import AnimatedModal from '@controleonline/ui-common/src/react/components/AnimatedModal';
 import { FlatList } from 'react-native';
 import {app_type} from '@appType';
 import { useStore } from '@store';
