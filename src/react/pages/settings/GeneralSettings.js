@@ -5,7 +5,7 @@ import {useFocusEffect} from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
 import css from '@controleonline/ui-orders/src/react/css/orders';
-import StateStore from '@controleonline/ui-layout/src/react/components/StateStore';
+import StateStore from '@controleonline/ui-common/src/react/components/StateStore';
 import {colors as defaultThemeColors} from '@controleonline/../../src/styles/colors';
 import {resolveThemePalette} from '@controleonline/../../src/styles/branding';
 import {useStore} from '@store';

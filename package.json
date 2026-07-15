@@ -17,13 +17,18 @@
   },
   "repository": {
     "type": "git",
-
     "url": "https://github.com/controleonline/conline-quasar-ui"
-
   },
   "bugs": "",
   "homepage": "https://www.controleonline.com/devs/plugins",
   "browserslist": [
     "last 1 version, not dead, ie >= 11"
-  ]
+  ],
+  "dependencies": {
+    "@controleonline/ui-common": "*",
+    "@controleonline/ui-default": "*",
+    "@controleonline/ui-layout": "*",
+    "@controleonline/ui-orders": "*",
+    "@controleonline/ui-tasks": "*"
+  }
 }
