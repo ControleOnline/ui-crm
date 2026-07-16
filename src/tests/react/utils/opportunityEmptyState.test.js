@@ -1,4 +1,4 @@
-const test = require('node:test');
+const {test} = global;
 const assert = require('node:assert/strict');
 
 const {
