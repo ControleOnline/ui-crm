@@ -5,7 +5,6 @@
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {
   ActivityIndicator,
-  Image,
   ScrollView,
   Text,
   TextInput,
@@ -41,7 +40,6 @@ import {
   SHOP_CHARGE_ON_DELIVERY_ENABLED_CONFIG_KEY,
   SHOP_DELIVERY_FEE_ENABLED_CONFIG_KEY,
   SHOP_DELIVERY_FEE_VALUE_CONFIG_KEY,
-  SHOP_FRANCHISE_PIN_ICON_URL_CONFIG_KEY,
   SHOP_FRANCHISE_VISIBLE_ADDRESS_IDS_CONFIG_KEY,
   SHOP_FRANCHISE_VISIBLE_COMPANY_IDS_CONFIG_KEY,
   SHOP_FRANCHISE_LOCATOR_ENABLED_CONFIG_KEY,
@@ -537,7 +535,6 @@ const ShopSection = () => {
     SHOP_CATALOG_DEFAULT_PRODUCT_TYPES,
   );
   const [googleMapsApiKey, setGoogleMapsApiKey] = useState('');
-  const [franchisePinIconUrl, setFranchisePinIconUrl] = useState('');
   const [primaryEntry, setPrimaryEntry] = useState('');
   const [visibleFranchiseCompanyIds, setVisibleFranchiseCompanyIds] = useState(
     [],
@@ -643,11 +640,6 @@ const ShopSection = () => {
     setGoogleMapsApiKey(
       normalizeShopTextConfig(
         effectiveCompanyConfigs[SHOP_GOOGLE_MAPS_API_KEY_CONFIG_KEY],
-      ),
-    );
-    setFranchisePinIconUrl(
-      normalizeShopTextConfig(
-        effectiveCompanyConfigs[SHOP_FRANCHISE_PIN_ICON_URL_CONFIG_KEY],
       ),
     );
     const nextLoyaltyCouponsEnabled = normalizeBooleanConfig(
@@ -1219,42 +1211,6 @@ const ShopSection = () => {
             })
           }
         />
-
-        <View style={localStyles.fieldBlock}>
-          <Text style={localStyles.fieldLabel}>URL do icone dos pins</Text>
-          <Text style={localStyles.helperText}>
-            Informe a URL da imagem que deve ser usada nos pins das franquias.
-            Se ficar vazia, o mapa usa o pin padrao do Google.
-          </Text>
-          <View style={localStyles.pinIconPreviewRow}>
-            <TextInput
-              value={franchisePinIconUrl}
-              onChangeText={setFranchisePinIconUrl}
-              onBlur={() =>
-                saveConfig(
-                  SHOP_FRANCHISE_PIN_ICON_URL_CONFIG_KEY,
-                  normalizeShopTextConfig(franchisePinIconUrl),
-                )
-              }
-              autoCapitalize="none"
-              autoCorrect={false}
-              placeholder="https://..."
-              placeholderTextColor="#94A3B8"
-              style={[localStyles.input, localStyles.pinIconPreviewInput]}
-            />
-            <View style={localStyles.pinIconPreviewFrame}>
-              {String(franchisePinIconUrl || '').trim() ? (
-                <Image
-                  source={{uri: String(franchisePinIconUrl || '').trim()}}
-                  style={localStyles.pinIconPreviewImage}
-                  resizeMode="contain"
-                />
-              ) : (
-                <Icon name="image-not-supported" size={20} color="#94A3B8" />
-              )}
-            </View>
-          </View>
-        </View>
 
         <Text style={localStyles.helperText}>
           {enabledHomeOptions.length === 0
