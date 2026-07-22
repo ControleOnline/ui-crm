@@ -241,7 +241,7 @@ const CrmSection = () => {
             <TouchableOpacity
               onPress={() => removeProfile(index)}
               style={localStyles.removeProfileButton}>
-              <Icon name="delete" size={22} color={themePalette.error} />
+              <Icon name="delete" size={22} color={themePalette.iconDanger} />
             </TouchableOpacity>
           </View>
         ))}

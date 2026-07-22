@@ -6,11 +6,11 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 
 import css from '@controleonline/ui-orders/src/react/css/orders';
 import StateStore from '@controleonline/ui-common/src/react/components/StateStore';
-import {colors as defaultThemeColors} from '@controleonline/../../src/styles/colors';
-import {resolveThemePalette} from '@controleonline/../../src/styles/branding';
-import {useStore} from '@store';
 
-import localStyles from './GeneralSettings.styles';
+import {
+  useGeneralSettingsPalette,
+  useGeneralSettingsStyles,
+} from './GeneralSettings.styles';
 import {
   useGeneralSettingsConfig,
 } from './GeneralSettings.shared';
@@ -136,7 +136,7 @@ const SETTINGS_TABS = [
 
 const GeneralSettings = () => {
   const {styles} = css();
-  const themeStore = useStore('theme');
+  const localStyles = useGeneralSettingsStyles();
   const {
     companies,
     currentCompany,
@@ -146,18 +146,7 @@ const GeneralSettings = () => {
     peopleActions,
   } =
     useGeneralSettingsConfig();
-  const themeColors = themeStore.getters.colors;
-  const themePalette = useMemo(
-    () =>
-      resolveThemePalette(
-        {
-          ...themeColors,
-          ...(currentCompany?.theme?.colors || {}),
-        },
-        defaultThemeColors,
-      ),
-    [currentCompany?.theme?.colors, themeColors],
-  );
+  const themePalette = useGeneralSettingsPalette();
   const [activeTab, setActiveTab] = useState(
     () => readGeneralSettingsActiveTab() || SETTINGS_TABS[0].key,
   );

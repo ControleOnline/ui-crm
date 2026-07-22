@@ -57,7 +57,10 @@ import {
   toggleAndSaveBooleanConfig,
 } from '@controleonline/ui-common/src/react/utils/shopConfig';
 
-import localStyles from '../GeneralSettings.styles';
+import {
+  useGeneralSettingsPalette,
+  useGeneralSettingsStyles,
+} from '../GeneralSettings.styles';
 import GeneralSettingsSection from '../GeneralSettingsSection';
 import {useGeneralSettingsConfig} from '../GeneralSettings.shared';
 
@@ -188,30 +191,30 @@ const filterSelectableItems = ({
   );
 };
 
-const ConfigToggleRow = ({description, label, value, onToggle}) => (
-  <View style={localStyles.settingRow}>
-    <View style={localStyles.settingCopy}>
-      <Text style={localStyles.statusLabel}>{label}</Text>
-      <Text style={localStyles.settingDescription}>{description}</Text>
+const ConfigToggleRow = ({description, label, onToggle, palette, styles, value}) => (
+  <View style={styles.settingRow}>
+    <View style={styles.settingCopy}>
+      <Text style={styles.statusLabel}>{label}</Text>
+      <Text style={styles.settingDescription}>{description}</Text>
     </View>
     <TouchableOpacity
       style={[
-        localStyles.statusChip,
+        styles.statusChip,
         value
-          ? localStyles.statusChipEnabled
-          : localStyles.statusChipDisabled,
+          ? styles.statusChipEnabled
+          : styles.statusChipDisabled,
       ]}
       activeOpacity={0.85}
       onPress={onToggle}>
       <Icon
         name={value ? 'check-circle' : 'block'}
         size={16}
-        color={value ? '#166534' : '#991B1B'}
+        color={value ? palette.badgeSelectedText : palette.badgeDisabledText}
       />
       <Text
         style={[
-          localStyles.statusChipText,
-          {color: value ? '#166534' : '#991B1B'},
+          styles.statusChipText,
+          {color: value ? palette.badgeSelectedText : palette.badgeDisabledText},
         ]}>
         {value ? 'Ativado' : 'Desativado'}
       </Text>
@@ -375,43 +378,45 @@ const SelectionModal = ({
   resolveItemMeta = () => 'Toque para selecionar',
   searchPlaceholder = 'Pesquisar item...',
   selectionMeta,
+  palette,
+  styles,
 }) => {
   const normalizedSelectedIds = selectedIds || new Set();
   const normalizedSelectedItemId = String(selectedItemId || '').trim();
 
   return (
     <AnimatedModal visible={visible} onRequestClose={onClose}>
-      <View style={localStyles.selectionModal}>
-        <View style={localStyles.selectionModalHeader}>
-          <View style={localStyles.selectionModalHeaderCopy}>
-            <Text style={localStyles.selectionModalTitle}>{title}</Text>
+      <View style={styles.selectionModal}>
+        <View style={styles.selectionModalHeader}>
+          <View style={styles.selectionModalHeaderCopy}>
+            <Text style={styles.selectionModalTitle}>{title}</Text>
             {!!helperText && (
-              <Text style={localStyles.selectionModalSubtitle}>
+              <Text style={styles.selectionModalSubtitle}>
                 {helperText}
               </Text>
             )}
           </View>
           <TouchableOpacity
             onPress={onClose}
-            style={localStyles.selectionModalClose}
+            style={styles.selectionModalClose}
             activeOpacity={0.85}>
-            <Icon name="close" size={20} color="#64748B" />
+            <Icon name="close" size={20} color={palette.modalCloseIcon} />
           </TouchableOpacity>
         </View>
 
-        <View style={localStyles.selectionSearchWrap}>
+        <View style={styles.selectionSearchWrap}>
           <Icon
             name="search"
             size={18}
-            color="#94A3B8"
-            style={localStyles.selectionSearchIcon}
+            color={palette.inputIcon}
+            style={styles.selectionSearchIcon}
           />
           <TextInput
             value={browser.query}
             onChangeText={browser.setQuery}
             placeholder={searchPlaceholder}
-            placeholderTextColor="#94A3B8"
-            style={localStyles.selectionSearchInput}
+            placeholderTextColor={palette.inputPlaceholderText}
+            style={styles.selectionSearchInput}
             autoFocus={visible}
             returnKeyType="search"
           />
@@ -419,30 +424,30 @@ const SelectionModal = ({
             <TouchableOpacity
               onPress={() => browser.setQuery('')}
               activeOpacity={0.85}>
-              <Icon name="cancel" size={18} color="#94A3B8" />
+              <Icon name="cancel" size={18} color={palette.inputIcon} />
             </TouchableOpacity>
           )}
         </View>
 
         <ScrollView
-          style={localStyles.selectionModalList}
-          contentContainerStyle={localStyles.selectionModalListContent}
+          style={styles.selectionModalList}
+          contentContainerStyle={styles.selectionModalListContent}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}>
           {browser.isLoading ? (
-            <View style={localStyles.searchEmptyState}>
-              <ActivityIndicator size="small" color="#64748B" />
-              <Text style={localStyles.searchEmptyStateText}>
+            <View style={styles.searchEmptyState}>
+              <ActivityIndicator size="small" color={palette.loadingSpinner} />
+              <Text style={styles.searchEmptyStateText}>
                 Carregando itens...
               </Text>
             </View>
           ) : browser.results.length === 0 ? (
-            <View style={localStyles.searchEmptyState}>
-              <Icon name={emptyIconName} size={36} color="#CBD5E1" />
-              <Text style={localStyles.searchEmptyStateTitle}>
+            <View style={styles.searchEmptyState}>
+              <Icon name={emptyIconName} size={36} color={palette.iconDisabled} />
+              <Text style={styles.searchEmptyStateTitle}>
                 {emptyTitle}
               </Text>
-              <Text style={localStyles.searchEmptyStateText}>
+              <Text style={styles.searchEmptyStateText}>
                 {String(browser.query || '').trim()
                   ? emptyText
                   : 'Nenhum item disponivel apareceu para selecao.'}
@@ -459,8 +464,8 @@ const SelectionModal = ({
                 <TouchableOpacity
                   key={`shop-picker-${itemId}`}
                   style={[
-                    localStyles.selectionModalItem,
-                    selected && localStyles.selectionModalItemActive,
+                    styles.selectionModalItem,
+                    selected && styles.selectionModalItemActive,
                   ]}
                   activeOpacity={0.85}
                   onPress={() => onSelect(item)}>
@@ -475,13 +480,13 @@ const SelectionModal = ({
                           : 'radio-button-unchecked'
                     }
                     size={20}
-                    color={selected ? '#0F766E' : '#94A3B8'}
+                    color={selected ? palette.iconActive : palette.iconDisabled}
                   />
-                  <View style={localStyles.selectionModalItemCopy}>
-                    <Text style={localStyles.selectionModalItemTitle}>
+                  <View style={styles.selectionModalItemCopy}>
+                    <Text style={styles.selectionModalItemTitle}>
                       {resolveItemLabel(item)}
                     </Text>
-                    <Text style={localStyles.selectionModalItemMeta}>
+                    <Text style={styles.selectionModalItemMeta}>
                       {(selected
                         ? selectionMeta?.(item, {selected, multiSelect})
                         : null) ||
@@ -499,11 +504,11 @@ const SelectionModal = ({
           <TouchableOpacity
             style={[
               globalStyles.button,
-              localStyles.primaryButton,
-              localStyles.selectionModalActionButton,
+              styles.primaryButton,
+              styles.selectionModalActionButton,
             ]}
             onPress={onClose}>
-            <Text style={localStyles.primaryButtonText}>Concluir selecao</Text>
+            <Text style={styles.primaryButtonText}>Concluir selecao</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -514,6 +519,7 @@ const SelectionModal = ({
 const ShopSection = () => {
   const {globalStyles} = css();
   const navigation = useNavigation();
+  const localStyles = useGeneralSettingsStyles();
   const {
     currentCompany,
     defaultCompanyLabel,
@@ -522,6 +528,7 @@ const ShopSection = () => {
     saveConfig,
     saveConfigs,
   } = useGeneralSettingsConfig();
+  const themePalette = useGeneralSettingsPalette();
 
   const productActions = useStore('products').actions;
 
@@ -1147,8 +1154,8 @@ const ShopSection = () => {
       <GeneralSettingsSection
         description="Centraliza a configuracao da home do shop e das franquias visiveis no localizador."
         icon="shopping-bag"
-        iconBackgroundColor="#CCFBF1"
-        iconColor="#0F766E"
+        iconBackgroundColor={themePalette.cardIconBackground}
+        iconColor={themePalette.cardIconColor}
         title="Home do shop">
         <View style={localStyles.emptyBox}>
           <Text style={localStyles.emptyTitle}>
@@ -1167,12 +1174,14 @@ const ShopSection = () => {
       <GeneralSettingsSection
         description="Controla quais entradas aparecem na home do shop, qual delas vira a principal e quando a barra inferior de troca deve aparecer."
         icon="shopping-bag"
-        iconBackgroundColor="#CCFBF1"
-        iconColor="#0F766E"
+        iconBackgroundColor={themePalette.cardIconBackground}
+        iconColor={themePalette.cardIconColor}
         title="Home do shop">
         <ConfigToggleRow
           label="Pagina de vendas"
           description="Ativa a vitrine principal do shop."
+          palette={themePalette}
+          styles={localStyles}
           value={salesPageEnabled}
           onToggle={() =>
             toggleAndSaveBooleanConfig({
@@ -1187,6 +1196,8 @@ const ShopSection = () => {
         <ConfigToggleRow
           label="Localizador de franquias"
           description="Ativa a entrada do shop para localizar unidades ou franquias."
+          palette={themePalette}
+          styles={localStyles}
           value={franchiseLocatorEnabled}
           onToggle={() =>
             toggleAndSaveBooleanConfig({
@@ -1201,6 +1212,8 @@ const ShopSection = () => {
         <ConfigToggleRow
           label="Barra inferior no shop"
           description="Quando ativada, o shop pode mostrar uma barra inferior para alternar entre entradas. Quando desativada, a troca fica apenas no menu suspenso acima das categorias."
+          palette={themePalette}
+          styles={localStyles}
           value={bottomBarEnabled}
           onToggle={() =>
             toggleAndSaveBooleanConfig({
@@ -1250,7 +1263,7 @@ const ShopSection = () => {
                     <Icon
                       name={active ? 'star' : 'star-border'}
                       size={20}
-                      color={active ? '#0F766E' : '#94A3B8'}
+                      color={active ? themePalette.iconActive : themePalette.iconDisabled}
                     />
                     <View style={localStyles.printerCopy}>
                       <Text style={localStyles.printerName}>
@@ -1282,20 +1295,24 @@ const ShopSection = () => {
               value={franchiseCompanySearch}
               onChangeText={setFranchiseCompanySearch}
               placeholder="Buscar franquia..."
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={themePalette.inputPlaceholderText}
               style={[localStyles.input, localStyles.selectorInput]}
             />
             <TouchableOpacity
               style={localStyles.selectorListButton}
               activeOpacity={0.85}
               onPress={() => setFranchiseCompanySelectorVisible(true)}>
-              <Icon name="view-list" size={18} color="#FFFFFF" />
+              <Icon name="view-list" size={18} color={themePalette.buttonIcon} />
               <Text style={localStyles.selectorListButtonText}>Lista</Text>
             </TouchableOpacity>
           </View>
 
           {isLoadingFranchiseDirectory ? (
-            <ActivityIndicator size="small" style={localStyles.sectionLoader} />
+            <ActivityIndicator
+              size="small"
+              color={themePalette.loadingSpinner}
+              style={localStyles.sectionLoader}
+            />
           ) : String(franchiseCompanySearch || '').trim() &&
             visibleFranchiseCompanyResults.length === 0 ? (
             <View style={localStyles.emptyBox}>
@@ -1321,7 +1338,11 @@ const ShopSection = () => {
                         toggleFranchiseCompany(company);
                         setFranchiseCompanySearch('');
                       }}>
-                      <Icon name="storefront" size={20} color="#0F766E" />
+                      <Icon
+                        name="storefront"
+                        size={20}
+                        color={themePalette.cardIconColor}
+                      />
                       <View style={localStyles.printerCopy}>
                         <Text style={localStyles.printerName}>
                           {resolveCompanyLabel(company)}
@@ -1366,7 +1387,11 @@ const ShopSection = () => {
                     ]}
                     activeOpacity={0.85}
                     onPress={() => toggleFranchiseCompany(company)}>
-                    <Icon name="remove-circle-outline" size={20} color="#B45309" />
+                    <Icon
+                      name="remove-circle-outline"
+                      size={20}
+                      color={themePalette.iconDanger}
+                    />
                     <View style={localStyles.printerCopy}>
                       <Text style={localStyles.printerName}>
                         {resolveCompanyLabel(company)}
@@ -1402,7 +1427,11 @@ const ShopSection = () => {
               </Text>
             </View>
           ) : isLoadingFranchiseDirectory ? (
-            <ActivityIndicator size="small" style={localStyles.sectionLoader} />
+            <ActivityIndicator
+              size="small"
+              color={themePalette.loadingSpinner}
+              style={localStyles.sectionLoader}
+            />
           ) : (
             <View style={localStyles.franchiseAddressGroupList}>
               {selectedFranchiseAddressGroups.map(({company, addresses, selectedCount}) => {
@@ -1414,7 +1443,11 @@ const ShopSection = () => {
                     style={localStyles.franchiseAddressGroup}>
                     <View style={localStyles.franchiseAddressGroupHeader}>
                       <View style={localStyles.franchiseAddressGroupBadge}>
-                        <Icon name="storefront" size={18} color="#0F766E" />
+                        <Icon
+                          name="storefront"
+                          size={18}
+                          color={themePalette.cardIconColor}
+                        />
                       </View>
                       <View style={localStyles.franchiseAddressGroupCopy}>
                         <Text style={localStyles.printerName}>
@@ -1435,7 +1468,7 @@ const ShopSection = () => {
                           onPress={() =>
                             navigation.navigate('ClientDetails', {client: company})
                           }>
-                          <Icon name="add" size={16} color="#64748B" />
+                          <Icon name="add" size={16} color={themePalette.inputIcon} />
                         </TouchableOpacity>
                       )}
 
@@ -1475,7 +1508,11 @@ const ShopSection = () => {
                                     : 'radio-button-unchecked'
                                 }
                                 size={20}
-                                color={selected ? '#0F766E' : '#94A3B8'}
+                                color={
+                                  selected
+                                    ? themePalette.iconActive
+                                    : themePalette.iconDisabled
+                                }
                               />
                               <View style={localStyles.franchiseAddressOptionCopy}>
                                 <Text style={localStyles.printerName}>
@@ -1509,8 +1546,8 @@ const ShopSection = () => {
       <GeneralSettingsSection
         description="Define quais tipos de itens aparecem no cardapio. Use isso para separar shops de produtos, servicos ou lojas com itens customizaveis."
         icon="category"
-        iconBackgroundColor="#E0F2FE"
-        iconColor="#0369A1"
+        iconBackgroundColor={themePalette.cardIconBackground}
+        iconColor={themePalette.cardIconColor}
         title="Catalogo do shop">
         <View style={localStyles.printerList}>
           {SHOP_CATALOG_PRODUCT_TYPE_OPTIONS.map(option => {
@@ -1528,7 +1565,11 @@ const ShopSection = () => {
                 <Icon
                   name={selected ? 'check-circle' : 'radio-button-unchecked'}
                   size={20}
-                  color={selected ? '#2563EB' : '#94A3B8'}
+                  color={
+                    selected
+                      ? themePalette.iconActive
+                      : themePalette.iconDisabled
+                  }
                 />
                 <View style={localStyles.printerCopy}>
                   <Text style={localStyles.printerName}>{option.label}</Text>
@@ -1545,12 +1586,14 @@ const ShopSection = () => {
       <GeneralSettingsSection
         description="Controla como o shop apresenta a cobranca ao cliente. O checkout online continua usando as carteiras e meios integrados da empresa, como Asaas. Quando a opcao abaixo estiver ativa, o cliente tambem pode registrar o pedido para cobrar na entrega usando um meio manual da loja."
         icon="payments"
-        iconBackgroundColor="#DBEAFE"
-        iconColor="#1D4ED8"
+        iconBackgroundColor={themePalette.cardIconBackground}
+        iconColor={themePalette.cardIconColor}
         title="Checkout do shop">
         <ConfigToggleRow
           label="Cobrar na entrega"
           description="Libera uma acao no checkout para registrar pedidos que serao pagos manualmente na entrega."
+          palette={themePalette}
+          styles={localStyles}
           value={chargeOnDeliveryEnabled}
           onToggle={() =>
             toggleAndSaveBooleanConfig({
@@ -1571,6 +1614,8 @@ const ShopSection = () => {
         <ConfigToggleRow
           label="Taxa fixa de entrega"
           description="Quando ativada, soma uma taxa de entrega configurada no checkout quando nao houver cotacao automatica."
+          palette={themePalette}
+          styles={localStyles}
           value={deliveryFeeEnabled}
           onToggle={() =>
             toggleAndSaveBooleanConfig({
@@ -1595,7 +1640,7 @@ const ShopSection = () => {
             }
             keyboardType="decimal-pad"
             placeholder="Ex.: 8,90"
-            placeholderTextColor="#94A3B8"
+            placeholderTextColor={themePalette.inputPlaceholderText}
             style={localStyles.input}
           />
           <Text style={localStyles.helperText}>
@@ -1608,12 +1653,14 @@ const ShopSection = () => {
       <GeneralSettingsSection
         description="Prepara a configuracao dos cupons de fidelidade do shop, definindo se a regra fica ativa, quais produtos participam e qual brinde sera entregue."
         icon="redeem"
-        iconBackgroundColor="#FEF3C7"
-        iconColor="#B45309"
+        iconBackgroundColor={themePalette.cardIconBackground}
+        iconColor={themePalette.cardIconColor}
         title="Cupons de fidelidade">
         <ConfigToggleRow
           label="Cupons de fidelidade"
           description="Ativa a regra de acumulo de vendas para liberar um brinde no shop."
+          palette={themePalette}
+          styles={localStyles}
           value={loyaltyCouponsEnabled}
           onToggle={() =>
             toggleAndSaveBooleanConfig({
@@ -1648,7 +1695,7 @@ const ShopSection = () => {
             }
             keyboardType="number-pad"
             placeholder="Ex.: 10"
-            placeholderTextColor="#94A3B8"
+            placeholderTextColor={themePalette.inputPlaceholderText}
             style={localStyles.input}
           />
         </View>
@@ -1664,20 +1711,24 @@ const ShopSection = () => {
               value={loyaltySearch.query}
               onChangeText={loyaltySearch.setQuery}
               placeholder="Buscar produto participante..."
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={themePalette.inputPlaceholderText}
               style={[localStyles.input, localStyles.selectorInput]}
             />
             <TouchableOpacity
               style={localStyles.selectorListButton}
               activeOpacity={0.85}
               onPress={() => setLoyaltySelectorVisible(true)}>
-              <Icon name="view-list" size={18} color="#FFFFFF" />
+              <Icon name="view-list" size={18} color={themePalette.buttonIcon} />
               <Text style={localStyles.selectorListButtonText}>Lista</Text>
             </TouchableOpacity>
           </View>
 
           {loyaltySearch.isLoading ? (
-            <ActivityIndicator size="small" style={localStyles.sectionLoader} />
+            <ActivityIndicator
+              size="small"
+              color={themePalette.loadingSpinner}
+              style={localStyles.sectionLoader}
+            />
           ) : String(loyaltySearch.query || '').trim() &&
             visibleLoyaltyResults.length === 0 ? (
             <View style={localStyles.emptyBox}>
@@ -1703,7 +1754,11 @@ const ShopSection = () => {
                         toggleLoyaltyProduct(product);
                         loyaltySearch.setQuery('');
                       }}>
-                      <Icon name="add-circle" size={20} color="#0F766E" />
+                      <Icon
+                        name="add-circle"
+                        size={20}
+                        color={themePalette.cardIconColor}
+                      />
                       <View style={localStyles.printerCopy}>
                         <Text style={localStyles.printerName}>
                           {resolveProductLabel(product)}
@@ -1726,7 +1781,11 @@ const ShopSection = () => {
           </Text>
 
           {isHydratingLoyaltyProducts ? (
-            <ActivityIndicator size="small" style={localStyles.sectionLoader} />
+            <ActivityIndicator
+              size="small"
+              color={themePalette.loadingSpinner}
+              style={localStyles.sectionLoader}
+            />
           ) : selectedLoyaltyProducts.length === 0 ? (
             <View style={localStyles.emptyBox}>
               <Text style={localStyles.emptyTitle}>
@@ -1753,7 +1812,7 @@ const ShopSection = () => {
                     <Icon
                       name="remove-circle-outline"
                       size={20}
-                      color="#B45309"
+                      color={themePalette.iconDanger}
                     />
                     <View style={localStyles.printerCopy}>
                       <Text style={localStyles.printerName}>
@@ -1781,20 +1840,24 @@ const ShopSection = () => {
               value={giftSearch.query}
               onChangeText={giftSearch.setQuery}
               placeholder="Buscar produto brinde..."
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={themePalette.inputPlaceholderText}
               style={[localStyles.input, localStyles.selectorInput]}
             />
             <TouchableOpacity
               style={localStyles.selectorListButton}
               activeOpacity={0.85}
               onPress={() => setGiftSelectorVisible(true)}>
-              <Icon name="view-list" size={18} color="#FFFFFF" />
+              <Icon name="view-list" size={18} color={themePalette.buttonIcon} />
               <Text style={localStyles.selectorListButtonText}>Lista</Text>
             </TouchableOpacity>
           </View>
 
           {giftSearch.isLoading ? (
-            <ActivityIndicator size="small" style={localStyles.sectionLoader} />
+            <ActivityIndicator
+              size="small"
+              color={themePalette.loadingSpinner}
+              style={localStyles.sectionLoader}
+            />
           ) : String(giftSearch.query || '').trim() &&
             visibleGiftResults.length === 0 ? (
             <View style={localStyles.emptyBox}>
@@ -1820,7 +1883,11 @@ const ShopSection = () => {
                         selectGiftProduct(product);
                         giftSearch.setQuery('');
                       }}>
-                      <Icon name="redeem" size={20} color="#B45309" />
+                      <Icon
+                        name="redeem"
+                        size={20}
+                        color={themePalette.cardIconColor}
+                      />
                       <View style={localStyles.printerCopy}>
                         <Text style={localStyles.printerName}>
                           {resolveProductLabel(product)}
@@ -1837,7 +1904,11 @@ const ShopSection = () => {
           )}
 
           {isHydratingGiftProduct ? (
-            <ActivityIndicator size="small" style={localStyles.sectionLoader} />
+            <ActivityIndicator
+              size="small"
+              color={themePalette.loadingSpinner}
+              style={localStyles.sectionLoader}
+            />
           ) : selectedGiftProduct ? (
             <TouchableOpacity
               style={[
@@ -1846,7 +1917,11 @@ const ShopSection = () => {
               ]}
               activeOpacity={0.85}
               onPress={clearGiftProduct}>
-              <Icon name="card-giftcard" size={20} color="#B45309" />
+              <Icon
+                name="card-giftcard"
+                size={20}
+                color={themePalette.cardIconColor}
+              />
               <View style={localStyles.printerCopy}>
                 <Text style={localStyles.printerName}>
                   {resolveProductLabel(selectedGiftProduct)}
@@ -1889,12 +1964,14 @@ const ShopSection = () => {
         resolveItemMeta={company =>
           resolveCompanyMeta(company) || 'Toque para selecionar'
         }
+        palette={themePalette}
         searchPlaceholder="Pesquisar franquia..."
         selectionMeta={(company, {selected}) =>
           selected
             ? 'Franquia liberada para o localizador'
             : resolveCompanyMeta(company)
         }
+        styles={localStyles}
       />
 
       <SelectionModal
@@ -1915,6 +1992,7 @@ const ShopSection = () => {
         resolveItemMeta={product =>
           resolveProductMeta(product) || 'Toque para selecionar'
         }
+        palette={themePalette}
         searchPlaceholder="Pesquisar produto..."
         selectionMeta={(product, {selected, multiSelect}) =>
           selected
@@ -1923,6 +2001,7 @@ const ShopSection = () => {
               : 'Selecionado'
             : resolveProductMeta(product)
         }
+        styles={localStyles}
       />
 
       <SelectionModal
@@ -1942,8 +2021,10 @@ const ShopSection = () => {
         resolveItemMeta={product =>
           resolveProductMeta(product) || 'Toque para selecionar'
         }
+        palette={themePalette}
         searchPlaceholder="Pesquisar produto..."
         selectionMeta={() => 'Selecionado como brinde'}
+        styles={localStyles}
       />
     </>
   );
