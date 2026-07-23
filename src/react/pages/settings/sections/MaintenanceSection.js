@@ -13,11 +13,17 @@ import {
   normalizeMaintenanceRoutines,
 } from '@controleonline/ui-common/src/react/utils/maintenanceSettings';
 
-import localStyles from '../GeneralSettings.styles';
+import {
+  getGeneralSettingsSwitchProps,
+  useGeneralSettingsPalette,
+  useGeneralSettingsStyles,
+} from '../GeneralSettings.styles';
 import GeneralSettingsSection from '../GeneralSettingsSection';
 import {useGeneralSettingsConfig} from '../GeneralSettings.shared';
 
 const MaintenanceSection = () => {
+  const localStyles = useGeneralSettingsStyles();
+  const themePalette = useGeneralSettingsPalette();
   const {showError, showSuccess} = useToastMessage();
   const {
     defaultCompany,
@@ -123,8 +129,8 @@ const MaintenanceSection = () => {
     <GeneralSettingsSection
       description="Centraliza as rotinas tecnicas executadas pelo cron geral de manutencao."
       icon="schedule"
-      iconBackgroundColor="#CCFBF1"
-      iconColor="#0F766E"
+      iconBackgroundColor={themePalette.cardIconBackground}
+      iconColor={themePalette.cardIconColor}
       title="Rotinas de manutencao">
       <Text style={localStyles.helperText}>
         {`Essas rotinas ficam gravadas na empresa principal (${defaultCompanyLabel}) e o cron geral tenta executa-las a cada minuto.`}
@@ -158,6 +164,11 @@ const MaintenanceSection = () => {
                   updateRoutine(item.key, {enabled: value}, true)
                 }
                 disabled={!editable}
+                {...getGeneralSettingsSwitchProps({
+                  disabled: !editable,
+                  palette: themePalette,
+                  value: !!routine.enabled,
+                })}
               />
             </View>
 

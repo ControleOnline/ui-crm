@@ -5,7 +5,10 @@
 import React, {useCallback, useEffect, useState} from 'react';
 import {Text, TextInput, View} from 'react-native';
 
-import localStyles from '../GeneralSettings.styles';
+import {
+  useGeneralSettingsPalette,
+  useGeneralSettingsStyles,
+} from '../GeneralSettings.styles';
 import GeneralSettingsSection from '../GeneralSettingsSection';
 import {useGeneralSettingsConfig} from '../GeneralSettings.shared';
 import {
@@ -15,6 +18,8 @@ import {
 } from '@controleonline/ui-common/src/react/utils/googleMapsConfig';
 
 const MapsSection = () => {
+  const localStyles = useGeneralSettingsStyles();
+  const themePalette = useGeneralSettingsPalette();
   const {currentCompany, effectiveCompanyConfigs, saveConfigs} =
     useGeneralSettingsConfig();
 
@@ -43,8 +48,8 @@ const MapsSection = () => {
     <GeneralSettingsSection
       description="Define as chaves do Google Maps salvas na config publica da empresa. O display de entregas usa a chave web em runtime, sem depender de build."
       icon="map"
-      iconBackgroundColor="#E0F2FE"
-      iconColor="#0369A1"
+      iconBackgroundColor={themePalette.cardIconBackground}
+      iconColor={themePalette.cardIconColor}
       title="Mapas">
       <View style={localStyles.fieldBlock}>
         <Text style={localStyles.fieldLabel}>Chave do Google Maps Web</Text>
@@ -58,7 +63,7 @@ const MapsSection = () => {
           autoCapitalize="none"
           autoCorrect={false}
           placeholder="Cole a chave do Google Maps para web"
-          placeholderTextColor="#94A3B8"
+          placeholderTextColor={themePalette.inputPlaceholderText}
           style={localStyles.input}
         />
       </View>
@@ -75,7 +80,7 @@ const MapsSection = () => {
           autoCapitalize="none"
           autoCorrect={false}
           placeholder="Cole a chave do Google Maps para Android"
-          placeholderTextColor="#94A3B8"
+          placeholderTextColor={themePalette.inputPlaceholderText}
           style={localStyles.input}
         />
       </View>

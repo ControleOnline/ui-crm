@@ -19,7 +19,10 @@ import {
   SPOTIFY_CONFIG_KEY,
 } from '@controleonline/ui-common/src/utils/integrationConfigs';
 
-import localStyles from '../GeneralSettings.styles';
+import {
+  useGeneralSettingsPalette,
+  useGeneralSettingsStyles,
+} from '../GeneralSettings.styles';
 import GeneralSettingsSection from '../GeneralSettingsSection';
 import LoginSection from './LoginSection';
 import {
@@ -42,11 +45,12 @@ const IntegrationField = ({
   onChangeText,
   placeholder,
   sectionState,
+  styles,
 }) => (
   <>
-    <Text style={localStyles.fieldLabel}>{fieldKey}</Text>
+    <Text style={styles.fieldLabel}>{fieldKey}</Text>
     <TextInput
-      style={[localStyles.input, !editable && localStyles.inputDisabled]}
+      style={[styles.input, !editable && styles.inputDisabled]}
       value={sectionState[fieldKey]}
       onChangeText={onChangeText}
       onBlur={onBlur}
@@ -59,6 +63,8 @@ const IntegrationField = ({
 );
 
 const IntegrationsSection = () => {
+  const localStyles = useGeneralSettingsStyles();
+  const themePalette = useGeneralSettingsPalette();
   const {showError, showSuccess} = useToastMessage();
   const {
     configActions,
@@ -232,8 +238,8 @@ const IntegrationsSection = () => {
       <GeneralSettingsSection
         description="Credenciais tecnicas da Cielo centralizadas na empresa principal."
         icon="credit-card"
-        iconBackgroundColor="#FEF3C7"
-        iconColor="#B45309"
+        iconBackgroundColor={themePalette.cardIconBackground}
+        iconColor={themePalette.cardIconColor}
         title="Cielo">
         <Text style={localStyles.helperText}>
           {`Esses dados privados ficam vinculados a empresa principal (${defaultCompanyLabel}).`}
@@ -245,7 +251,10 @@ const IntegrationsSection = () => {
           </Text>
         )}
         {isLoadingPrivateConfigs && (
-          <ActivityIndicator style={localStyles.sectionLoader} color="#B45309" />
+          <ActivityIndicator
+            style={localStyles.sectionLoader}
+            color={themePalette.loadingSpinner}
+          />
         )}
 
         <IntegrationField
@@ -255,6 +264,7 @@ const IntegrationsSection = () => {
           onChangeText={buildConfigUpdater(setCieloConfig, 'ACCESS_TOKEN')}
           placeholder="Token da integracao Cielo"
           sectionState={cieloConfig}
+          styles={localStyles}
         />
         <IntegrationField
           editable={editable}
@@ -263,6 +273,7 @@ const IntegrationsSection = () => {
           onChangeText={buildConfigUpdater(setCieloConfig, 'CLIENT_ID')}
           placeholder="Client ID da Cielo"
           sectionState={cieloConfig}
+          styles={localStyles}
         />
         <IntegrationField
           editable={editable}
@@ -271,14 +282,15 @@ const IntegrationsSection = () => {
           onChangeText={buildConfigUpdater(setCieloConfig, 'EMAIL')}
           placeholder="financeiro@empresa.com.br"
           sectionState={cieloConfig}
+          styles={localStyles}
         />
       </GeneralSettingsSection>
 
       <GeneralSettingsSection
         description="Campos de observabilidade centralizados na empresa principal."
         icon="analytics"
-        iconBackgroundColor="#DBEAFE"
-        iconColor="#1D4ED8"
+        iconBackgroundColor={themePalette.cardIconBackground}
+        iconColor={themePalette.cardIconColor}
         title="New Relic">
         <Text style={localStyles.helperText}>
           Use esta area para centralizar os parametros do New Relic da empresa
@@ -292,6 +304,7 @@ const IntegrationsSection = () => {
           onChangeText={buildConfigUpdater(setNewRelicConfig, 'LICENSE_KEY')}
           placeholder="License key"
           sectionState={newRelicConfig}
+          styles={localStyles}
         />
         <IntegrationField
           editable={editable}
@@ -303,6 +316,7 @@ const IntegrationsSection = () => {
           )}
           placeholder="Application ID"
           sectionState={newRelicConfig}
+          styles={localStyles}
         />
         <IntegrationField
           editable={editable}
@@ -311,6 +325,7 @@ const IntegrationsSection = () => {
           onChangeText={buildConfigUpdater(setNewRelicConfig, 'ACCOUNT_ID')}
           placeholder="Account ID"
           sectionState={newRelicConfig}
+          styles={localStyles}
         />
         <IntegrationField
           editable={editable}
@@ -319,6 +334,7 @@ const IntegrationsSection = () => {
           onChangeText={buildConfigUpdater(setNewRelicConfig, 'TRUST_KEY')}
           placeholder="Trust key"
           sectionState={newRelicConfig}
+          styles={localStyles}
         />
         <IntegrationField
           editable={editable}
@@ -327,6 +343,7 @@ const IntegrationsSection = () => {
           onChangeText={buildConfigUpdater(setNewRelicConfig, 'BEACON')}
           placeholder="bam.nr-data.net"
           sectionState={newRelicConfig}
+          styles={localStyles}
         />
         <IntegrationField
           editable={editable}
@@ -335,14 +352,15 @@ const IntegrationsSection = () => {
           onChangeText={buildConfigUpdater(setNewRelicConfig, 'ERROR_BEACON')}
           placeholder="bam.nr-data.net"
           sectionState={newRelicConfig}
+          styles={localStyles}
         />
       </GeneralSettingsSection>
 
       <GeneralSettingsSection
         description="Chaves usadas pela integracao Spotify da empresa principal."
         icon="graphic-eq"
-        iconBackgroundColor="#DCFCE7"
-        iconColor="#15803D"
+        iconBackgroundColor={themePalette.cardIconBackground}
+        iconColor={themePalette.cardIconColor}
         title="Spotify">
         <Text style={localStyles.helperText}>
           Guarde aqui as chaves de Spotify vinculadas a empresa principal.
@@ -355,6 +373,7 @@ const IntegrationsSection = () => {
           onChangeText={buildConfigUpdater(setSpotifyConfig, 'CLIENT_ID')}
           placeholder="Client ID do Spotify"
           sectionState={spotifyConfig}
+          styles={localStyles}
         />
         <IntegrationField
           editable={editable}
@@ -363,6 +382,7 @@ const IntegrationsSection = () => {
           onChangeText={buildConfigUpdater(setSpotifyConfig, 'CLIENT_SECRET')}
           placeholder="Client secret do Spotify"
           sectionState={spotifyConfig}
+          styles={localStyles}
         />
       </GeneralSettingsSection>
     </>

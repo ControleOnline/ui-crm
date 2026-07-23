@@ -9,7 +9,10 @@ import {Picker} from '@react-native-picker/picker';
 import css from '@controleonline/ui-orders/src/react/css/orders';
 import {useStore} from '@store';
 
-import localStyles from '../GeneralSettings.styles';
+import {
+  useGeneralSettingsPalette,
+  useGeneralSettingsStyles,
+} from '../GeneralSettings.styles';
 import GeneralSettingsSection from '../GeneralSettingsSection';
 import {
   GENERAL_SETTINGS_PICKER_MODE,
@@ -19,6 +22,8 @@ import {
 
 const OperationsSection = () => {
   const {styles} = css();
+  const localStyles = useGeneralSettingsStyles();
+  const themePalette = useGeneralSettingsPalette();
   const {currentCompany, effectiveCompanyConfigs, saveConfigs} =
     useGeneralSettingsConfig();
 
@@ -124,8 +129,8 @@ const OperationsSection = () => {
     <GeneralSettingsSection
       description="Status, carteiras e notificacoes usadas pelos fluxos de pedido, pagamento e fechamento de caixa."
       icon="point-of-sale"
-      iconBackgroundColor="#DCFCE7"
-      iconColor="#166534"
+      iconBackgroundColor={themePalette.cardIconBackground}
+      iconColor={themePalette.cardIconColor}
       title="Operacao e PDV">
       <View style={localStyles.fieldBlock}>
         <Text style={localStyles.fieldLabel}>Status padrao do PDV</Text>
@@ -275,7 +280,11 @@ const OperationsSection = () => {
       </View>
 
       {(isLoadingStatuses || isLoadingWallets) && (
-        <ActivityIndicator size="small" style={localStyles.sectionLoader} />
+        <ActivityIndicator
+          size="small"
+          style={localStyles.sectionLoader}
+          color={themePalette.loadingSpinner}
+        />
       )}
 
     </GeneralSettingsSection>

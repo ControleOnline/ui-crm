@@ -18,7 +18,11 @@ import {
   normalizeLogPolicy,
 } from '@controleonline/ui-common/src/react/utils/logSettings';
 
-import localStyles from '../GeneralSettings.styles';
+import {
+  getGeneralSettingsSwitchProps,
+  useGeneralSettingsPalette,
+  useGeneralSettingsStyles,
+} from '../GeneralSettings.styles';
 import GeneralSettingsSection from '../GeneralSettingsSection';
 import {useGeneralSettingsConfig} from '../GeneralSettings.shared';
 
@@ -27,28 +31,35 @@ const LogPolicyRow = ({
   item,
   onChange,
   onCommit,
+  palette,
   policy,
+  styles,
 }) => {
   const keepForever = policy.retentionDays === null;
 
   return (
-    <View style={localStyles.logPolicyCard}>
-      <View style={localStyles.settingRow}>
-        <View style={localStyles.settingCopy}>
-          <Text style={localStyles.statusLabel}>{item.title}</Text>
-          <Text style={localStyles.settingDescription}>{item.description}</Text>
+    <View style={styles.logPolicyCard}>
+      <View style={styles.settingRow}>
+        <View style={styles.settingCopy}>
+          <Text style={styles.statusLabel}>{item.title}</Text>
+          <Text style={styles.settingDescription}>{item.description}</Text>
         </View>
         <Switch
           value={!!policy.enabled}
           onValueChange={value => onCommit(item.key, {enabled: value})}
           disabled={!editable}
+          {...getGeneralSettingsSwitchProps({
+            disabled: !editable,
+            palette,
+            value: !!policy.enabled,
+          })}
         />
       </View>
 
-      <View style={localStyles.settingRow}>
-        <View style={localStyles.settingCopy}>
-          <Text style={localStyles.statusLabel}>Manter para sempre</Text>
-          <Text style={localStyles.settingDescription}>
+      <View style={styles.settingRow}>
+        <View style={styles.settingCopy}>
+          <Text style={styles.statusLabel}>Manter para sempre</Text>
+          <Text style={styles.settingDescription}>
             Desative para informar quantos dias esse grupo deve ficar salvo.
           </Text>
         </View>
@@ -58,14 +69,19 @@ const LogPolicyRow = ({
             onCommit(item.key, {retentionDays: value ? null : 30})
           }
           disabled={!editable}
+          {...getGeneralSettingsSwitchProps({
+            disabled: !editable,
+            palette,
+            value: keepForever,
+          })}
         />
       </View>
 
       {!keepForever && (
-        <View style={localStyles.fieldBlock}>
-          <Text style={localStyles.fieldLabel}>Retencao em dias</Text>
+        <View style={styles.fieldBlock}>
+          <Text style={styles.fieldLabel}>Retencao em dias</Text>
           <TextInput
-            style={[localStyles.input, !editable && localStyles.inputDisabled]}
+            style={[styles.input, !editable && styles.inputDisabled]}
             value={policy.retentionDays ? String(policy.retentionDays) : ''}
             onChangeText={value =>
               onChange(item.key, {
@@ -87,6 +103,8 @@ const LogPolicyRow = ({
 };
 
 const LogSection = () => {
+  const localStyles = useGeneralSettingsStyles();
+  const themePalette = useGeneralSettingsPalette();
   const {showError, showSuccess} = useToastMessage();
   const {
     currentCompany,
@@ -220,8 +238,8 @@ const LogSection = () => {
     <GeneralSettingsSection
       description="Centraliza avisos por e-mail e a politica geral de habilitacao e retencao dos logs do sistema."
       icon="bug-report"
-      iconBackgroundColor="#FEE2E2"
-      iconColor="#B91C1C"
+      iconBackgroundColor={themePalette.cardIconBackground}
+      iconColor={themePalette.cardIconColor}
       title="Logs e alertas">
       <Text style={localStyles.helperText}>
         {`Essas configuracoes sao globais e ficam vinculadas a empresa principal (${defaultCompanyLabel}).`}
@@ -248,6 +266,11 @@ const LogSection = () => {
             saveLogSettings({nextEmailAlertsEnabled: value});
           }}
           disabled={!editable}
+          {...getGeneralSettingsSwitchProps({
+            disabled: !editable,
+            palette: themePalette,
+            value: emailAlertsEnabled,
+          })}
         />
       </View>
 
@@ -286,7 +309,9 @@ const LogSection = () => {
             item={item}
             onChange={updatePolicy}
             onCommit={commitPolicyChange}
+            palette={themePalette}
             policy={logPolicy[item.key] || DEFAULT_LOG_POLICY[item.key]}
+            styles={localStyles}
           />
         ))}
       </View>

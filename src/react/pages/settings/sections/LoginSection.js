@@ -11,11 +11,16 @@ import {
   resolveCompanyGoogleOauthClientId,
 } from '@controleonline/ui-common/src/utils/oauth';
 
-import localStyles from '../GeneralSettings.styles';
+import {
+  useGeneralSettingsPalette,
+  useGeneralSettingsStyles,
+} from '../GeneralSettings.styles';
 import GeneralSettingsSection from '../GeneralSettingsSection';
 import {toConfigRequestValue, useGeneralSettingsConfig} from '../GeneralSettings.shared';
 
 const LoginSection = () => {
+  const localStyles = useGeneralSettingsStyles();
+  const themePalette = useGeneralSettingsPalette();
   const {showError, showSuccess} = useToastMessage();
   const {
     configActions,
@@ -93,8 +98,8 @@ const LoginSection = () => {
     <GeneralSettingsSection
       description="Centraliza a chave publica usada pelo login Google da tela React."
       icon="login"
-      iconBackgroundColor="#FFEDD5"
-      iconColor="#EA580C"
+      iconBackgroundColor={themePalette.cardIconBackground}
+      iconColor={themePalette.cardIconColor}
       title="Login e autenticacao">
       <Text style={localStyles.helperText}>
         {`Esse client ID e salvo na empresa principal (${defaultCompanyLabel}) e controla quando o botao "Entrar com Google" aparece no login web.`}

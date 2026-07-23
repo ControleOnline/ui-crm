@@ -11,7 +11,10 @@ import {
 } from '@controleonline/ui-common/src/react/utils/paymentDevices';
 import {useStore} from '@store';
 
-import localStyles from '../GeneralSettings.styles';
+import {
+  useGeneralSettingsPalette,
+  useGeneralSettingsStyles,
+} from '../GeneralSettings.styles';
 import GeneralSettingsSection from '../GeneralSettingsSection';
 import {
   DISPLAY_DEVICE_LINK_CONFIG_KEY,
@@ -22,6 +25,8 @@ import {
 } from '../GeneralSettings.shared';
 
 const DisplayPreparationSection = () => {
+  const localStyles = useGeneralSettingsStyles();
+  const themePalette = useGeneralSettingsPalette();
   const {currentCompany} = useGeneralSettingsConfig();
 
   const deviceConfigStore = useStore('device_config');
@@ -80,8 +85,8 @@ const DisplayPreparationSection = () => {
     <GeneralSettingsSection
       description="A copia de preparo e disparada automaticamente pelo app DISPLAY quando um item entra em preparo. Cada DISPLAY precisa estar vinculado a um display e a uma impressora no detalhe do device para que a copia seja enviada para a fila correta."
       icon="receipt-long"
-      iconBackgroundColor="#FEF3C7"
-      iconColor="#B45309"
+      iconBackgroundColor={themePalette.cardIconBackground}
+      iconColor={themePalette.cardIconColor}
       title="Impressao de preparo por fila">
       <Text style={localStyles.helperText}>
         {configuredDisplayPreparationCount > 0
@@ -90,7 +95,11 @@ const DisplayPreparationSection = () => {
       </Text>
 
       {isLoadingDeviceConfigs ? (
-        <ActivityIndicator size="small" style={localStyles.sectionLoader} />
+        <ActivityIndicator
+          size="small"
+          style={localStyles.sectionLoader}
+          color={themePalette.loadingSpinner}
+        />
       ) : configuredDisplayPreparationCount > 0 ? (
         <View style={localStyles.printerList}>
           {displayPreparationDevices.map(deviceConfig => {
@@ -112,7 +121,11 @@ const DisplayPreparationSection = () => {
               <View
                 key={`display-print-${deviceConfig?.id || alias}`}
                 style={[localStyles.printerItem, localStyles.printerItemActive]}>
-                <Icon name="check-circle" size={20} color="#B45309" />
+                <Icon
+                  name="check-circle"
+                  size={20}
+                  color={themePalette.iconActive}
+                />
                 <View style={localStyles.printerCopy}>
                   <Text style={localStyles.printerName}>{alias}</Text>
                   <Text style={localStyles.printerDevice}>

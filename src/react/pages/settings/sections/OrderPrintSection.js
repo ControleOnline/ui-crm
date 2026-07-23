@@ -25,7 +25,10 @@ import {
 } from '@controleonline/ui-common/src/react/utils/printerDevices';
 import {useStore} from '@store';
 
-import localStyles from '../GeneralSettings.styles';
+import {
+  useGeneralSettingsPalette,
+  useGeneralSettingsStyles,
+} from '../GeneralSettings.styles';
 import GeneralSettingsSection from '../GeneralSettingsSection';
 import {
   normalizeTextConfigValue,
@@ -35,6 +38,8 @@ import {
 } from '../GeneralSettings.shared';
 
 const OrderPrintSection = () => {
+  const localStyles = useGeneralSettingsStyles();
+  const themePalette = useGeneralSettingsPalette();
   const {currentCompany, effectiveCompanyConfigs, saveConfigs} =
     useGeneralSettingsConfig();
 
@@ -181,8 +186,8 @@ const OrderPrintSection = () => {
     <GeneralSettingsSection
       description="Define quais devices da empresa recebem a cópia completa do pedido para conferência e qual texto livre sai no rodapé usando as configs `order-print-devices` e `order-print-footer-text`."
       icon="print"
-      iconBackgroundColor="#DBEAFE"
-      iconColor="#2563EB"
+      iconBackgroundColor={themePalette.cardIconBackground}
+      iconColor={themePalette.cardIconColor}
       title="Impressão de conferência">
       <View style={localStyles.statusRow}>
         <Text style={localStyles.statusLabel}>Impressão padrão</Text>
@@ -198,12 +203,20 @@ const OrderPrintSection = () => {
           <Icon
             name={orderPrintEnabled ? 'check-circle' : 'block'}
             size={16}
-            color={orderPrintEnabled ? '#166534' : '#991B1B'}
+            color={
+              orderPrintEnabled
+                ? themePalette.badgeSelectedText
+                : themePalette.badgeDisabledText
+            }
           />
           <Text
             style={[
               localStyles.statusChipText,
-              {color: orderPrintEnabled ? '#166534' : '#991B1B'},
+              {
+                color: orderPrintEnabled
+                  ? themePalette.badgeSelectedText
+                  : themePalette.badgeDisabledText,
+              },
             ]}>
             {orderPrintEnabled ? 'Ativada' : 'Desativada'}
           </Text>
@@ -217,7 +230,11 @@ const OrderPrintSection = () => {
       </Text>
 
       {isLoadingPrinters || isLoadingDeviceConfigs ? (
-        <ActivityIndicator size="small" style={localStyles.sectionLoader} />
+        <ActivityIndicator
+          size="small"
+          style={localStyles.sectionLoader}
+          color={themePalette.loadingSpinner}
+        />
       ) : printerOptions.length === 0 ? (
         <View style={localStyles.emptyBox}>
           <Text style={localStyles.emptyTitle}>
@@ -248,7 +265,11 @@ const OrderPrintSection = () => {
                 <Icon
                   name={active ? 'check-circle' : 'radio-button-unchecked'}
                   size={20}
-                  color={active ? '#2563EB' : '#94A3B8'}
+                  color={
+                    active
+                      ? themePalette.iconActive
+                      : themePalette.iconDisabled
+                  }
                 />
                 <View style={localStyles.printerCopy}>
                   <Text style={localStyles.printerName}>

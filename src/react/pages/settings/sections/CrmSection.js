@@ -7,13 +7,12 @@ import {Text, TextInput, TouchableOpacity, View} from 'react-native';
 import {Picker} from '@react-native-picker/picker';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
-import {useStore} from '@store';
 import css from '@controleonline/ui-orders/src/react/css/orders';
 import Formatter from '@controleonline/ui-common/src/utils/formatter';
-import {colors as defaultThemeColors} from '@controleonline/../../src/styles/colors';
-import {resolveThemePalette, withOpacity} from '@controleonline/../../src/styles/branding';
-
-import localStyles from '../GeneralSettings.styles';
+import {
+  useGeneralSettingsPalette,
+  useGeneralSettingsStyles,
+} from '../GeneralSettings.styles';
 import GeneralSettingsSection from '../GeneralSettingsSection';
 import {
   DEFAULT_AFTER_SALES_PROFILES,
@@ -23,14 +22,11 @@ import {
 } from '../GeneralSettings.shared';
 
 const CrmSection = () => {
-  const themeStore = useStore('theme');
   const {styles, globalStyles} = css();
+  const localStyles = useGeneralSettingsStyles();
+  const themePalette = useGeneralSettingsPalette();
   const {currentCompany, effectiveCompanyConfigs, isSaving, saveConfig} =
     useGeneralSettingsConfig();
-  const themePalette = resolveThemePalette(
-    themeStore.getters.colors,
-    defaultThemeColors,
-  );
 
   const [strategy, setStrategy] = useState('random');
   const [maxTasks, setMaxTasks] = useState('10');
@@ -131,8 +127,8 @@ const CrmSection = () => {
     <GeneralSettingsSection
       description="Configuracoes comerciais e regras de distribuicao de atendimento."
       icon="groups"
-      iconBackgroundColor={withOpacity(themePalette.primary, 0.12)}
-      iconColor={themePalette.primary}
+      iconBackgroundColor={themePalette.cardIconBackground}
+      iconColor={themePalette.cardIconColor}
       title="CRM">
       <View style={localStyles.fieldBlock}>
         <Text style={localStyles.fieldLabel}>

@@ -24,11 +24,16 @@ import {
 } from '@controleonline/ui-common/src/react/utils/paymentDevices';
 import {useStore} from '@store';
 
-import localStyles from '../GeneralSettings.styles';
+import {
+  useGeneralSettingsPalette,
+  useGeneralSettingsStyles,
+} from '../GeneralSettings.styles';
 import GeneralSettingsSection from '../GeneralSettingsSection';
 import {useGeneralSettingsConfig} from '../GeneralSettings.shared';
 
 const OrderPaymentSection = () => {
+  const localStyles = useGeneralSettingsStyles();
+  const themePalette = useGeneralSettingsPalette();
   const {currentCompany, effectiveCompanyConfigs, saveConfigs} =
     useGeneralSettingsConfig();
 
@@ -174,8 +179,8 @@ const OrderPaymentSection = () => {
     <GeneralSettingsSection
       description="Define a ordem padrao dos terminais com gateway local que podem receber cobrancas remotas. Esse destino atende manager web, celulares e tambem PDVs Android quando o operador escolhe cobrar em outro terminal pela barra unica."
       icon="credit-card"
-      iconBackgroundColor="#EDE9FE"
-      iconColor="#7C3AED"
+      iconBackgroundColor={themePalette.cardIconBackground}
+      iconColor={themePalette.cardIconColor}
       title="Pagamento remoto de pedidos">
       <View style={localStyles.statusRow}>
         <Text style={localStyles.statusLabel}>Pagamento padrao</Text>
@@ -191,12 +196,20 @@ const OrderPaymentSection = () => {
           <Icon
             name={orderPaymentEnabled ? 'check-circle' : 'block'}
             size={16}
-            color={orderPaymentEnabled ? '#166534' : '#991B1B'}
+            color={
+              orderPaymentEnabled
+                ? themePalette.badgeSelectedText
+                : themePalette.badgeDisabledText
+            }
           />
           <Text
             style={[
               localStyles.statusChipText,
-              {color: orderPaymentEnabled ? '#166534' : '#991B1B'},
+              {
+                color: orderPaymentEnabled
+                  ? themePalette.badgeSelectedText
+                  : themePalette.badgeDisabledText,
+              },
             ]}>
             {orderPaymentEnabled ? 'Ativado' : 'Desativado'}
           </Text>
@@ -238,12 +251,20 @@ const OrderPaymentSection = () => {
           <Icon
             name={allowPaymentDeviceChange ? 'check-circle' : 'block'}
             size={16}
-            color={allowPaymentDeviceChange ? '#166534' : '#991B1B'}
+            color={
+              allowPaymentDeviceChange
+                ? themePalette.badgeSelectedText
+                : themePalette.badgeDisabledText
+            }
           />
           <Text
             style={[
               localStyles.statusChipText,
-              {color: allowPaymentDeviceChange ? '#166534' : '#991B1B'},
+              {
+                color: allowPaymentDeviceChange
+                  ? themePalette.badgeSelectedText
+                  : themePalette.badgeDisabledText,
+              },
             ]}>
             {allowPaymentDeviceChange ? 'Ativado' : 'Desativado'}
           </Text>
@@ -276,12 +297,20 @@ const OrderPaymentSection = () => {
           <Icon
             name={chargeOnDeliveryEnabled ? 'check-circle' : 'block'}
             size={16}
-            color={chargeOnDeliveryEnabled ? '#166534' : '#991B1B'}
+            color={
+              chargeOnDeliveryEnabled
+                ? themePalette.badgeSelectedText
+                : themePalette.badgeDisabledText
+            }
           />
           <Text
             style={[
               localStyles.statusChipText,
-              {color: chargeOnDeliveryEnabled ? '#166534' : '#991B1B'},
+              {
+                color: chargeOnDeliveryEnabled
+                  ? themePalette.badgeSelectedText
+                  : themePalette.badgeDisabledText,
+              },
             ]}>
             {chargeOnDeliveryEnabled ? 'Ativado' : 'Desativado'}
           </Text>
@@ -289,7 +318,11 @@ const OrderPaymentSection = () => {
       </View>
 
       {isLoadingDeviceConfigs ? (
-        <ActivityIndicator size="small" style={localStyles.sectionLoader} />
+        <ActivityIndicator
+          size="small"
+          style={localStyles.sectionLoader}
+          color={themePalette.loadingSpinner}
+        />
       ) : paymentDevices.length === 0 ? (
         <View style={localStyles.emptyBox}>
           <Text style={localStyles.emptyTitle}>
@@ -319,7 +352,11 @@ const OrderPaymentSection = () => {
                 <Icon
                   name={active ? 'check-circle' : 'radio-button-unchecked'}
                   size={20}
-                  color={active ? '#7C3AED' : '#94A3B8'}
+                  color={
+                    active
+                      ? themePalette.iconActive
+                      : themePalette.iconDisabled
+                  }
                 />
                 <View style={localStyles.printerCopy}>
                   <Text style={localStyles.printerName}>

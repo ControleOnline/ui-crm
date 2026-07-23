@@ -86,11 +86,43 @@ export const buildGeneralSettingsPalette = themeColors => ({
   pageBackground: themeColors.pageBackground,
   primary: themeColors.primary,
   success: themeColors.success,
+  switchDisabledThumb: themeColors.switchDisabledThumb,
+  switchDisabledTrack: themeColors.switchDisabledTrack,
+  switchOffThumb: themeColors.switchOffThumb,
+  switchOffTrack: themeColors.switchOffTrack,
+  switchOnThumb: themeColors.switchOnThumb,
+  switchOnTrack: themeColors.switchOnTrack,
   textMuted: themeColors.textMuted,
   textPrimary: themeColors.textPrimary,
   textSecondary: themeColors.textSecondary,
   warning: themeColors.warning,
 });
+
+export const getGeneralSettingsSwitchProps = ({
+  disabled = false,
+  palette,
+  value = false,
+}) => {
+  const offTrackColor = disabled
+    ? palette.switchDisabledTrack
+    : palette.switchOffTrack;
+  const onTrackColor = disabled
+    ? palette.switchDisabledTrack
+    : palette.switchOnTrack;
+
+  return {
+    ios_backgroundColor: offTrackColor,
+    thumbColor: disabled
+      ? palette.switchDisabledThumb
+      : value
+        ? palette.switchOnThumb
+        : palette.switchOffThumb,
+    trackColor: {
+      false: offTrackColor,
+      true: onTrackColor,
+    },
+  };
+};
 
 export const createGeneralSettingsStyles = palette =>
   StyleSheet.create({
@@ -162,6 +194,8 @@ export const createGeneralSettingsStyles = palette =>
       borderRadius: 14,
       alignItems: 'center',
       justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: palette.cardIconBorder,
       marginRight: 12,
     },
     sectionHeaderCopy: {
@@ -680,6 +714,12 @@ const legacyPalette = {
   pageBackground: '#F8FAFC',
   primary: '#1D4ED8',
   success: '#0F766E',
+  switchDisabledThumb: '#94A3B8',
+  switchDisabledTrack: '#E2E8F0',
+  switchOffThumb: '#FFFFFF',
+  switchOffTrack: '#CBD5E1',
+  switchOnThumb: '#FFFFFF',
+  switchOnTrack: '#2563EB',
   textMuted: '#64748B',
   textPrimary: '#334155',
   textSecondary: '#64748B',

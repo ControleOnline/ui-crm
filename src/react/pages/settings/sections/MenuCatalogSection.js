@@ -19,7 +19,10 @@ import {
 } from '@controleonline/ui-common/src/react/utils/menuCatalogConfig';
 import {useStore} from '@store';
 
-import localStyles from '../GeneralSettings.styles';
+import {
+  useGeneralSettingsPalette,
+  useGeneralSettingsStyles,
+} from '../GeneralSettings.styles';
 import GeneralSettingsSection from '../GeneralSettingsSection';
 import {
   GENERAL_SETTINGS_PICKER_MODE,
@@ -33,6 +36,8 @@ import {
 
 const MenuCatalogSection = () => {
   const {styles} = css();
+  const localStyles = useGeneralSettingsStyles();
+  const themePalette = useGeneralSettingsPalette();
   const {
     currentCompany,
     effectiveCompanyConfigs,
@@ -204,8 +209,8 @@ const MenuCatalogSection = () => {
     <GeneralSettingsSection
       description="Define o modelo HTML/Twig usado no PDF e quais categorias e grupos de customizacao ficam ocultos no arquivo baixado no manager e na rota publica `/download` do shop."
       icon="restaurant-menu"
-      iconBackgroundColor="#FEF3C7"
-      iconColor="#B45309"
+      iconBackgroundColor={themePalette.cardIconBackground}
+      iconColor={themePalette.cardIconColor}
       title="Cardapio em PDF">
       <View style={localStyles.fieldBlock}>
         <Text style={localStyles.fieldLabel}>Modelo do cardapio</Text>
@@ -215,7 +220,11 @@ const MenuCatalogSection = () => {
         </Text>
 
         {isLoadingMenuModels ? (
-          <ActivityIndicator size="small" style={localStyles.sectionLoader} />
+          <ActivityIndicator
+            size="small"
+            style={localStyles.sectionLoader}
+            color={themePalette.loadingSpinner}
+          />
         ) : normalizedMenuModels.length === 0 ? (
           <View style={localStyles.emptyBox}>
             <Text style={localStyles.emptyTitle}>
@@ -274,7 +283,11 @@ const MenuCatalogSection = () => {
         </Text>
 
         {isLoadingMenuCategories ? (
-          <ActivityIndicator size="small" style={localStyles.sectionLoader} />
+          <ActivityIndicator
+            size="small"
+            style={localStyles.sectionLoader}
+            color={themePalette.loadingSpinner}
+          />
         ) : normalizedMenuCategories.length === 0 ? (
           <View style={localStyles.emptyBox}>
             <Text style={localStyles.emptyTitle}>
@@ -303,7 +316,11 @@ const MenuCatalogSection = () => {
                   <Icon
                     name={hidden ? 'visibility-off' : 'category'}
                     size={20}
-                    color={hidden ? '#B45309' : '#94A3B8'}
+                    color={
+                      hidden
+                        ? themePalette.iconActive
+                        : themePalette.iconDisabled
+                    }
                   />
                   <View style={localStyles.printerCopy}>
                     <Text style={localStyles.printerName}>
@@ -328,7 +345,11 @@ const MenuCatalogSection = () => {
         </Text>
 
         {isLoadingMenuGroups ? (
-          <ActivityIndicator size="small" style={localStyles.sectionLoader} />
+          <ActivityIndicator
+            size="small"
+            style={localStyles.sectionLoader}
+            color={themePalette.loadingSpinner}
+          />
         ) : normalizedMenuGroups.length === 0 ? (
           <View style={localStyles.emptyBox}>
             <Text style={localStyles.emptyTitle}>
@@ -356,7 +377,11 @@ const MenuCatalogSection = () => {
                   <Icon
                     name={hidden ? 'visibility-off' : 'tune'}
                     size={20}
-                    color={hidden ? '#B45309' : '#94A3B8'}
+                    color={
+                      hidden
+                        ? themePalette.iconActive
+                        : themePalette.iconDisabled
+                    }
                   />
                   <View style={localStyles.printerCopy}>
                     <Text style={localStyles.printerName}>
