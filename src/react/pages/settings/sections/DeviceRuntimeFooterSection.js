@@ -23,10 +23,12 @@ const DeviceRuntimeFooterSection = () => {
     configActions,
     defaultCompany,
     defaultCompanyLabel,
+    hasDefaultCompanyAccess,
     isMainCompanySelected,
     peopleActions,
   } = useGeneralSettingsConfig();
   const [deviceRuntimeFooterText, setDeviceRuntimeFooterText] = useState('');
+  const canEditFooterText = !!defaultCompany?.id && hasDefaultCompanyAccess;
 
   useEffect(() => {
     setDeviceRuntimeFooterText(
@@ -41,14 +43,6 @@ const DeviceRuntimeFooterSection = () => {
       Alert.alert(
         'Empresa principal indisponivel',
         'Nao foi possivel identificar a empresa principal para salvar o rodape.',
-      );
-      return Promise.resolve(false);
-    }
-
-    if (!isMainCompanySelected) {
-      Alert.alert(
-        'Empresa principal',
-        'Abra as configuracoes da empresa principal para editar o rodape dos devices.',
       );
       return Promise.resolve(false);
     }
@@ -87,13 +81,12 @@ const DeviceRuntimeFooterSection = () => {
     configActions,
     defaultCompany?.id,
     deviceRuntimeFooterText,
-    isMainCompanySelected,
     peopleActions,
   ]);
 
   return (
     <GeneralSettingsSection
-      description="Exibe o nome do device e a versao do software em uma linha fina no rodape. Quando existir texto livre na empresa principal, ele entra na mesma linha ou alterna em telas pequenas."
+      description="Exibe o nome do device e a versao do software em uma linha fina no rodape. Quando existir texto livre na empresa principal, o app passa por cada linha desse texto antes de mostrar novamente a linha de versao."
       icon="dvr"
       iconBackgroundColor={themePalette.cardIconBackground}
       iconColor={themePalette.cardIconColor}
@@ -104,7 +97,7 @@ const DeviceRuntimeFooterSection = () => {
 
       {!isMainCompanySelected && (
         <Text style={localStyles.helperText}>
-          Abra a empresa principal para editar esse rodape.
+          A edicao continua salvando na empresa principal, mesmo fora dela.
         </Text>
       )}
 
@@ -112,18 +105,21 @@ const DeviceRuntimeFooterSection = () => {
       <TextInput
         style={[
           localStyles.input,
-          (!defaultCompany?.id || !isMainCompanySelected) &&
+          localStyles.multilineInput,
+          !canEditFooterText &&
             localStyles.inputDisabled,
         ]}
         value={deviceRuntimeFooterText}
         onChangeText={setDeviceRuntimeFooterText}
         onBlur={saveDeviceRuntimeFooter}
-        editable={!!defaultCompany?.id && isMainCompanySelected}
-        placeholder="Ex.: www.seusite.com.br • (11) 99999-9999"
+        multiline
+        numberOfLines={4}
+        editable={canEditFooterText}
+        placeholder={`Ex.:\nwww.seusite.com.br\n(11) 99999-9999`}
       />
       <Text style={localStyles.helperText}>
-        No rodape pequeno, o app alterna entre nome do device / versao e esse
-        texto.
+        No rodape pequeno, o app alterna entre cada linha desse texto e a
+        linha de nome do device / versao.
       </Text>
     </GeneralSettingsSection>
   );
