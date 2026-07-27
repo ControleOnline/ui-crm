@@ -246,10 +246,17 @@ const CrmSection = () => {
           style={[
             globalStyles.button,
             localStyles.primaryButton,
+            {
+              alignItems: 'center',
+              backgroundColor: themePalette.buttonBackground,
+              flexDirection: 'row',
+              gap: 6,
+            },
             (!currentCompany?.id || isSaving) && localStyles.primaryButtonDisabled,
           ]}
           disabled={!currentCompany?.id || isSaving}
           onPress={addProfile}>
+          <Icon name="add" size={18} color={themePalette.buttonIcon} />
           <Text style={localStyles.primaryButtonText}>
             {global.t?.t('configs', 'button', 'addProfile')}
           </Text>
