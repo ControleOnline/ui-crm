@@ -40,7 +40,6 @@ const SETTINGS_TABS = [
     key: 'devices',
     label: 'Devices',
     icon: 'dvr',
-    colorToken: 'info',
     stores: ['configs', 'people'],
     Component: DeviceRuntimeFooterSection,
   },
@@ -48,7 +47,6 @@ const SETTINGS_TABS = [
     key: 'integrations',
     label: 'Integrações',
     icon: 'link',
-    colorToken: 'primary',
     stores: ['configs', 'people'],
     Component: IntegrationsSection,
   },
@@ -56,7 +54,6 @@ const SETTINGS_TABS = [
     key: 'logs',
     label: 'Logs',
     icon: 'bug-report',
-    colorToken: 'error',
     stores: ['configs', 'people'],
     Component: LogSection,
   },
@@ -64,7 +61,6 @@ const SETTINGS_TABS = [
     key: 'maintenance',
     label: 'Rotinas',
     icon: 'schedule',
-    colorToken: 'success',
     stores: ['configs', 'people'],
     Component: MaintenanceSection,
   },
@@ -72,7 +68,6 @@ const SETTINGS_TABS = [
     key: 'print',
     label: 'Conferência',
     icon: 'print',
-    colorToken: 'info',
     stores: ['configs', 'printer', 'device_config'],
     Component: OrderPrintSection,
   },
@@ -80,7 +75,6 @@ const SETTINGS_TABS = [
     key: 'preparation',
     label: 'Preparo',
     icon: 'receipt-long',
-    colorToken: 'warning',
     stores: ['device_config'],
     Component: DisplayPreparationSection,
   },
@@ -88,7 +82,6 @@ const SETTINGS_TABS = [
     key: 'menu',
     label: 'Cardapio PDF',
     icon: 'restaurant-menu',
-    colorToken: 'warning',
     stores: ['configs', 'categories', 'product_group', 'models'],
     Component: MenuCatalogSection,
   },
@@ -96,7 +89,6 @@ const SETTINGS_TABS = [
     key: 'payment',
     label: 'Pagamento',
     icon: 'credit-card',
-    colorToken: 'primary',
     stores: ['configs', 'device_config'],
     Component: OrderPaymentSection,
   },
@@ -104,7 +96,6 @@ const SETTINGS_TABS = [
     key: 'operations',
     label: 'Operações',
     icon: 'point-of-sale',
-    colorToken: 'success',
     stores: ['configs', 'status', 'wallet'],
     Component: OperationsSection,
   },
@@ -112,7 +103,6 @@ const SETTINGS_TABS = [
     key: 'crm',
     label: 'CRM',
     icon: 'groups',
-    colorToken: 'primary',
     stores: ['configs'],
     Component: CrmSection,
   },
@@ -120,7 +110,6 @@ const SETTINGS_TABS = [
     key: 'maps',
     label: 'Mapas',
     icon: 'map',
-    colorToken: 'info',
     stores: ['configs'],
     Component: MapsSection,
   },
@@ -128,7 +117,6 @@ const SETTINGS_TABS = [
     key: 'shop',
     label: 'Shop',
     icon: 'shopping-bag',
-    colorToken: 'success',
     stores: ['configs', 'products'],
     Component: ShopSection,
   },
@@ -262,31 +250,42 @@ const GeneralSettings = () => {
             contentContainerStyle={localStyles.tabBarContent}>
             {availableTabs.map(tab => {
               const active = tab.key === activeTab;
+              const tabColors = active
+                ? {
+                    backgroundColor: themePalette.buttonBackground,
+                    borderColor: themePalette.buttonBorder,
+                    iconColor: themePalette.buttonIcon,
+                    textColor: themePalette.buttonText,
+                  }
+                : {
+                    backgroundColor: themePalette.buttonBackgroundSecondary,
+                    borderColor: themePalette.buttonBorderSecondary,
+                    iconColor: themePalette.buttonIconSecondary,
+                    textColor: themePalette.buttonTextSecondary,
+                  };
 
               return (
                 <TouchableOpacity
                   key={tab.key}
                   style={[
                     localStyles.tabItem,
-                    active && localStyles.tabItemActive,
-                    active && {borderBottomColor: themePalette[tab.colorToken]},
+                    {
+                      backgroundColor: tabColors.backgroundColor,
+                      borderColor: tabColors.borderColor,
+                    },
                   ]}
                   activeOpacity={0.85}
                   onPress={() => setActiveTab(tab.key)}>
                   <Icon
                     name={tab.icon}
                     size={18}
-                    color={
-                      active
-                        ? themePalette[tab.colorToken]
-                        : themePalette.textSecondary
-                    }
+                    color={tabColors.iconColor}
                   />
                   <Text
                     style={[
                       localStyles.tabLabel,
                       active && localStyles.tabLabelActive,
-                      active && {color: themePalette[tab.colorToken]},
+                      {color: tabColors.textColor},
                     ]}>
                     {tab.label}
                   </Text>

@@ -41,8 +41,10 @@ export const buildGeneralSettingsPalette = themeColors => ({
   badgeSelectedText: themeColors.badgeSelectedText,
   buttonBackground: themeColors.buttonBackground,
   buttonBackgroundSecondary: themeColors.buttonBackgroundSecondary,
+  buttonBorder: themeColors.buttonBorder,
   buttonBorderSecondary: themeColors.buttonBorderSecondary,
   buttonIcon: themeColors.buttonIcon,
+  buttonIconSecondary: themeColors.buttonIconSecondary,
   buttonText: themeColors.buttonText,
   buttonTextSecondary: themeColors.buttonTextSecondary,
   cardBackground: themeColors.cardBackground,
@@ -146,6 +148,8 @@ export const createGeneralSettingsStyles = palette =>
     },
     tabBarContent: {
       flexDirection: 'row',
+      gap: 6,
+      padding: 6,
     },
     tabItem: {
       flexDirection: 'row',
@@ -154,16 +158,12 @@ export const createGeneralSettingsStyles = palette =>
       gap: 6,
       paddingVertical: 12,
       paddingHorizontal: 16,
-      borderBottomWidth: 2.5,
-      borderBottomColor: palette.containerTransparentBackground,
-    },
-    tabItemActive: {
-      backgroundColor: palette.navigationActiveBackground,
+      borderRadius: 8,
+      borderWidth: 1,
     },
     tabLabel: {
       fontSize: 13,
       fontWeight: '600',
-      color: palette.navigationText,
     },
     tabLabelActive: {
       fontWeight: '700',
@@ -292,6 +292,9 @@ export const createGeneralSettingsStyles = palette =>
     },
     printerList: {
       gap: 10,
+    },
+    giftProductResult: {
+      marginTop: 10,
     },
     printerItem: {
       flexDirection: 'row',
@@ -674,8 +677,10 @@ const legacyPalette = {
   badgeSelectedText: '#166534',
   buttonBackground: '#334155',
   buttonBackgroundSecondary: '#334155',
+  buttonBorder: '#334155',
   buttonBorderSecondary: '#E2E8F0',
   buttonIcon: '#FFFFFF',
+  buttonIconSecondary: '#FFFFFF',
   buttonText: '#FFFFFF',
   buttonTextSecondary: '#FFFFFF',
   cardBackground: '#FFFFFF',

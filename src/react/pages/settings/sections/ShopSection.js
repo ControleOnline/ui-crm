@@ -1903,45 +1903,47 @@ const ShopSection = () => {
             )
           )}
 
-          {isHydratingGiftProduct ? (
-            <ActivityIndicator
-              size="small"
-              color={themePalette.loadingSpinner}
-              style={localStyles.sectionLoader}
-            />
-          ) : selectedGiftProduct ? (
-            <TouchableOpacity
-              style={[
-                localStyles.printerItem,
-                localStyles.printerItemActive,
-              ]}
-              activeOpacity={0.85}
-              onPress={clearGiftProduct}>
-              <Icon
-                name="card-giftcard"
-                size={20}
-                color={themePalette.cardIconColor}
+          <View style={localStyles.giftProductResult}>
+            {isHydratingGiftProduct ? (
+              <ActivityIndicator
+                size="small"
+                color={themePalette.loadingSpinner}
+                style={localStyles.sectionLoader}
               />
-              <View style={localStyles.printerCopy}>
-                <Text style={localStyles.printerName}>
-                  {resolveProductLabel(selectedGiftProduct)}
+            ) : selectedGiftProduct ? (
+              <TouchableOpacity
+                style={[
+                  localStyles.printerItem,
+                  localStyles.printerItemActive,
+                ]}
+                activeOpacity={0.85}
+                onPress={clearGiftProduct}>
+                <Icon
+                  name="card-giftcard"
+                  size={20}
+                  color={themePalette.cardIconColor}
+                />
+                <View style={localStyles.printerCopy}>
+                  <Text style={localStyles.printerName}>
+                    {resolveProductLabel(selectedGiftProduct)}
+                  </Text>
+                  <Text style={localStyles.printerDevice}>
+                    {resolveProductMeta(selectedGiftProduct) ||
+                      'Toque para remover o brinde selecionado'}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            ) : (
+              <View style={localStyles.emptyBox}>
+                <Text style={localStyles.emptyTitle}>
+                  Nenhum brinde selecionado
                 </Text>
-                <Text style={localStyles.printerDevice}>
-                  {resolveProductMeta(selectedGiftProduct) ||
-                    'Toque para remover o brinde selecionado'}
+                <Text style={localStyles.emptyText}>
+                  Escolha um produto para ser entregue como recompensa.
                 </Text>
               </View>
-            </TouchableOpacity>
-          ) : (
-            <View style={localStyles.emptyBox}>
-              <Text style={localStyles.emptyTitle}>
-                Nenhum brinde selecionado
-              </Text>
-              <Text style={localStyles.emptyText}>
-                Escolha um produto para ser entregue como recompensa.
-              </Text>
-            </View>
-          )}
+            )}
+          </View>
         </View>
 
       </GeneralSettingsSection>
