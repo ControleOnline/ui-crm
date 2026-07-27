@@ -5,6 +5,7 @@
 import React, {useCallback, useEffect, useState} from 'react';
 import {Text, TextInput, TouchableOpacity, View} from 'react-native';
 import {Picker} from '@react-native-picker/picker';
+import FeatherIcon from 'react-native-vector-icons/Feather';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
 import css from '@controleonline/ui-orders/src/react/css/orders';
@@ -236,8 +237,18 @@ const CrmSection = () => {
 
             <TouchableOpacity
               onPress={() => removeProfile(index)}
-              style={localStyles.removeProfileButton}>
-              <Icon name="delete" size={22} color={themePalette.iconDanger} />
+              style={[
+                localStyles.removeProfileButton,
+                {
+                  backgroundColor: themePalette.buttonBackground,
+                  borderColor: themePalette.buttonBackground,
+                },
+              ]}>
+              <FeatherIcon
+                name="trash-2"
+                size={16}
+                color={themePalette.buttonIcon}
+              />
             </TouchableOpacity>
           </View>
         ))}

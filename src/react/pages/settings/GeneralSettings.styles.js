@@ -473,8 +473,13 @@ export const createGeneralSettingsStyles = palette =>
       marginLeft: 10,
     },
     removeProfileButton: {
+      alignItems: 'center',
+      borderRadius: 8,
+      borderWidth: 1,
+      height: 34,
+      justifyContent: 'center',
       marginLeft: 10,
-      padding: 4,
+      width: 34,
     },
     selectionModal: {
       backgroundColor: palette.modalBackground,
