@@ -26,8 +26,9 @@ import MenuCatalogSection from './sections/MenuCatalogSection';
 import OrderPaymentSection from './sections/OrderPaymentSection';
 import OperationsSection from './sections/OperationsSection';
 import CrmSection from './sections/CrmSection';
+import LoyaltySection from './sections/LoyaltySection';
 import MapsSection from './sections/MapsSection';
-import ShopSection from './sections/ShopSection';
+import ShopSettingsSection from './sections/shop/ShopSettingsSection';
 import IntegrationsSection from './sections/IntegrationsSection';
 import LogSection from './sections/LogSection';
 import MaintenanceSection from './sections/MaintenanceSection';
@@ -107,6 +108,13 @@ const SETTINGS_TABS = [
     Component: CrmSection,
   },
   {
+    key: 'loyalty',
+    label: 'Fidelidade',
+    icon: 'loyalty',
+    stores: ['configs', 'products'],
+    Component: LoyaltySection,
+  },
+  {
     key: 'maps',
     label: 'Mapas',
     icon: 'map',
@@ -117,8 +125,8 @@ const SETTINGS_TABS = [
     key: 'shop',
     label: 'Shop',
     icon: 'shopping-bag',
-    stores: ['configs', 'products'],
-    Component: ShopSection,
+    stores: ['people_domains', 'product_showcases'],
+    Component: ShopSettingsSection,
   },
 ];
 
