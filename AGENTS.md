@@ -1,8 +1,6 @@
-## CRM Module
+## Ponto de entrada
 
-- Shop settings must configure behavior only; institutional media such as `logo`, `icon`, `stamp`, and `pin` belong to company media management through `people_media`.
-- Do not add URL config inputs for media roles that already exist in `media_types`.
-
-## Qualidade de código
-
-- A barra comum de modularizacao, testes, smoke tests e limite de tamanho de componentes vive em `https://github.com/ControleOnline/agents-mcp/blob/master/skills/shared/code-quality.md`.
+- A documentação funcional e de regras deste modulo vive na wiki do proprio repositório e na wiki principal do app.
+- Regras transversais de qualidade, modularizacao e limites de componente vivem em `https://github.com/ControleOnline/agents-mcp/blob/master/skills/shared/code-quality.md`.
+- Quando houver detalhe especifico de implementacao, prefira comentar no codigo em ingles perto da regra.
+- Este arquivo deve ficar curto e servir apenas como ponte para as fontes oficiais.
