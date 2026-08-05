@@ -21,8 +21,11 @@ Sempre comece pela **Home** da wiki e siga as categorias abaixo.
 | Página | O que documenta |
 | --- | --- |
 | [Cliente × Vendedor — vínculo e permissões](https://github.com/ControleOnline/ui-crm/wiki/Cliente-Vendedor-Vinculo-e-Permissoes) | Vínculo automático, handoff CRM → detalhe, corte MANAGER vs demais |
+| [Oportunidades — estado vazio e filtros](https://github.com/ControleOnline/ui-crm/wiki/Oportunidades-Estado-Vazio-e-Filtros) | Mensagens de lista vazia vs filtro ativo na listagem de oportunidades |
 
 Cópia versionada no Git: `docs/technical/Cliente-Vendedor-Vinculo-e-Permissoes.md`
+Cópia versionada no Git: `docs/technical/Oportunidades-Estado-Vazio-e-Filtros.md`
+
 
 ### Visão deste módulo
 
