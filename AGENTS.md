@@ -21,8 +21,11 @@ Sempre comece pela **Home** da wiki e siga as categorias abaixo.
 | Página | O que documenta |
 | --- | --- |
 | [Cliente × Vendedor — vínculo e permissões](https://github.com/ControleOnline/ui-crm/wiki/Cliente-Vendedor-Vinculo-e-Permissoes) | Vínculo automático, handoff CRM → detalhe, corte MANAGER vs demais |
+| [Propostas — Filtro de status](https://github.com/ControleOnline/ui-crm/wiki/Propostas-Filtro-de-Status) | Chips de status (fixos + dinâmicos), matching e parâmetros de listagem |
 
-Cópia versionada no Git: `docs/technical/Cliente-Vendedor-Vinculo-e-Permissoes.md`
+Cópias versionadas no Git:
+- `docs/technical/Cliente-Vendedor-Vinculo-e-Permissoes.md`
+- `docs/technical/Propostas-Filtro-de-Status.md`
 
 ### Visão deste módulo
 
