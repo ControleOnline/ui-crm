@@ -22,6 +22,8 @@ Sempre comece pela **Home** da wiki e siga as categorias abaixo.
 | --- | --- |
 | [Cliente × Vendedor — vínculo e permissões](https://github.com/ControleOnline/ui-crm/wiki/Cliente-Vendedor-Vinculo-e-Permissoes) | Vínculo automático, handoff CRM → detalhe, corte MANAGER vs demais |
 | [Propostas — Filtro de status](https://github.com/ControleOnline/ui-crm/wiki/Propostas-Filtro-de-Status) | Chips de status (fixos + dinâmicos), matching e parâmetros de listagem |
+| [Oportunidades — estado vazio e filtros](https://github.com/ControleOnline/ui-crm/wiki/Oportunidades-Estado-Vazio-e-Filtros) | Empty state vs filtered; helper `getOpportunityEmptyStateMode` |
+| [Oportunidades — ordenação por data de retorno](https://github.com/ControleOnline/ui-crm/wiki/Oportunidades-Ordenacao-por-Data-de-Retorno) | Ordenação client-side por dueDate/alterDate (mais antiga → mais nova) |
 
 Cópias versionadas no Git:
 - `docs/technical/Cliente-Vendedor-Vinculo-e-Permissoes.md`
@@ -44,7 +46,7 @@ No fluxo cliente × vendedor:
 ### Módulos relacionados (mesmo fluxo)
 
 | Módulo | Papel | Entrada da documentação |
-| --- | --- | --- |
+| --- | --- |
 | `ui-customers` | Detalhe do cliente / aba Vendedores | https://github.com/ControleOnline/ui-customers/wiki |
 | `api-platform-people` | Backend de vínculos e distribuição | https://github.com/ControleOnline/api-platform-people/wiki |
 | `app-community` | Home do app e mapa de submódulos | https://github.com/ControleOnline/app-community/wiki |
