@@ -120,6 +120,7 @@ export default function CrmIndex() {
   const [alterDateMonthPickerVisible, setAlterDateMonthPickerVisible] =
     useState(false);
   const hasInitializedStatusFilter = useRef(false);
+  const statusFilterDefaultAppliedRef = useRef(false);
   const providerFetchKeyRef = useRef('');
   const tasksStore = useStore('tasks');
   const opportunitiesGetters = tasksStore.getters;
@@ -415,7 +416,16 @@ export default function CrmIndex() {
   }, [status, selectedStatusFilterKey, getStatusFilterKey]);
 
   useEffect(() => {
-    if (selectedStatusFilterKey || status.length === 0) {
+    if (status.length === 0) {
+      return;
+    }
+
+    // Empty key means intentional "all" after the default has been applied once.
+    if (selectedStatusFilterKey) {
+      return;
+    }
+
+    if (statusFilterDefaultAppliedRef.current) {
       return;
     }
 
@@ -426,6 +436,7 @@ export default function CrmIndex() {
     if (defaultStatusFilterKey) {
       setSelectedStatusFilterKey(defaultStatusFilterKey);
     }
+    statusFilterDefaultAppliedRef.current = true;
   }, [status, selectedStatusFilterKey]);
 
   useEffect(() => {
