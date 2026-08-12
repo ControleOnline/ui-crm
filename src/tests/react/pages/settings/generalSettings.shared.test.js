@@ -1,4 +1,4 @@
-const {afterEach, beforeEach, describe, it} = global;
+const { afterEach, beforeEach, describe, it } = require('node:test');
 const assert = require('node:assert/strict');
 
 const {
