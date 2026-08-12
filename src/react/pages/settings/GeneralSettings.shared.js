@@ -353,6 +353,72 @@ export const useGeneralSettingsConfig = () => {
     [configActions, currentCompany?.id, syncConfigCache],
   );
 
+  const saveDefaultCompanyConfigs = useCallback(
+    entries => {
+      if (!defaultCompanyId) {
+        Alert.alert(
+          'Empresa principal nao selecionada',
+          'Selecione uma empresa principal para salvar as configuracoes.',
+        );
+        return Promise.resolve(false);
+      }
+
+      const normalizedEntries = Object.entries(entries || {}).reduce(
+        (accumulator, [key, value]) => {
+          accumulator[key] = value;
+          return accumulator;
+        },
+        {},
+      );
+
+      const requestEntries = Object.entries(normalizedEntries).reduce(
+        (accumulator, [key, value]) => {
+          accumulator[key] = toConfigRequestValue(value);
+          return accumulator;
+        },
+        {},
+      );
+
+      const cacheEntries = Object.entries(normalizedEntries).reduce(
+        (accumulator, [key, value]) => {
+          accumulator[key] = toConfigCacheValue(value);
+          return accumulator;
+        },
+        {},
+      );
+
+      return new Promise(resolve => {
+        configActions.addToQueue(async () => {
+          const requestConfigItems = Object.entries(requestEntries).map(
+            ([configKey, configValue]) => ({
+              configKey,
+              configValue,
+            }),
+          );
+
+          try {
+            const data = await configActions.addManyConfigs({
+              configs: requestConfigItems,
+              people: '/people/' + defaultCompanyId,
+              module: 4,
+              visibility: 'public',
+            });
+
+            syncConfigCache(cacheEntries);
+            resolve(true);
+            return data;
+          } catch (err) {
+            Alert.alert('Erro', err?.message || JSON.stringify(err));
+            resolve(false);
+            return null;
+          }
+        });
+        configActions.initQueue();
+      });
+    },
+    [configActions, defaultCompanyId, syncConfigCache],
+  );
+
   const saveConfig = useCallback(
     (key, value) => {
       if (!currentCompany?.id) {
@@ -406,5 +472,6 @@ export const useGeneralSettingsConfig = () => {
     peopleActions,
     saveConfig,
     saveConfigs,
+    saveDefaultCompanyConfigs,
   };
 };
