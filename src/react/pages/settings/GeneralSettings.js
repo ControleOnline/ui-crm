@@ -97,7 +97,7 @@ const SETTINGS_TABS = [
     key: 'operations',
     label: 'Operações',
     icon: 'point-of-sale',
-    stores: ['configs', 'status', 'wallet'],
+    stores: [],
     Component: OperationsSection,
   },
   {
