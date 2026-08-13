@@ -1,0 +1,178 @@
+const cardStyles = {
+  cardWrapper: {
+    marginBottom: 12,
+  },
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  titleContainer: {
+    flex: 1,
+    marginRight: 10,
+  },
+  opportunityTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginBottom: 3,
+  },
+  opportunityTitleSkeleton: {
+    width: '72%',
+    height: 16,
+    borderRadius: 8,
+    marginBottom: 4,
+  },
+  clientName: {
+    fontSize: 13,
+    color: '#64748B',
+    fontWeight: '400',
+    flex: 1,
+  },
+  clientNameSkeleton: {
+    width: '68%',
+    height: 12,
+    borderRadius: 6,
+    marginTop: 1,
+    marginBottom: 1,
+  },
+  clientNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  editClientButton: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#E7F3FF',
+    marginLeft: 8,
+  },
+  stageTag: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 10,
+  },
+  stageText: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+  },
+  stageTagSkeleton: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    minWidth: 72,
+  },
+  stageTextSkeleton: {
+    width: 52,
+    height: 11,
+    borderRadius: 6,
+  },
+  cardBody: {
+    marginBottom: 12,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  infoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 6,
+  },
+  infoText: {
+    fontSize: 12,
+    color: '#64748B',
+    marginLeft: 5,
+    flex: 1,
+  },
+  cardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+    marginBottom: 10,
+  },
+  responsibleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  responsibleText: {
+    fontSize: 12,
+    color: '#64748B',
+    marginLeft: 5,
+  },
+  statusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  announceContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+  },
+  announceText: {
+    fontSize: 12,
+    color: '#8B5CF6',
+    marginLeft: 5,
+  },
+  actionContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+    paddingTop: 12,
+  },
+  actionButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  chatButton: {
+    borderColor: '#10B981',
+    backgroundColor: '#10B98110',
+  },
+  editButton: {
+    borderColor: '#e67e22',
+    backgroundColor: '#e67e2210',
+  },
+  actionButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    marginLeft: 5,
+  },
+};
+
+export default cardStyles;
