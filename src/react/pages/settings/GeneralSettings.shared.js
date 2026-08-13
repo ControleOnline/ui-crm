@@ -263,12 +263,17 @@ export const useGeneralSettingsConfig = () => {
   );
 
   const saveConfigs = useCallback(
-    entries => {
+    (entries, options = {}) => {
+      const {suppressAlert = false} = options;
+
       if (!currentCompany?.id) {
-        Alert.alert(
-          'Empresa nao selecionada',
-          'Selecione uma empresa para salvar as configuracoes.',
-        );
+        if (!suppressAlert) {
+          Alert.alert(
+            'Empresa nao selecionada',
+            'Selecione uma empresa para salvar as configuracoes.',
+          );
+        }
+
         return Promise.resolve(false);
       }
 
@@ -318,7 +323,10 @@ export const useGeneralSettingsConfig = () => {
             return data;
           } catch (err) {
             if (!isMethodNotAllowedError(err)) {
-              Alert.alert('Erro', err?.message || JSON.stringify(err));
+              if (!suppressAlert) {
+                Alert.alert('Erro', err?.message || JSON.stringify(err));
+              }
+
               resolve(false);
               return null;
             }
@@ -338,10 +346,13 @@ export const useGeneralSettingsConfig = () => {
               resolve(true);
               return true;
             } catch (fallbackErr) {
-              Alert.alert(
-                'Erro',
-                fallbackErr?.message || JSON.stringify(fallbackErr),
-              );
+              if (!suppressAlert) {
+                Alert.alert(
+                  'Erro',
+                  fallbackErr?.message || JSON.stringify(fallbackErr),
+                );
+              }
+
               resolve(false);
               return null;
             }

@@ -3,11 +3,12 @@
  * The visible options must come from the shared stores and save back through the config contract.
  */
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
-import {ActivityIndicator, Text, TextInput, View} from 'react-native';
+import {Text, TextInput, View} from 'react-native';
 import {Picker} from '@react-native-picker/picker';
 
 import css from '@controleonline/ui-orders/src/react/css/orders';
 import {useStore} from '@store';
+import useToastMessage from '@controleonline/ui-crm/src/react/hooks/useToastMessage';
 
 import {
   useGeneralSettingsPalette,
@@ -24,21 +25,16 @@ const OperationsSection = () => {
   const {styles} = css();
   const localStyles = useGeneralSettingsStyles();
   const themePalette = useGeneralSettingsPalette();
+  const {showError, showSuccess} = useToastMessage();
   const {currentCompany, effectiveCompanyConfigs, saveConfigs} =
     useGeneralSettingsConfig();
 
   const statusStore = useStore('status');
-  const {
-    items: statuses = [],
-    isLoading: isLoadingStatuses,
-  } = statusStore.getters;
+  const {items: statuses = []} = statusStore.getters;
   const statusActions = statusStore.actions;
 
   const walletStore = useStore('wallet');
-  const {
-    items: wallets = [],
-    isLoading: isLoadingWallets,
-  } = walletStore.getters;
+  const {items: wallets = []} = walletStore.getters;
   const walletActions = walletStore.actions;
 
   const [posDefaultStatus, setPosDefaultStatus] = useState('');
@@ -101,20 +97,39 @@ const OperationsSection = () => {
       nextPosPaidStatus = posPaidStatus,
       nextPosWithdrawWallet = posWithdrawWallet,
     } = {}) => {
-      await saveConfigs({
-        'pos-default-status': String(nextPosDefaultStatus || '').trim(),
-        'pos-paid-status': String(nextPosPaidStatus || '').trim(),
-        'pos-cash-wallet': String(nextPosCashWallet || '').trim(),
-        'pos-withdrawl-wallet': String(nextPosWithdrawWallet || '').trim(),
-        'pos-cielo-wallet': String(nextPosCieloWallet || '').trim(),
-        'pos-infinite-pay-wallet': String(nextPosInfinitePayWallet || '').trim(),
-        'cash-register-notifications': normalizeNotificationTargets(
-          nextCashRegisterNotifications,
-        ),
-      });
+      if (!currentCompany?.id) {
+        showError('Selecione uma empresa para salvar as configuracoes.');
+        return false;
+      }
+
+      const success = await saveConfigs(
+        {
+          'pos-default-status': String(nextPosDefaultStatus || '').trim(),
+          'pos-paid-status': String(nextPosPaidStatus || '').trim(),
+          'pos-cash-wallet': String(nextPosCashWallet || '').trim(),
+          'pos-withdrawl-wallet': String(nextPosWithdrawWallet || '').trim(),
+          'pos-cielo-wallet': String(nextPosCieloWallet || '').trim(),
+          'pos-infinite-pay-wallet': String(nextPosInfinitePayWallet || '').trim(),
+          'cash-register-notifications': normalizeNotificationTargets(
+            nextCashRegisterNotifications,
+          ),
+        },
+        {
+          suppressAlert: true,
+        },
+      );
+
+      if (!success) {
+        showError('Nao foi possivel salvar as configuracoes de Operacao e PDV.');
+        return false;
+      }
+
+      showSuccess('Configuracoes de Operacao e PDV salvas com sucesso.');
+      return true;
     },
     [
       cashRegisterNotifications,
+      currentCompany?.id,
       posCashWallet,
       posCieloWallet,
       posDefaultStatus,
@@ -122,6 +137,8 @@ const OperationsSection = () => {
       posPaidStatus,
       posWithdrawWallet,
       saveConfigs,
+      showError,
+      showSuccess,
     ],
   );
 
@@ -278,14 +295,6 @@ const OperationsSection = () => {
           placeholder="Um numero por linha ou separado por virgula"
         />
       </View>
-
-      {(isLoadingStatuses || isLoadingWallets) && (
-        <ActivityIndicator
-          size="small"
-          style={localStyles.sectionLoader}
-          color={themePalette.loadingSpinner}
-        />
-      )}
 
     </GeneralSettingsSection>
   );
