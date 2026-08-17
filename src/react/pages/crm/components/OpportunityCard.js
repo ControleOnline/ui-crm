@@ -34,19 +34,22 @@ const OpportunityCard = ({
             {showClientSkeleton ? (
               <View style={[styles.skeletonLine, styles.opportunityTitleSkeleton]} />
             ) : (
-              <Text style={styles.opportunityTitle}>
-                {providerName ||
-                  global.t?.t('people', 'card', 'clientNotInformed')}
-              </Text>
+              <View style={styles.clientNameRow}>
+                <Text style={styles.opportunityTitle}>
+                  {providerName ||
+                    global.t?.t('people', 'card', 'clientNotInformed')}
+                </Text>
+                <TouchableOpacity
+                  style={styles.editClientButton}
+                  onPress={() => handleEditProvider(opportunity)}
+                  activeOpacity={0.8}
+                  accessibilityLabel={global.t?.t('people', 'action', 'editClient') || 'Editar cliente'}>
+                  <Icon name="edit" size={12} color={colors.primary} />
+                </TouchableOpacity>
+              </View>
             )}
             <View style={styles.clientNameRow}>
               <Text style={styles.clientName}>#{opportunity.id}</Text>
-              <TouchableOpacity
-                style={styles.editClientButton}
-                onPress={() => handleEditProvider(opportunity)}
-                activeOpacity={0.8}>
-                <Icon name="edit" size={12} color={colors.primary} />
-              </TouchableOpacity>
             </View>
           </View>
           {!opportunity?.taskStatus?.realStatus && isStatusLoading ? (
