@@ -185,6 +185,7 @@ const useCrmData = ({ iconComponent, navigation, showError }) => {
     };
 
     if (query) {
+      // app-community#14: filter by client name (not opportunity id)
       params['peoples.people.name'] = query;
     }
 
