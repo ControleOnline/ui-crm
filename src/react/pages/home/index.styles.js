@@ -115,7 +115,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   statLabel: {
-    fontSize: 12,
+    fontSize: 10,
     color: '#64748B',
     fontWeight: '500',
   },
@@ -196,7 +196,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   shortcutSub: {
-    fontSize: 11,
+    fontSize: 10,
     color: '#64748B',
     fontWeight: '500',
   },
@@ -240,12 +240,12 @@ const styles = StyleSheet.create({
     color: '#334155',
   },
   activityClient: {
-    fontSize: 12,
+    fontSize: 10,
     color: '#64748B',
     marginTop: 2,
   },
   activityTime: {
-    fontSize: 12,
+    fontSize: 10,
     color: '#94A3B8',
     marginTop: 2,
   },
