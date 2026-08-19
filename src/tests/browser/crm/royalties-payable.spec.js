@@ -1,0 +1,122 @@
+/**
+ * Smoke: Franqueado — Royalties a pagar (ui-crm#24)
+ * Navigates to RoyaltiesPayablePage and asserts list shell loads
+ * with payer-scoped invoice request (mocked).
+ *
+ * Requires app-community browser harness (same pattern as
+ * royalties-receivable.spec.js / seller-commissions.spec.js).
+ * When run outside that harness, this file documents the acceptance
+ * scenario for QA.
+ */
+const { expect, test } = require('playwright/test');
+
+const API_ORIGIN =
+  process.env.API_ORIGIN ||
+  process.env.EXPO_PUBLIC_API_URL ||
+  'https://api.controleonline.com';
+
+const CORS_HEADERS = {
+  'access-control-allow-origin': '*',
+  'access-control-allow-headers':
+    'API-TOKEN, APP-DOMAIN, DEVICE, ACCEPT, CONTENT-TYPE, X-Requested-With',
+  'access-control-allow-methods': 'GET,POST,PUT,PATCH,DELETE,OPTIONS',
+};
+
+const jsonHeaders = () => ({
+  ...CORS_HEADERS,
+  'content-type': 'application/ld+json; charset=utf-8',
+});
+
+const collection = member => ({
+  member,
+  'hydra:member': member,
+  totalItems: member.length,
+  'hydra:totalItems': member.length,
+  summary: {
+    sum: { price: 150 },
+    financial: { totalAmount: 150, openAmount: 150, paidAmount: 0 },
+  },
+});
+
+const company = {
+  id: 88,
+  name: 'Franqueado Alpha',
+  alias: 'ALPHA',
+  panel_enabled: true,
+  enabled: true,
+  commercial_enabled: true,
+  theme: { colors: { primary: '#0EA5E9' } },
+};
+
+const royaltyInvoice = {
+  id: 502,
+  invoiceType: 'royalties',
+  price: 150,
+  dueDate: '2026-08-20',
+  payer: { id: 88, name: 'Franqueado Alpha', alias: 'ALPHA' },
+  receiver: { id: 3, name: 'Franqueadora Teste', alias: 'FRANQ' },
+  category: { id: 12, name: 'Royalties' },
+  status: { id: 1, realStatus: 'open' },
+};
+
+test.describe('Royalties a pagar (franqueado)', () => {
+  test('loads RoyaltiesPayablePage and lists royalty invoices for payer company', async ({
+    page,
+  }) => {
+    let invoicesQuery = '';
+
+    await page.route(`${API_ORIGIN}/**`, async route => {
+      const request = route.request();
+      const url = new URL(request.url());
+      const pathname = url.pathname.replace(/^\/+/, '');
+      const method = request.method().toUpperCase();
+
+      if (method === 'OPTIONS') {
+        return route.fulfill({ status: 204, headers: CORS_HEADERS, body: '' });
+      }
+
+      if (
+        pathname === 'companies' ||
+        pathname.startsWith('people/') ||
+        pathname === 'people'
+      ) {
+        return route.fulfill({
+          status: 200,
+          headers: jsonHeaders(),
+          body: JSON.stringify(company),
+        });
+      }
+
+      if (pathname === 'invoices' || pathname.startsWith('invoices')) {
+        invoicesQuery = url.search || '';
+        return route.fulfill({
+          status: 200,
+          headers: jsonHeaders(),
+          body: JSON.stringify(collection([royaltyInvoice])),
+        });
+      }
+
+      return route.fulfill({
+        status: 200,
+        headers: jsonHeaders(),
+        body: JSON.stringify({ member: [], 'hydra:member': [] }),
+      });
+    });
+
+    // Deep-link / navigate as the app shell would for the registered route
+    await page.goto(
+      process.env.SMOKE_APP_URL ||
+        'http://localhost:8081/?route=RoyaltiesPayablePage',
+    );
+
+    // Shell: page testID or title
+    const pageRoot = page.getByTestId('royalties-payable-page').or(
+      page.getByText(/Royalties a pagar/i),
+    );
+    await expect(pageRoot.first()).toBeVisible({ timeout: 30000 });
+
+    // Request should scope to payer (franqueado) + invoiceType=royalties
+    expect(invoicesQuery).toMatch(/invoiceType=royalties|invoiceType%3Droyalties/);
+    expect(invoicesQuery).toMatch(/payer=88|payer%3D88/);
+  });
+});

@@ -224,6 +224,7 @@ function RoyaltiesPayablePage() {
 
   return (
     <SafeAreaView
+      testID="royalties-payable-page"
       style={{
         flex: 1,
         backgroundColor: brandColors.background || '#F8FAFC',
