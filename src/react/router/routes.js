@@ -1,4 +1,5 @@
 import Comissions from '@controleonline/ui-crm/src/react/pages/comissions';
+import SellerCommissionsPage from '@controleonline/ui-crm/src/react/pages/comissions/SellerCommissionsPage';
 import CrmIndex from '@controleonline/ui-crm/src/react/pages/crm/index';
 import ProposalsPage from '../pages/proposals';
 import CrmConversation from '../pages/crm/conversation';
@@ -16,6 +17,18 @@ const crmRoutes = [
       headerBackVisible: true,
       companyFilterMode: 'icon',
       title: 'Comissões',
+    },
+  },
+  {
+    name: 'SellerCommissionsPage',
+    component: SellerCommissionsPage,
+    options: {
+      showCompanyFilter: true,
+      showBottomToolBar: true,
+      headerShown: true,
+      headerBackVisible: true,
+      companyFilterMode: 'icon',
+      title: 'Minhas comissões',
     },
   },
   {
