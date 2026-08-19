@@ -23,6 +23,10 @@ const {
   getOpportunityEmptyStateMode,
 } = require('../../utils/opportunityEmptyState');
 
+const {
+  normalizeOpportunityEditorDraft,
+} = require('../../utils/opportunityEditorReferences');
+
 const FONT_AWESOME_GLYPH_MAP = Icon?.getRawGlyphMap
   ? Icon.getRawGlyphMap()
   : null;
@@ -834,8 +838,15 @@ export default function CrmIndex() {
     const alterDateComponents = parseDateComponents(opportunity.alterDate);
     const phones = parsePhoneNumbers(opportunity.announce);
     const todayComponents = getCurrentDateComponents();
+    const normalizedOpportunity = normalizeOpportunityEditorDraft({
+      opportunity,
+      statusOptions: status,
+      categoryOptions: productCategories,
+      criticalityOptions: criticalityCategories,
+      reasonOptions: reasonCategories,
+    });
     setEditingOpportunity({
-      ...opportunity,
+      ...normalizedOpportunity,
       dueDate: opportunity.dueDate
         ? formatDateForInput(opportunity.dueDate)
         : '',
