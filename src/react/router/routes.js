@@ -4,6 +4,7 @@ import ProposalsPage from '../pages/proposals';
 import CrmConversation from '../pages/crm/conversation';
 import GeneralSettings from '../pages/settings/GeneralSettings';
 import ProposalDetails from '../pages/proposals/ProposalDetails';
+import RoyaltiesReceivablePage from '../pages/royalties/ReceivablePage';
 
 const crmRoutes = [
   {
@@ -16,6 +17,18 @@ const crmRoutes = [
       headerBackVisible: true,
       companyFilterMode: 'icon',
       title: 'Comissões',
+    },
+  },
+  {
+    name: 'RoyaltiesReceivablePage',
+    component: RoyaltiesReceivablePage,
+    options: {
+      showCompanyFilter: true,
+      showBottomToolBar: true,
+      headerShown: true,
+      headerBackVisible: true,
+      companyFilterMode: 'icon',
+      title: 'Royalties a receber',
     },
   },
   {

@@ -6,11 +6,12 @@
   "license": "MIT",
   "main": "src/react/index.js",
   "scripts": {
-    "test": "npm run test:crm-empty-state && npm run test:opportunity-status-filter && npm run test:general-settings",
+    "test": "npm run test:crm-empty-state && npm run test:opportunity-status-filter && npm run test:general-settings && npm run test:royalties-receivable",
     "test:crm-empty-state": "node --test src/tests/react/utils/opportunityEmptyState.test.js",
     "test:opportunity-status-filter": "node --test src/tests/react/utils/opportunityStatusFilter.test.cjs",
     "test:general-settings": "node --test src/tests/react/pages/settings/generalSettings.shared.test.js",
-    "test:coverage": "c8 --reporter=clover --report-dir coverage npm test"
+    "test:coverage": "c8 --reporter=clover --report-dir coverage npm test",
+    "test:royalties-receivable": "node --test src/tests/react/pages/royalties/royaltiesReceivableHelpers.test.js"
   },
   "devDependencies": {
     "c8": "^10.1.3"
