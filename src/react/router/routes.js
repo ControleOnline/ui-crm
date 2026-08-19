@@ -1,4 +1,5 @@
 import Comissions from '@controleonline/ui-crm/src/react/pages/comissions';
+import SellerCommissionsPage from '@controleonline/ui-crm/src/react/pages/comissions/SellerCommissionsPage';
 import RoyaltiesPayablePage from '@controleonline/ui-crm/src/react/pages/royalties/RoyaltiesPayablePage';
 import RoyaltiesReceivablePage from '@controleonline/ui-crm/src/react/pages/royalties/ReceivablePage';
 import CrmIndex from '@controleonline/ui-crm/src/react/pages/crm/index';
@@ -33,6 +34,18 @@ const crmRoutes = [
       headerBackVisible: true,
       companyFilterMode: 'icon',
       title: 'Demonstrativo',
+    },
+  },
+  {
+    name: 'SellerCommissionsPage',
+    component: SellerCommissionsPage,
+    options: {
+      showCompanyFilter: true,
+      showBottomToolBar: true,
+      headerShown: true,
+      headerBackVisible: true,
+      companyFilterMode: 'icon',
+      title: 'Minhas comissões',
     },
   },
   {
