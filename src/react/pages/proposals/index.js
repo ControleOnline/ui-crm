@@ -7,6 +7,20 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 import IconAdd from 'react-native-vector-icons/MaterialIcons';
 import MaterialIcon from 'react-native-vector-icons/MaterialIcons';
 import CreateProposalsModal from './CreateProposalsModal';
+import ProposalCard from './ProposalCard';
+import {
+  normalizeDigits,
+  normalizeStatusKey,
+  getStatusColor,
+  getStatusLabel,
+  extractPeopleId,
+  resolvePeopleName,
+  getContractPartyCandidates,
+  isIgnoredContractPartyId,
+  getResolvedPeopleName,
+  getContractClientName as resolveContractClientName,
+  isContractClientPendingResolution as resolveContractClientPending,
+} from './proposalListHelpers';
 import Formatter from '@controleonline/ui-common/src/utils/formatter';
 import { getPeopleDisplayName } from '@controleonline/ui-common/src/react/utils/peopleDisplay';
 import styles from './index.styles';
@@ -29,132 +43,11 @@ const ProposalsPage = () => {
   const [allContracts, setAllContracts] = useState([]);
   const [selectedStatusFilterKey, setSelectedStatusFilterKey] = useState('');
   const [peopleNameById, setPeopleNameById] = useState({});
-  const normalizeDigits = value => String(value || '').replace(/\D/g, '');
-  const normalizeText = value => String(value || '').trim();
   const pageTitle =
     global.t?.t('contract', 'title', 'page') || 'Propostas';
 
-  const extractPeopleId = person => {
-    if (!person) {
-      return '';
-    }
 
-    if (typeof person === 'string' || typeof person === 'number') {
-      return normalizeDigits(person);
-    }
 
-    return normalizeDigits(person?.['@id'] || person?.id || person?.people);
-  };
-
-  const resolvePeopleName = person => {
-    if (!person || typeof person !== 'object') {
-      return '';
-    }
-
-    return normalizeText(getPeopleDisplayName(person));
-  };
-
-  const getResolvedPeopleName = person => {
-    const directName = resolvePeopleName(person);
-    if (directName) {
-      return directName;
-    }
-
-    const personId = extractPeopleId(person);
-    return personId ? peopleNameById[personId] || '' : '';
-  };
-
-  const getContractPartyCandidates = contract => {
-    const participants = Array.isArray(contract?.peoples) ? contract.peoples : [];
-    const participantsOrdered = [...participants].sort((left, right) => {
-      const leftType = String(left?.peopleType || '').trim().toLowerCase();
-      const rightType = String(right?.peopleType || '').trim().toLowerCase();
-
-      // nunca traduzir
-      const weight = type => {
-        if (type === 'provider') return 0;
-        if (type === 'contractor') return 1;
-        if (type === 'witness') return 2;
-        return 3;
-      };
-
-      return weight(leftType) - weight(rightType);
-    });
-
-    return [
-      ...participantsOrdered.map(entry => entry?.people),
-      contract?.client,
-      contract?.customer,
-      contract?.contractor,
-      contract?.people,
-      contract?.provider,
-    ].filter(Boolean);
-  };
-
-  const isCurrentCompanyPerson = person => {
-    const reference = String(
-      typeof person === 'object' ? person?.['@id'] || person?.id : person || '',
-    ).trim();
-    const companyId = normalizeDigits(currentCompany?.id);
-    if (!reference || !companyId) {
-      return false;
-    }
-
-    const referenceDigits = extractPeopleId(reference);
-    return (
-      reference === `/people/${companyId}` ||
-      reference === `/peoples/${companyId}` ||
-      referenceDigits === companyId
-    );
-  };
-
-  const isIgnoredContractPartyId = (contract, personId) => {
-    if (!personId) {
-      return true;
-    }
-
-    const companyId = normalizeDigits(currentCompany?.id);
-    const modelPeopleId = normalizeDigits(contract?.contractModel?.people);
-    const signerId = normalizeDigits(contract?.contractModel?.signer);
-
-    return [companyId, modelPeopleId, signerId].some(
-      referenceId => referenceId && referenceId === personId,
-    );
-  };
-
-  const getContractClientName = contract => {
-    const candidates = getContractPartyCandidates(contract);
-    for (const candidate of candidates) {
-      const personId = extractPeopleId(candidate);
-      if (personId && isIgnoredContractPartyId(contract, personId)) {
-        continue;
-      }
-
-      if (personId && isCurrentCompanyPerson(candidate)) {
-        continue;
-      }
-
-      const name = getResolvedPeopleName(candidate);
-      if (name) {
-        return name;
-      }
-    }
-
-    return '';
-  };
-
-  const isContractClientPendingResolution = contract => {
-    const candidates = getContractPartyCandidates(contract);
-    return candidates.some(candidate => {
-      const personId = extractPeopleId(candidate);
-      if (!personId || isIgnoredContractPartyId(contract, personId)) {
-        return false;
-      }
-
-      const name = getResolvedPeopleName(candidate);
-      return !name;
-    });
-  };
 
   useEffect(() => {
     if (!peopleActions?.get || !Array.isArray(allContracts) || allContracts.length === 0) {
@@ -166,11 +59,11 @@ const ProposalsPage = () => {
     allContracts.forEach(contract => {
       getContractPartyCandidates(contract).forEach(candidate => {
         const personId = extractPeopleId(candidate);
-        if (!personId || isIgnoredContractPartyId(contract, personId)) {
+        if (!personId || isIgnoredContractPartyId(contract, personId, currentCompany)) {
           return;
         }
 
-        const name = getResolvedPeopleName(candidate);
+        const name = getResolvedPeopleName(candidate, peopleNameById);
         if (!name && !peopleNameById[personId]) {
           missingIds.add(personId);
         }
@@ -305,64 +198,7 @@ const ProposalsPage = () => {
     setRefreshing(false);
   }, [fetchContracts, searchQuery]);
 
-  const normalizeStatusKey = status =>
-    String(status || '')
-      .trim()
-      .toLowerCase()
-      .replace(/[_-]+/g, ' ')
-      .replace(/\s+/g, ' ');
 
-  const getStatusColor = status => {
-    const normalized = normalizeStatusKey(status);
-
-    switch (normalized) {
-      case 'ativo':
-      case 'active':
-      case 'assinado':
-      case 'signed':
-        return '#10B981'; // Green
-      case 'inativo':
-      case 'inactive':
-      case 'cancelado':
-      case 'canceled':
-        return '#c10015'; // Red
-      case 'pendente':
-      case 'pending':
-        return '#e67e22'; // Orange
-      case 'open':
-      case 'aberto':
-        return '#3B82F6'; // Blue
-      default:
-        return '#64748B'; // Gray
-    }
-  };
-
-  const getStatusLabel = status => {
-    const normalized = normalizeStatusKey(status);
-    const map = {
-      ativo: global.t?.t('contract','status', 'active'),
-      active: global.t?.t('contract','status', 'active'),
-      inativo: global.t?.t('contract','status', 'inactive'),
-      inactive: global.t?.t('contract','status', 'inactive'),
-      pendente: global.t?.t('contract','status', 'pending'),
-      pending: global.t?.t('contract','status', 'pending'),
-      open: global.t?.t('contract','status', 'open'),
-      aberto: global.t?.t('contract','status', 'open'),
-      closed: global.t?.t('contract','status', 'closed'),
-      fechado: global.t?.t('contract','status', 'closed'),
-      cancelado: global.t?.t('contract','status', 'canceled'),
-      canceled: global.t?.t('contract','status', 'canceled'),
-      'waiting signature': global.t?.t('contract','status', 'waitingSignature'),
-      'awaiting signature': global.t?.t('contract','status', 'waitingSignature'),
-      'signature pending': global.t?.t('contract','status', 'waitingSignature'),
-      assinado: global.t?.t('contract','status', 'signed'),
-      signed: global.t?.t('contract','status', 'signed'),
-      draft: global.t?.t('contract','status', 'draft'),
-      rascunho: global.t?.t('contract','status', 'draft'),
-    };
-
-    return map[normalized] || status || global.t?.t('contract','label', 'na');
-  };
 
   const getStatusFilterKey = useCallback(
     item => {
@@ -487,65 +323,14 @@ const ProposalsPage = () => {
     : allContracts;
 
   const renderProposal = ({ item: contract }) => (
-    <TouchableOpacity
-      style={styles.card}
-      onPress={() => navigation.navigate('ProposalDetails', { contractId: contract.id })}
-      activeOpacity={0.9}
-    >
-      <View style={styles.cardHeader}>
-        <View style={styles.headerContent}>
-          <Text style={styles.cardTitle}>
-            {contract.contractModel?.model || global.t?.t('contract','label', 'untitled')}
-          </Text>
-          <View style={[styles.statusBadge, { backgroundColor: getStatusColor(contract.status?.status) }]}>
-            <Text style={styles.statusText}>{getStatusLabel(contract.status?.status)}</Text>
-          </View>
-        </View>
-      </View>
-
-      <View style={styles.cardBody}>
-        {(() => {
-          const clientName = getContractClientName(contract);
-          const isPendingClient = isContractClientPendingResolution(contract);
-          const clientLabel = clientName
-            ? clientName
-            : isPendingClient
-            ? global.t?.t('contract','label', 'loadingClient')
-            : global.t?.t('contract','label', 'clientNotInformed');
-
-          return (
-            <View style={styles.clientRow}>
-              <MaterialIcon name="person" size={14} color="#64748B" />
-              <Text style={styles.clientText}>
-                {global.t?.t('contract','label', 'client')}: {clientLabel}
-              </Text>
-            </View>
-          );
-        })()}
-
-        <View style={styles.datesContainer}>
-          <View style={styles.dateBadge}>
-            <MaterialIcon name="event" size={14} color="#64748B" />
-            <Text style={styles.dateText}>
-              {global.t?.t('contract','label', 'startDate')}: {contract.startDate ? Formatter.formatDateYmdTodmY(contract.startDate) : global.t?.t('contract','label', 'na')}
-            </Text>
-          </View>
-          {contract.endDate && (
-            <View style={styles.dateBadge}>
-              <MaterialIcon name="event-available" size={14} color="#64748B" />
-              <Text style={styles.dateText}>
-                {global.t?.t('contract','label', 'endDate')}: {Formatter.formatDateYmdTodmY(contract.endDate)}
-              </Text>
-            </View>
-          )}
-        </View>
-      </View>
-
-      <View style={styles.cardFooter}>
-        <Text style={styles.viewDetailsText}>{global.t?.t('contract','action', 'viewDetails')}</Text>
-        <Icon name="chevron-right" size={12} color={colors.primary} />
-      </View>
-    </TouchableOpacity>
+    <ProposalCard
+      contract={contract}
+      navigation={navigation}
+      getStatusColor={getStatusColor}
+      getStatusLabel={getStatusLabel}
+      getContractClientName={getContractClientName}
+      isContractClientPendingResolution={isContractClientPendingResolution}
+    />
   );
 
   return (
