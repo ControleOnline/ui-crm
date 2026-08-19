@@ -24,6 +24,8 @@ Sempre comece pela **Home** da wiki e siga as categorias abaixo.
 | [Propostas — Filtro de status](https://github.com/ControleOnline/ui-crm/wiki/Propostas-Filtro-de-Status) | Chips de status (fixos + dinâmicos), matching e parâmetros de listagem |
 | [Oportunidades — estado vazio e filtros](https://github.com/ControleOnline/ui-crm/wiki/Oportunidades-Estado-Vazio-e-Filtros) | Empty state vs filtered; helper `getOpportunityEmptyStateMode` |
 | [Oportunidades — ordenação por data de retorno](https://github.com/ControleOnline/ui-crm/wiki/Oportunidades-Ordenacao-por-Data-de-Retorno) | Ordenação client-side por dueDate/alterDate (mais antiga → mais nova) |
+| [Income Statements — Demonstrativo geral](https://github.com/ControleOnline/ui-crm/wiki) | Visão empresa por categorias (comission/royalties); ver `docs/technical/Income-Statements-Demonstrativo.md` |
+
 
 Cópias versionadas no Git:
 - `docs/technical/Cliente-Vendedor-Vinculo-e-Permissoes.md`

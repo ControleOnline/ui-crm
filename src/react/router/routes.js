@@ -9,6 +9,9 @@ import ProposalDetails from '../pages/proposals/ProposalDetails';
 
 const crmRoutes = [
   {
+    // Company-wide Income Statements (demonstrativo por categorias).
+    // Route name kept for existing menu/config entries; title reflects the view.
+    // Role-specific commission/royalties screens are separate (ui-crm#21 filhas).
     name: 'ComissionsPage',
     component: Comissions,
     options: {
@@ -17,7 +20,19 @@ const crmRoutes = [
       headerShown: true,
       headerBackVisible: true,
       companyFilterMode: 'icon',
-      title: 'Comissões',
+      title: 'Demonstrativo',
+    },
+  },
+  {
+    name: 'IncomeStatementsPage',
+    component: Comissions,
+    options: {
+      showCompanyFilter: true,
+      showBottomToolBar: true,
+      headerShown: true,
+      headerBackVisible: true,
+      companyFilterMode: 'icon',
+      title: 'Demonstrativo',
     },
   },
   {

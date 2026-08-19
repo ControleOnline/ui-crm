@@ -314,6 +314,58 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#FFFFFF',
   },
+  monthListContent: {
+    paddingRight: 8,
+    alignItems: 'center',
+  },
+  natureList: {
+    paddingVertical: 2,
+    marginTop: 4,
+  },
+  categoryFilterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: 10,
+    backgroundColor: '#F8FAFC',
+    paddingHorizontal: 10,
+    height: 36,
+  },
+  categoryFilterIcon: {
+    marginRight: 6,
+  },
+  categoryFilterInput: {
+    flex: 1,
+    color: '#0F172A',
+    fontSize: 13,
+    paddingVertical: 0,
+  },
+  emptyTitle: {
+    marginTop: 12,
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#334155',
+    textAlign: 'center',
+  },
+  emptySubtitle: {
+    marginTop: 6,
+    fontSize: 13,
+    color: '#64748B',
+    textAlign: 'center',
+    paddingHorizontal: 24,
+  },
+  listScroll: {
+    flex: 1,
+  },
+  listContent: {
+    padding: 12,
+    paddingBottom: 24,
+  },
+  cardsWrap: {
+    gap: 10,
+  },
 });
 
 export default styles;
