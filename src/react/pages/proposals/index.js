@@ -9,6 +9,14 @@ import MaterialIcon from 'react-native-vector-icons/MaterialIcons';
 import CreateProposalsModal from './CreateProposalsModal';
 import Formatter from '@controleonline/ui-common/src/utils/formatter';
 import { getPeopleDisplayName } from '@controleonline/ui-common/src/react/utils/peopleDisplay';
+import {
+  normalizeProposalStatusKey,
+  getProposalStatusColor,
+  getProposalStatusLabel,
+  getProposalStatusFilterKey,
+  buildProposalStatusFilterOptions,
+  proposalMatchesStatusFilter,
+} from '../../utils/proposalStatus';
 import styles from './index.styles';
 import { inlineStyle_669_129 } from './index.styles';
 
@@ -305,84 +313,14 @@ const ProposalsPage = () => {
     setRefreshing(false);
   }, [fetchContracts, searchQuery]);
 
-  const normalizeStatusKey = status =>
-    String(status || '')
-      .trim()
-      .toLowerCase()
-      .replace(/[_-]+/g, ' ')
-      .replace(/\s+/g, ' ');
-
-  const getStatusColor = status => {
-    const normalized = normalizeStatusKey(status);
-
-    switch (normalized) {
-      case 'ativo':
-      case 'active':
-      case 'assinado':
-      case 'signed':
-        return '#10B981'; // Green
-      case 'inativo':
-      case 'inactive':
-      case 'cancelado':
-      case 'canceled':
-        return '#c10015'; // Red
-      case 'pendente':
-      case 'pending':
-        return '#e67e22'; // Orange
-      case 'open':
-      case 'aberto':
-        return '#3B82F6'; // Blue
-      default:
-        return '#64748B'; // Gray
-    }
-  };
-
-  const getStatusLabel = status => {
-    const normalized = normalizeStatusKey(status);
-    const map = {
-      ativo: global.t?.t('contract','status', 'active'),
-      active: global.t?.t('contract','status', 'active'),
-      inativo: global.t?.t('contract','status', 'inactive'),
-      inactive: global.t?.t('contract','status', 'inactive'),
-      pendente: global.t?.t('contract','status', 'pending'),
-      pending: global.t?.t('contract','status', 'pending'),
-      open: global.t?.t('contract','status', 'open'),
-      aberto: global.t?.t('contract','status', 'open'),
-      closed: global.t?.t('contract','status', 'closed'),
-      fechado: global.t?.t('contract','status', 'closed'),
-      cancelado: global.t?.t('contract','status', 'canceled'),
-      canceled: global.t?.t('contract','status', 'canceled'),
-      'waiting signature': global.t?.t('contract','status', 'waitingSignature'),
-      'awaiting signature': global.t?.t('contract','status', 'waitingSignature'),
-      'signature pending': global.t?.t('contract','status', 'waitingSignature'),
-      assinado: global.t?.t('contract','status', 'signed'),
-      signed: global.t?.t('contract','status', 'signed'),
-      draft: global.t?.t('contract','status', 'draft'),
-      rascunho: global.t?.t('contract','status', 'draft'),
-    };
-
-    return map[normalized] || status || global.t?.t('contract','label', 'na');
-  };
-
+  const normalizeStatusKey = normalizeProposalStatusKey;
+  const getStatusColor = getProposalStatusColor;
+  const getStatusLabel = status => getProposalStatusLabel(status, global.t?.t);
   const getStatusFilterKey = useCallback(
-    item => {
-      if (!item) {
-        return '';
-      }
-
-      if (item['@id']) {
-        return item['@id'];
-      }
-
-      if (item.id != null) {
-        return `/statuses/${item.id}`;
-      }
-
-      const normalized = normalizeStatusKey(item.realStatus || item.status);
-      return normalized ? `realStatus:${normalized}` : '';
-    },
-    [normalizeStatusKey],
+    item => getProposalStatusFilterKey(item),
+    [],
   );
+
 
   const statusFilterOptions = React.useMemo(
     () => {
