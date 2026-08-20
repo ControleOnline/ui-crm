@@ -9,6 +9,7 @@ import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import useToastMessage from '../../hooks/useToastMessage';
 import {colors} from '@controleonline/../../src/styles/colors';
 import styles from './conversation.styles';
+import MarketingEventsSection from './components/MarketingEventsSection';
 
 export default function CrmConversation() {
   const [message, setMessage] = useState('');
@@ -87,6 +88,15 @@ export default function CrmConversation() {
 
     return linkedPerson?.name || linkedPerson?.realname || global.t?.t('users','label', 'client', 'Cliente');
   }, [opportunity, people]);
+
+  const clientPeopleRef = useMemo(() => {
+    return (
+      normalizePeopleReference(opportunity?.client) ||
+      normalizePeopleReference(opportunity?.people) ||
+      ''
+    );
+  }, [opportunity]);
+
   const formatTime = timestamp =>
     timestamp.toLocaleTimeString('pt-br', {
       hour: '2-digit',
@@ -268,6 +278,8 @@ export default function CrmConversation() {
           </View>
         </View>
       </View>
+
+      <MarketingEventsSection peopleRef={clientPeopleRef} peopleName={clientName} />
 
       <ScrollView
         ref={scrollViewRef}
