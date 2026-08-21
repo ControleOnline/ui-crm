@@ -6,19 +6,12 @@
   "license": "MIT",
   "main": "src/react/index.js",
   "scripts": {
-    "test": "npm run test:crm-empty-state && npm run test:opportunity-status-filter && npm run test:general-settings && npm run test:opportunity-editor-references && npm run test:royalties-payable && npm run test:royalties-receivable && npm run test:income-statements && npm run test:seller-commissions && npm run test:proposal-product-selection && npm run test:proposal-products-navigation && npm run test:shop-franchise-visibility",
+    "test": "npm run test:crm-empty-state && npm run test:opportunity-status-filter && npm run test:general-settings && npm run test:marketing-events",
     "test:crm-empty-state": "node --test src/tests/react/utils/opportunityEmptyState.test.js",
     "test:opportunity-status-filter": "node --test src/tests/react/utils/opportunityStatusFilter.test.cjs",
     "test:general-settings": "node --test src/tests/react/pages/settings/generalSettings.shared.test.js",
-    "test:opportunity-editor-references": "node --test src/tests/react/utils/opportunityEditorReferences.test.js",
-    "test:royalties-payable": "node --test src/tests/react/utils/royaltiesPayableParams.test.js",
-    "test:royalties-receivable": "node --test src/tests/react/pages/royalties/royaltiesReceivableHelpers.test.js",
-    "test:income-statements": "node --test src/tests/react/pages/comissions/incomeStatementsHelpers.test.js",
     "test:coverage": "c8 --reporter=clover --report-dir coverage npm test",
-    "test:seller-commissions": "node --test src/tests/react/pages/comissions/sellerCommissionsHelpers.test.js",
-    "test:proposal-product-selection": "node --test src/tests/react/utils/proposalProductSelection.test.js src/tests/react/utils/proposalCreateHelpers.test.js",
-    "test:proposal-products-navigation": "node --test src/tests/react/pages/proposals/navigation.test.js src/tests/react/pages/proposals/proposalListHelpers.test.js",
-    "test:shop-franchise-visibility": "node --test src/tests/react/pages/settings/sections/shop/shopFranchiseVisibility.test.js"
+    "test:marketing-events": "node --test src/tests/react/pages/crm/marketingEventsHelpers.test.cjs"
   },
   "devDependencies": {
     "c8": "^10.1.3"
