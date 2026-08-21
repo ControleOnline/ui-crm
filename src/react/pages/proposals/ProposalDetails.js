@@ -9,6 +9,7 @@ import { colors } from '@controleonline/../../src/styles/colors';
 import { useMessage } from '@controleonline/ui-common/src/react/components/MessageService';
 import LinkedOrderProductsTab from '@controleonline/ui-common/src/react/components/LinkedOrderProductsTab';
 import styles from './ProposalDetails.styles';
+import { getProposalInitialTabIndex } from './proposalNavigation';
 
 import {
   inlineStyle_17_10,
@@ -70,7 +71,7 @@ const PropostaTab = ({ contract, fileContent, fileLoading, fileError, canEdit, h
 const ProposalDetails = () => {
   const navigation = useNavigation();
   const route = useRoute();
-  const { contractId } = route.params;
+  const { contractId, initialTab } = route.params;
 
   const { showSuccess, showError } = useMessage();
 
@@ -85,6 +86,16 @@ const ProposalDetails = () => {
   const [activeTab, setActiveTab] = useState(0);
 
   const scrollRef = useRef(null);
+
+  useEffect(() => {
+    const targetTabIndex = getProposalInitialTabIndex(initialTab);
+    if (targetTabIndex === 1) {
+      setActiveTab(targetTabIndex);
+      requestAnimationFrame(() => {
+        scrollRef.current?.scrollTo({ x: targetTabIndex * width, animated: false });
+      });
+    }
+  }, [initialTab]);
 
   const canEdit = contract?.status?.realStatus === 'open';
   const proposalTitle =

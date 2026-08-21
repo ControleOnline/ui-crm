@@ -13,6 +13,7 @@ import {
   sanitizePhoneValue,
 } from '../../../utils/opportunityPhone';
 import { normalizePeopleReferenceValue } from '../../../utils/opportunityPeople';
+import { normalizeOpportunityEditorDraft } from '../../../utils/opportunityEditorReferences';
 
 const useOpportunityForms = ({
   buildOpportunityParams,
@@ -21,6 +22,10 @@ const useOpportunityForms = ({
   setCurrentPage,
   showError,
   showSuccess,
+  statusOptions = [],
+  categoryOptions = [],
+  criticalityOptions = [],
+  reasonOptions = [],
 }) => {
   const [editingOpportunity, setEditingOpportunity] = useState(null);
   const [editModalVisible, setEditModalVisible] = useState(false);
@@ -47,8 +52,15 @@ const useOpportunityForms = ({
     const alterDateComponents = parseDateComponents(opportunity.alterDate);
     const phones = parsePhoneNumbers(opportunity.announce);
     const todayComponents = getCurrentDateComponents();
+    const normalizedOpportunity = normalizeOpportunityEditorDraft({
+      opportunity,
+      statusOptions,
+      categoryOptions,
+      criticalityOptions,
+      reasonOptions,
+    });
     setEditingOpportunity({
-      ...opportunity,
+      ...normalizedOpportunity,
       dueDate: opportunity.dueDate ? formatDateForInput(opportunity.dueDate) : '',
       alterDate: opportunity.alterDate ? formatDateForInput(opportunity.alterDate) : '',
       dueDateDay: dueDateComponents.day || todayComponents.day,

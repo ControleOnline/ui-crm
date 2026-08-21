@@ -1,4 +1,7 @@
 import Comissions from '@controleonline/ui-crm/src/react/pages/comissions';
+import SellerCommissionsPage from '@controleonline/ui-crm/src/react/pages/comissions/SellerCommissionsPage';
+import RoyaltiesPayablePage from '@controleonline/ui-crm/src/react/pages/royalties/RoyaltiesPayablePage';
+import RoyaltiesReceivablePage from '@controleonline/ui-crm/src/react/pages/royalties/ReceivablePage';
 import CrmIndex from '@controleonline/ui-crm/src/react/pages/crm/index';
 import ProposalsPage from '../pages/proposals';
 import CrmConversation from '../pages/crm/conversation';
@@ -7,6 +10,9 @@ import ProposalDetails from '../pages/proposals/ProposalDetails';
 
 const crmRoutes = [
   {
+    // Company-wide Income Statements (demonstrativo por categorias).
+    // Route name kept for existing menu/config entries; title reflects the view.
+    // Role-specific commission/royalties screens are separate (ui-crm#21 filhas).
     name: 'ComissionsPage',
     component: Comissions,
     options: {
@@ -15,7 +21,57 @@ const crmRoutes = [
       headerShown: true,
       headerBackVisible: true,
       companyFilterMode: 'icon',
-      title: 'Comissões',
+      title: 'Demonstrativo',
+    },
+  },
+  {
+    name: 'IncomeStatementsPage',
+    component: Comissions,
+    options: {
+      showCompanyFilter: true,
+      showBottomToolBar: true,
+      headerShown: true,
+      headerBackVisible: true,
+      companyFilterMode: 'icon',
+      title: 'Demonstrativo',
+    },
+  },
+  {
+    name: 'SellerCommissionsPage',
+    component: SellerCommissionsPage,
+    options: {
+      showCompanyFilter: true,
+      showBottomToolBar: true,
+      headerShown: true,
+      headerBackVisible: true,
+      companyFilterMode: 'icon',
+      title: 'Minhas comissões',
+    },
+  },
+  {
+    name: 'RoyaltiesPayablePage',
+    component: RoyaltiesPayablePage,
+    path: 'royalties-a-pagar',
+    options: {
+      showCompanyFilter: true,
+      showBottomToolBar: true,
+      headerShown: true,
+      headerBackVisible: true,
+      companyFilterMode: 'icon',
+      title: 'Royalties a pagar',
+    },
+  },
+  {
+    name: 'RoyaltiesReceivablePage',
+    component: RoyaltiesReceivablePage,
+    path: 'royalties-a-receber',
+    options: {
+      showCompanyFilter: true,
+      showBottomToolBar: true,
+      headerShown: true,
+      headerBackVisible: true,
+      companyFilterMode: 'icon',
+      title: 'Royalties a receber',
     },
   },
   {

@@ -161,8 +161,10 @@ export const toConfigRequestValue = value => {
     }
   }
 
+  // Arrays: single stringify so discovery + parsers resolve to a real array once.
+  // Legacy double-stringify made franchise selections appear empty after refresh.
   if (Array.isArray(value)) {
-    return JSON.stringify(JSON.stringify(value));
+    return JSON.stringify(value);
   }
 
   return JSON.stringify(value);

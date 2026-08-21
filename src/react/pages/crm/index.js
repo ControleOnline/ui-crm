@@ -19,21 +19,6 @@ export default function CrmIndex() {
   const { showSuccess, showError } = useToastMessage();
   const navigation = useNavigation();
   const data = useCrmData({ iconComponent: Icon, navigation, showError });
-  const forms = useOpportunityForms({
-    buildOpportunityParams: data.buildOpportunityParams,
-    currentCompany: data.currentCompany,
-    opportunitiesActions: data.opportunitiesActions,
-    setCurrentPage: data.setCurrentPage,
-    showError,
-    showSuccess,
-  });
-
-  const headerTitle =
-    global.t?.t('people', 'header', 'opportunities') || 'Oportunidades';
-
-  useLayoutEffect(() => {
-    navigation.setOptions({ headerTitle });
-  }, [headerTitle, navigation]);
 
   const productCategories = data.categories.filter(
     cat => cat.context === 'relationship',
@@ -44,6 +29,26 @@ export default function CrmIndex() {
   const reasonCategories = data.categories.filter(
     cat => cat.context === 'relationship-reason',
   );
+
+  const forms = useOpportunityForms({
+    buildOpportunityParams: data.buildOpportunityParams,
+    currentCompany: data.currentCompany,
+    opportunitiesActions: data.opportunitiesActions,
+    setCurrentPage: data.setCurrentPage,
+    showError,
+    showSuccess,
+    statusOptions: data.status,
+    categoryOptions: productCategories,
+    criticalityOptions: criticalityCategories,
+    reasonOptions: reasonCategories,
+  });
+
+  const headerTitle =
+    global.t?.t('people', 'header', 'opportunities') || 'Oportunidades';
+
+  useLayoutEffect(() => {
+    navigation.setOptions({ headerTitle });
+  }, [headerTitle, navigation]);
 
   const activeOpportunity = forms.editModalVisible
     ? forms.editingOpportunity
