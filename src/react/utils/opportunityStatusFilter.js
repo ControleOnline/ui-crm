@@ -32,8 +32,23 @@ const resolveDefaultOpportunityStatusFilterKey = statusItems => {
   return getOpportunityStatusFilterKey(defaultOpenStatus);
 };
 
+/**
+ * True only before the default has been applied and statuses are available.
+ * After first apply, empty selectedStatusFilterKey means intentional "all".
+ */
+const shouldApplyDefaultOpportunityStatusFilter = ({
+  hasAppliedDefault,
+  statusItemsLength,
+}) => {
+  if (hasAppliedDefault) {
+    return false;
+  }
+  return statusItemsLength > 0;
+};
+
 module.exports = {
   getOpportunityStatusFilterKey,
   normalizeOpportunityStatus,
   resolveDefaultOpportunityStatusFilterKey,
+  shouldApplyDefaultOpportunityStatusFilter,
 };

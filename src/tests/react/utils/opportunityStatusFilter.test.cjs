@@ -1,4 +1,4 @@
-const test = require('node:test');
+const { test } = require('node:test');
 const assert = require('node:assert/strict');
 
 const {
@@ -49,5 +49,33 @@ test('resolveDefaultOpportunityStatusFilterKey preserves the empty state when op
       { id: 3, realStatus: 'closed' },
     ]),
     '',
+  );
+});
+
+const {
+  shouldApplyDefaultOpportunityStatusFilter,
+} = require('../../../react/utils/opportunityStatusFilter');
+
+test('shouldApplyDefaultOpportunityStatusFilter is true only before first apply when statuses exist', () => {
+  assert.equal(
+    shouldApplyDefaultOpportunityStatusFilter({
+      hasAppliedDefault: false,
+      statusItemsLength: 3,
+    }),
+    true,
+  );
+  assert.equal(
+    shouldApplyDefaultOpportunityStatusFilter({
+      hasAppliedDefault: true,
+      statusItemsLength: 3,
+    }),
+    false,
+  );
+  assert.equal(
+    shouldApplyDefaultOpportunityStatusFilter({
+      hasAppliedDefault: false,
+      statusItemsLength: 0,
+    }),
+    false,
   );
 });

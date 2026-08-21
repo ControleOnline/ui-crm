@@ -161,8 +161,10 @@ export const toConfigRequestValue = value => {
     }
   }
 
+  // Arrays: single stringify so discovery + parsers resolve to a real array once.
+  // Legacy double-stringify made franchise selections appear empty after refresh.
   if (Array.isArray(value)) {
-    return JSON.stringify(JSON.stringify(value));
+    return JSON.stringify(value);
   }
 
   return JSON.stringify(value);
@@ -263,12 +265,17 @@ export const useGeneralSettingsConfig = () => {
   );
 
   const saveConfigs = useCallback(
-    entries => {
+    (entries, options = {}) => {
+      const {suppressAlert = false} = options;
+
       if (!currentCompany?.id) {
-        Alert.alert(
-          'Empresa nao selecionada',
-          'Selecione uma empresa para salvar as configuracoes.',
-        );
+        if (!suppressAlert) {
+          Alert.alert(
+            'Empresa nao selecionada',
+            'Selecione uma empresa para salvar as configuracoes.',
+          );
+        }
+
         return Promise.resolve(false);
       }
 
@@ -318,7 +325,10 @@ export const useGeneralSettingsConfig = () => {
             return data;
           } catch (err) {
             if (!isMethodNotAllowedError(err)) {
-              Alert.alert('Erro', err?.message || JSON.stringify(err));
+              if (!suppressAlert) {
+                Alert.alert('Erro', err?.message || JSON.stringify(err));
+              }
+
               resolve(false);
               return null;
             }
@@ -338,10 +348,13 @@ export const useGeneralSettingsConfig = () => {
               resolve(true);
               return true;
             } catch (fallbackErr) {
-              Alert.alert(
-                'Erro',
-                fallbackErr?.message || JSON.stringify(fallbackErr),
-              );
+              if (!suppressAlert) {
+                Alert.alert(
+                  'Erro',
+                  fallbackErr?.message || JSON.stringify(fallbackErr),
+                );
+              }
+
               resolve(false);
               return null;
             }
@@ -351,6 +364,72 @@ export const useGeneralSettingsConfig = () => {
       });
     },
     [configActions, currentCompany?.id, syncConfigCache],
+  );
+
+  const saveDefaultCompanyConfigs = useCallback(
+    entries => {
+      if (!defaultCompanyId) {
+        Alert.alert(
+          'Empresa principal nao selecionada',
+          'Selecione uma empresa principal para salvar as configuracoes.',
+        );
+        return Promise.resolve(false);
+      }
+
+      const normalizedEntries = Object.entries(entries || {}).reduce(
+        (accumulator, [key, value]) => {
+          accumulator[key] = value;
+          return accumulator;
+        },
+        {},
+      );
+
+      const requestEntries = Object.entries(normalizedEntries).reduce(
+        (accumulator, [key, value]) => {
+          accumulator[key] = toConfigRequestValue(value);
+          return accumulator;
+        },
+        {},
+      );
+
+      const cacheEntries = Object.entries(normalizedEntries).reduce(
+        (accumulator, [key, value]) => {
+          accumulator[key] = toConfigCacheValue(value);
+          return accumulator;
+        },
+        {},
+      );
+
+      return new Promise(resolve => {
+        configActions.addToQueue(async () => {
+          const requestConfigItems = Object.entries(requestEntries).map(
+            ([configKey, configValue]) => ({
+              configKey,
+              configValue,
+            }),
+          );
+
+          try {
+            const data = await configActions.addManyConfigs({
+              configs: requestConfigItems,
+              people: '/people/' + defaultCompanyId,
+              module: 4,
+              visibility: 'public',
+            });
+
+            syncConfigCache(cacheEntries);
+            resolve(true);
+            return data;
+          } catch (err) {
+            Alert.alert('Erro', err?.message || JSON.stringify(err));
+            resolve(false);
+            return null;
+          }
+        });
+        configActions.initQueue();
+      });
+    },
+    [configActions, defaultCompanyId, syncConfigCache],
   );
 
   const saveConfig = useCallback(
@@ -406,5 +485,6 @@ export const useGeneralSettingsConfig = () => {
     peopleActions,
     saveConfig,
     saveConfigs,
+    saveDefaultCompanyConfigs,
   };
 };

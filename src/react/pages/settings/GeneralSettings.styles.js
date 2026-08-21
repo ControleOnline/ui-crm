@@ -385,6 +385,11 @@ export const createGeneralSettingsStyles = palette =>
       flex: 1,
       marginLeft: 12,
     },
+    franchiseAddressName: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: palette.listItemText,
+    },
     primaryButton: {
       marginTop: 16,
       justifyContent: 'center',
