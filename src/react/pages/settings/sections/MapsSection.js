@@ -1,8 +1,9 @@
 /*
  * @agents This section controls map keys, shop primary entry (mapa vs vitrine),
- * franchise-locator enablement and franchise address categories for app_type=shop.
- * Detailed franchise/company address visibility lists remain in the Shop tab
- * (shared config keys). Lat/long persist via Address API + DefaultAddress.
+ * franchise-locator enablement, franchise address categories and the franchise
+ * directory (companies + addresses visibility) for app_type=shop.
+ * Lat/long persist via Address API + DefaultAddress explicit fields.
+ * app-community#360 — maps settings live here (not the Shop tab).
  */
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {
@@ -20,6 +21,7 @@ import {
   useGeneralSettingsStyles,
 } from '../GeneralSettings.styles';
 import GeneralSettingsSection from '../GeneralSettingsSection';
+import ShopFranchiseLocatorSection from './shop/ShopFranchiseLocatorSection';
 import {useGeneralSettingsConfig} from '../GeneralSettings.shared';
 import {
   GOOGLE_MAPS_ANDROID_API_KEY_CONFIG_KEY,
@@ -52,6 +54,7 @@ const MapsSection = () => {
   const categoriesStore = useStore('categories');
   const categoryActions = categoriesStore.actions;
   const {
+    currentCompany,
     defaultCompany,
     effectiveCompanyConfigs,
     saveConfig,
@@ -474,10 +477,19 @@ const MapsSection = () => {
       </View>
 
       <Text style={localStyles.helperText}>
-        Latitude/Longitude: persistidos na tabela de endereço (API) e no
-        formulário DefaultAddress. Visibilidade detalhada por franquia/endereço
-        no mapa: aba Shop (chaves shop-franchise-visible-*).
+        Latitude/Longitude: campos explícitos no formulário DefaultAddress e
+        persistidos na tabela de endereço (API). A lista abaixo controla quais
+        franquias e endereços aparecem no mapa do shop (chaves
+        shop-franchise-visible-*).
       </Text>
+
+      <ShopFranchiseLocatorSection
+        currentCompanyId={currentCompany?.id || currentCompany?.['@id']}
+        effectiveCompanyConfigs={effectiveCompanyConfigs}
+        localStyles={localStyles}
+        saveConfigs={saveConfigs}
+        themePalette={themePalette}
+      />
     </GeneralSettingsSection>
   );
 };
