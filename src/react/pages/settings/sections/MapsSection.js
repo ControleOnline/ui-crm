@@ -248,7 +248,7 @@ const MapsSection = () => {
 
   return (
     <GeneralSettingsSection
-      description="Chaves do Google Maps, tela principal do shop (mapa de franquias vs vitrine), localizador e categorias de endereço no mapa. Lista detalhada de franquias/endereços visíveis permanece na aba Shop (mesmas chaves de config)."
+      description="Chaves do Google Maps, tela principal do shop (mapa de franquias vs vitrine), localizador, categorias e lista de franquias/endereços visíveis no mapa do shop."
       icon="map"
       iconBackgroundColor={themePalette.cardIconBackground}
       iconColor={themePalette.cardIconColor}
@@ -378,6 +378,7 @@ const MapsSection = () => {
         </Text>
         {primaryEntryOptions.length > 0 && (
           <View
+            testID="maps-primary-entry-options"
             style={{
               flexDirection: 'row',
               flexWrap: 'wrap',
@@ -483,6 +484,7 @@ const MapsSection = () => {
         shop-franchise-visible-*).
       </Text>
 
+      <View testID="maps-franchise-locator">
       <ShopFranchiseLocatorSection
         currentCompanyId={currentCompany?.id || currentCompany?.['@id']}
         effectiveCompanyConfigs={effectiveCompanyConfigs}
@@ -490,6 +492,7 @@ const MapsSection = () => {
         saveConfigs={saveConfigs}
         themePalette={themePalette}
       />
+      </View>
     </GeneralSettingsSection>
   );
 };
