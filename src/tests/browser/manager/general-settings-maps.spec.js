@@ -6,7 +6,8 @@
  * Criteria:
  * - Aba Mapas visível com seletor de tela principal (quando opções ativas)
  * - Lista/secao de franquias/endereços presente na aba Mapas (sem apontar aba Shop)
- * - Helper de lat/long e seção de mapa sem mensagem residual "aba Shop"
+ * - Nomes de franquias via people_links (não people?link.company=)
+ * - Print 01-maps-franchise-names.png em test-results/manual-qa/issue-360/
  * - Módulos de settings ≤ 500 linhas
  */
 const { expect, test } = require('playwright/test');
@@ -57,8 +58,8 @@ const company = {
 const franchiseCompany = {
   '@id': '/people/31',
   id: 31,
-  name: 'FRANQUIA SMOKE',
-  alias: 'FRANQUIA',
+  name: 'ASC FRANQUIA 1',
+  alias: 'ASC FRANQUIA 1',
   peopleType: 'J',
   shopAddresses: [
     {
@@ -74,6 +75,44 @@ const franchiseCompany = {
   ],
 };
 
+const franchiseCompany2 = {
+  '@id': '/people/32',
+  id: 32,
+  name: 'ASC FRANQUIA 2',
+  alias: 'ASC FRANQUIA 2',
+  peopleType: 'J',
+  shopAddresses: [
+    {
+      '@id': '/addresses/502',
+      id: 502,
+      nickname: 'Filial',
+      street: 'Rua Augusta',
+      number: '200',
+      city: 'São Paulo',
+      latitude: -23.55,
+      longitude: -46.64,
+    },
+  ],
+};
+
+/** people_links rows (directory path used by shopFranchises after #360 fix) */
+const franchiseLinks = [
+  {
+    '@id': '/people_links/1',
+    id: 1,
+    linkType: 'franchisee',
+    company: company,
+    people: franchiseCompany,
+  },
+  {
+    '@id': '/people_links/2',
+    id: 2,
+    linkType: 'franchisee',
+    company: company,
+    people: franchiseCompany2,
+  },
+];
+
 const MODULES_MAX_500 = [
   path.join(__dirname, '../../../react/pages/settings/sections/MapsSection.js'),
   path.join(
@@ -82,7 +121,7 @@ const MODULES_MAX_500 = [
   ),
 ];
 
-const mockGeneralSettingsApi = async page => {
+const mockGeneralSettingsApi = async (page, track = null) => {
   await page.route(`${API_ORIGIN}/**`, async route => {
     const request = route.request();
     const url = new URL(request.url());
@@ -141,11 +180,49 @@ const mockGeneralSettingsApi = async page => {
       });
     }
 
+    // #360 directory: people_links both sides (not people?link.company=)
+    if (pathname === 'people_links' || pathname.startsWith('people_links')) {
+      if (track && Array.isArray(track.peopleLinks)) {
+        track.peopleLinks.push(url.href);
+      }
+      return route.fulfill({
+        status: 200,
+        headers: jsonHeaders(),
+        body: JSON.stringify(collection(franchiseLinks)),
+      });
+    }
+
+    if (
+      pathname === 'people' &&
+      (url.searchParams.has('link.company') ||
+        String(url.search).includes('link.company'))
+    ) {
+      if (track && Array.isArray(track.badPeopleFilter)) {
+        track.badPeopleFilter.push(url.href);
+      }
+    }
+
+    if (pathname === 'people/31' || pathname === 'people/31/') {
+      return route.fulfill({
+        status: 200,
+        headers: jsonHeaders(),
+        body: JSON.stringify(franchiseCompany),
+      });
+    }
+
+    if (pathname === 'people/32' || pathname === 'people/32/') {
+      return route.fulfill({
+        status: 200,
+        headers: jsonHeaders(),
+        body: JSON.stringify(franchiseCompany2),
+      });
+    }
+
     if (pathname === 'shop/franchises' || pathname.startsWith('shop/franchises')) {
       return route.fulfill({
         status: 200,
         headers: jsonHeaders(),
-        body: JSON.stringify(collection([franchiseCompany])),
+        body: JSON.stringify(collection([franchiseCompany, franchiseCompany2])),
       });
     }
 
@@ -247,7 +324,8 @@ test.describe('general-settings maps (browser smoke #360)', () => {
   test('open /general-settings → aba Mapas shows primary entry + franchise locator', async ({
     page,
   }) => {
-    await mockGeneralSettingsApi(page);
+    const track = { peopleLinks: [], badPeopleFilter: [] };
+    await mockGeneralSettingsApi(page, track);
 
     await page.goto('/general-settings');
 
@@ -282,5 +360,33 @@ test.describe('general-settings maps (browser smoke #360)', () => {
     const bodyText = await page.locator('body').innerText();
     expect(bodyText).not.toMatch(/permanece na aba Shop/i);
     expect(bodyText).not.toMatch(/Visibilidade detalhada por franquia\/endereço no mapa: aba Shop/i);
+
+    // Directory via people_links must surface franchise *names*
+    await expect(page.getByText('ASC FRANQUIA 1').first()).toBeVisible({
+      timeout: 15000,
+    });
+    await expect(page.getByText('ASC FRANQUIA 2').first()).toBeVisible({
+      timeout: 10000,
+    });
+
+    // Print evidence for QA (fluxo: manager-general-settings-maps)
+    const outDir = path.join(
+      __dirname,
+      '../../../../../../../test-results/manual-qa/issue-360',
+    );
+    fs.mkdirSync(outDir, { recursive: true });
+    await page.screenshot({
+      path: path.join(outDir, '01-maps-franchise-names.png'),
+      fullPage: true,
+    });
+
+    expect(
+      track.peopleLinks.length,
+      'expected GET people_links for franchise directory',
+    ).toBeGreaterThan(0);
+    expect(
+      track.badPeopleFilter.length,
+      'must not use people?link.company= for franchise directory',
+    ).toBe(0);
   });
 });
