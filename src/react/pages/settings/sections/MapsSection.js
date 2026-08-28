@@ -477,13 +477,6 @@ const MapsSection = () => {
         )}
       </View>
 
-      <Text style={localStyles.helperText}>
-        Latitude/Longitude: campos explícitos no formulário DefaultAddress e
-        persistidos na tabela de endereço (API). A lista abaixo controla quais
-        franquias e endereços aparecem no mapa do shop (chaves
-        shop-franchise-visible-*).
-      </Text>
-
       <View testID="maps-franchise-locator">
       <ShopFranchiseLocatorSection
         currentCompanyId={currentCompany?.id || currentCompany?.['@id']}
