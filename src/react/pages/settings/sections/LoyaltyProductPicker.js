@@ -14,6 +14,10 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import AnimatedModal from '@controleonline/ui-common/src/react/components/AnimatedModal';
 import {searchCompanyProducts} from '@controleonline/ui-common/src/react/utils/commercialDocumentOrders';
 import {normalizeShopProductId} from '@controleonline/ui-common/src/react/utils/shopConfig';
+import {
+  filterProductsByCompany,
+  normalizeLoyaltyCompanyId,
+} from './loyaltyProductCompany';
 
 export const resolveProductLabel = product => {
   const normalizedId = normalizeShopProductId(product);
@@ -43,9 +47,10 @@ export const useProductBrowser = ({companyId, visible}) => {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const scopedCompanyId = normalizeLoyaltyCompanyId(companyId);
 
   useEffect(() => {
-    if (!visible || !companyId) {
+    if (!visible || !scopedCompanyId) {
       setResults([]);
       setIsLoading(false);
       return undefined;
@@ -58,11 +63,11 @@ export const useProductBrowser = ({companyId, visible}) => {
       setIsLoading(true);
       try {
         const items = await searchCompanyProducts({
-          companyId,
+          companyId: scopedCompanyId,
           query: trimmedQuery,
         });
         if (!cancelled) {
-          setResults(Array.isArray(items) ? items : []);
+          setResults(filterProductsByCompany(items, scopedCompanyId));
         }
       } catch {
         if (!cancelled) {
@@ -79,7 +84,7 @@ export const useProductBrowser = ({companyId, visible}) => {
       cancelled = true;
       clearTimeout(timeoutId);
     };
-  }, [companyId, query, visible]);
+  }, [scopedCompanyId, query, visible]);
 
   useEffect(() => {
     if (!visible) {
