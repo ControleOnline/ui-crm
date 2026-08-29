@@ -7,8 +7,9 @@
  * - Aba Mapas visível com seletor de tela principal (quando opções ativas)
  * - Lista/secao de franquias/endereços presente na aba Mapas (sem apontar aba Shop)
  * - Nomes de franquias via people_links (não people?link.company=)
- * - Print 01-maps-franchise-names.png em test-results/manual-qa/issue-360/
+ * - Prints por etapa em test-results/manual-qa/issue-360/ (01 primary+names, 02 locator, 03 options) + MANIFEST.md
  * - Módulos de settings ≤ 500 linhas
+ * flowchartIds: nenhum entry general-settings no catálogo admin atual (GET /flowcharts)
  */
 const { expect, test } = require('playwright/test');
 const fs = require('fs');
@@ -369,16 +370,53 @@ test.describe('general-settings maps (browser smoke #360)', () => {
       timeout: 10000,
     });
 
-    // Print evidence for QA (fluxo: manager-general-settings-maps)
+    // Evidence dir (fluxo: manager-general-settings-maps) — prints por etapa
     const outDir = path.join(
       __dirname,
       '../../../../../../../test-results/manual-qa/issue-360',
     );
     fs.mkdirSync(outDir, { recursive: true });
+
+    // 01 — aba Mapas com seletor tela principal + nomes de franquia
     await page.screenshot({
-      path: path.join(outDir, '01-maps-franchise-names.png'),
+      path: path.join(outDir, '01-maps-primary-entry-and-franchise-names.png'),
       fullPage: true,
     });
+
+    // 02 — detalhe do bloco localizador (testID)
+    const locatorBlock = page.getByTestId('maps-franchise-locator');
+    await locatorBlock.scrollIntoViewIfNeeded();
+    await page.screenshot({
+      path: path.join(outDir, '02-maps-franchise-locator-block.png'),
+      fullPage: false,
+    });
+
+    // 03 — options de tela principal
+    await primaryOptions.scrollIntoViewIfNeeded();
+    await page.screenshot({
+      path: path.join(outDir, '03-maps-primary-entry-options.png'),
+      fullPage: false,
+    });
+
+    // Manifesto reutilizável por QA/Documentor
+    const manifesto = [
+      'fluxo: manager-general-settings-maps',
+      'issue: app-community#360',
+      'flowchartIds: none-in-admin-catalog (GET /flowcharts has no general-settings entry; catalog IDs 1,3,4,5 only)',
+      'steps:',
+      '  1. open /general-settings',
+      '  2. activate tab Mapas',
+      '  3. assert Tela principal do shop + Localizador de franquias',
+      '  4. assert testIDs maps-primary-entry-options + maps-franchise-locator',
+      '  5. assert franchise names ASC FRANQUIA 1/2 via people_links (not people?link.company=)',
+      '  6. screenshots 01/02/03 under test-results/manual-qa/issue-360/',
+      'network:',
+      '  people_links hits: ' + track.peopleLinks.length,
+      '  bad people?link.company= hits: ' + track.badPeopleFilter.length,
+      'result: PASS',
+      '',
+    ].join('\n');
+    fs.writeFileSync(path.join(outDir, 'MANIFEST.md'), manifesto, 'utf8');
 
     expect(
       track.peopleLinks.length,
