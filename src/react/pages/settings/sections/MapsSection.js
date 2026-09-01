@@ -156,9 +156,13 @@ const buildLeafletMapHtml = markers => {
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<style>html,body,#map{margin:0;padding:0;height:100%;width:100%;} .leaflet-container{font:12px/1.4 system-ui,sans-serif;}</style>
+<style>
+html,body{margin:0;padding:0;height:100%;width:100%;overflow:hidden;}
+#map{position:absolute;inset:0;width:100%;height:100%;}
+.leaflet-container{width:100%!important;height:100%!important;font:12px/1.4 system-ui,sans-serif;}
+</style>
 </head>
-<body>
+<body style="position:relative;width:100%;height:100%;">
 <div id="map"></div>
 <script>
 var map = L.map('map').setView([${center.lat}, ${center.lng}], ${points.length === 1 ? 14 : 11});
@@ -782,33 +786,44 @@ const MapsSection = () => {
                 </Text>
               </View>
             ) : (
-              <View style={{alignSelf: 'stretch', width: '100%'}}>
+              <View
+                style={{
+                  alignSelf: 'stretch',
+                  width: '100%',
+                  minWidth: '100%',
+                  flexGrow: 1,
+                }}>
                 {Platform.OS === 'web' && leafletMapHtml
-                  ? createElement(
-                      'div',
-                      {
-                        style: {
-                          width: '100%',
-                          maxWidth: '100%',
+                  ? (
+                      <View
+                        style={{
                           alignSelf: 'stretch',
-                          height: 320,
-                          minHeight: 280,
+                          width: '100%',
+                          minWidth: '100%',
+                          height: 360,
                           borderRadius: 8,
                           overflow: 'hidden',
                           backgroundColor:
                             themePalette.inputBackground || '#eee',
-                        },
-                      },
-                      createElement('iframe', {
-                        title: 'Mapa das franquias',
-                        srcDoc: leafletMapHtml,
-                        style: {
-                          display: 'block',
-                          width: '100%',
-                          height: '100%',
-                          border: 0,
-                        },
-                      }),
+                          position: 'relative',
+                        }}>
+                        {createElement('iframe', {
+                          title: 'Mapa das franquias',
+                          srcDoc: leafletMapHtml,
+                          style: {
+                            position: 'absolute',
+                            left: 0,
+                            top: 0,
+                            right: 0,
+                            bottom: 0,
+                            width: '100%',
+                            height: '100%',
+                            border: 'none',
+                            display: 'block',
+                            maxWidth: '100%',
+                          },
+                        })}
+                      </View>
                     )
                   : previewMapUrl
                     ? (
@@ -817,8 +832,8 @@ const MapsSection = () => {
                           style={{
                             alignSelf: 'stretch',
                             width: '100%',
-                            maxWidth: '100%',
-                            height: 320,
+                            minWidth: '100%',
+                            height: 360,
                             borderRadius: 8,
                             backgroundColor:
                               themePalette.inputBackground || '#eee',
