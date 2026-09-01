@@ -168,6 +168,8 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 }).addTo(map);
 ${markersJs}
 ${fitJs}
+setTimeout(function(){ map.invalidateSize(); }, 50);
+window.addEventListener('resize', function(){ map.invalidateSize(); });
 </script>
 </body>
 </html>`;
@@ -430,12 +432,13 @@ const MapsSection = () => {
       buildStaticMapUrl({
         apiKey: webGoogleMapsApiKey,
         markers: mapMarkers,
+        size: '1280x480',
       }),
     [mapMarkers, webGoogleMapsApiKey],
   );
 
   const osmStaticMapUrl = useMemo(
-    () => buildOsmStaticMapUrl(mapMarkers),
+    () => buildOsmStaticMapUrl(mapMarkers, '1280x480'),
     [mapMarkers],
   );
 
@@ -755,11 +758,12 @@ const MapsSection = () => {
             globalStyles={globalStyles}
           />
 
-          <View style={localStyles.fieldBlock} testID="maps-franchise-map">
+          <View
+            style={[localStyles.fieldBlock, {alignSelf: 'stretch', width: '100%'}]}
+            testID="maps-franchise-map">
             <Text style={localStyles.fieldLabel}>Mapa das franquias</Text>
             <Text style={localStyles.helperText}>
-              Pins das franquias/endereços marcados como visíveis (com
-              latitude/longitude).
+              Pins das franquias marcadas acima (com latitude/longitude).
             </Text>
             {isLoadingFranchiseDirectory ? (
               <ActivityIndicator
@@ -778,36 +782,52 @@ const MapsSection = () => {
                 </Text>
               </View>
             ) : (
-              <View>
+              <View style={{alignSelf: 'stretch', width: '100%'}}>
                 {Platform.OS === 'web' && leafletMapHtml
                   ? createElement(
-                      'iframe',
+                      'div',
                       {
-                        title: 'Mapa das franquias',
-                        srcDoc: leafletMapHtml,
                         style: {
                           width: '100%',
-                          height: 300,
-                          border: 0,
+                          maxWidth: '100%',
+                          alignSelf: 'stretch',
+                          height: 320,
+                          minHeight: 280,
                           borderRadius: 8,
+                          overflow: 'hidden',
                           backgroundColor:
                             themePalette.inputBackground || '#eee',
                         },
                       },
+                      createElement('iframe', {
+                        title: 'Mapa das franquias',
+                        srcDoc: leafletMapHtml,
+                        style: {
+                          display: 'block',
+                          width: '100%',
+                          height: '100%',
+                          border: 0,
+                        },
+                      }),
                     )
-                  : previewMapUrl ? (
-                  <Image
-                    source={{uri: previewMapUrl}}
-                    style={{
-                      width: '100%',
-                      height: 280,
-                      borderRadius: 8,
-                      backgroundColor: themePalette.inputBackground || '#eee',
-                    }}
-                    resizeMode="cover"
-                    accessibilityLabel="Mapa das franquias com pins"
-                  />
-                ) : null}
+                  : previewMapUrl
+                    ? (
+                        <Image
+                          source={{uri: previewMapUrl}}
+                          style={{
+                            alignSelf: 'stretch',
+                            width: '100%',
+                            maxWidth: '100%',
+                            height: 320,
+                            borderRadius: 8,
+                            backgroundColor:
+                              themePalette.inputBackground || '#eee',
+                          }}
+                          resizeMode="cover"
+                          accessibilityLabel="Mapa das franquias com pins"
+                        />
+                      )
+                    : null}
                 <Text style={localStyles.helperText}>
                   {mapMarkers.length} pin(s) no mapa
                   {visibleFranchiseCompanyIds.length > 0
