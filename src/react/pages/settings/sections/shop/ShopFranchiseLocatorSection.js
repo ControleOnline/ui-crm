@@ -200,10 +200,31 @@ const ShopFranchiseLocatorSection = ({
     [saveConfigs],
   );
 
+  const companyHasMapCoords = useCallback(company => {
+    const addresses = Array.isArray(company?.shopAddresses)
+      ? company.shopAddresses
+      : [];
+    const primary = addresses[0];
+    if (!primary) {
+      return false;
+    }
+    const coords = resolveFranchiseAddressCoords(primary);
+    return (
+      coords.latitude != null &&
+      coords.longitude != null &&
+      Math.abs(Number(coords.latitude)) > 0.000001 &&
+      Math.abs(Number(coords.longitude)) > 0.000001
+    );
+  }, []);
+
   const toggleFranchiseCompany = useCallback(
     company => {
       const companyId = normalizeShopEntityId(company);
       if (!companyId) return;
+      // Sem lat/long não pode entrar no mapa.
+      if (!companyHasMapCoords(company)) {
+        return;
+      }
       const isSelected = visibleFranchiseCompanyIds.includes(companyId);
       const nextCompanyIds = isSelected
         ? visibleFranchiseCompanyIds.filter(item => item !== companyId)
@@ -242,6 +263,7 @@ const ShopFranchiseLocatorSection = ({
       saveFranchiseVisibility(nextCompanyIds, nextAddressIds);
     },
     [
+      companyHasMapCoords,
       franchiseAddressesById,
       saveFranchiseVisibility,
       visibleFranchiseAddressIds,
@@ -370,26 +392,46 @@ const ShopFranchiseLocatorSection = ({
                     {alignItems: 'flex-start'},
                   ]}>
                   <TouchableOpacity
-                    activeOpacity={0.85}
-                    onPress={() => toggleFranchiseCompany(company)}
-                    style={{paddingTop: 2, marginRight: 10}}
+                    activeOpacity={hasCoords ? 0.85 : 1}
+                    disabled={!hasCoords}
+                    onPress={() => {
+                      if (!hasCoords) return;
+                      toggleFranchiseCompany(company);
+                    }}
+                    style={{paddingTop: 2, marginRight: 10, opacity: hasCoords ? 1 : 0.4}}
                     accessibilityRole="checkbox"
-                    accessibilityState={{checked: selected}}
-                    accessibilityLabel={`Exibir ${name} no mapa`}>
+                    accessibilityState={{checked: selected, disabled: !hasCoords}}
+                    accessibilityLabel={
+                      hasCoords
+                        ? `Exibir ${name} no mapa`
+                        : `${name} sem latitude/longitude — edite o endereço`
+                    }>
                     <Icon
-                      name={selected ? 'check-box' : 'check-box-outline-blank'}
+                      name={
+                        !hasCoords
+                          ? 'check-box-outline-blank'
+                          : selected
+                            ? 'check-box'
+                            : 'check-box-outline-blank'
+                      }
                       size={24}
                       color={
-                        selected
-                          ? themePalette.iconActive || themePalette.primary
-                          : themePalette.iconDisabled || themePalette.textMuted
+                        !hasCoords
+                          ? themePalette.iconDisabled || themePalette.textMuted
+                          : selected
+                            ? themePalette.iconActive || themePalette.primary
+                            : themePalette.iconDisabled || themePalette.textMuted
                       }
                     />
                   </TouchableOpacity>
                   <TouchableOpacity
-                    activeOpacity={0.85}
-                    onPress={() => toggleFranchiseCompany(company)}
-                    style={[localStyles.printerCopy, {flex: 1}]}>
+                    activeOpacity={hasCoords ? 0.85 : 1}
+                    disabled={!hasCoords}
+                    onPress={() => {
+                      if (!hasCoords) return;
+                      toggleFranchiseCompany(company);
+                    }}
+                    style={[localStyles.printerCopy, {flex: 1, opacity: hasCoords ? 1 : 0.7}]}>
                     <Text style={localStyles.printerName}>{name}</Text>
                     <Text style={localStyles.printerDevice}>{addressLine}</Text>
                     <Text
