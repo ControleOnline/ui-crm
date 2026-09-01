@@ -172,8 +172,14 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 }).addTo(map);
 ${markersJs}
 ${fitJs}
-setTimeout(function(){ map.invalidateSize(); }, 50);
-window.addEventListener('resize', function(){ map.invalidateSize(); });
+function resizeMap(){ map.invalidateSize(true); }
+setTimeout(resizeMap, 0);
+setTimeout(resizeMap, 100);
+setTimeout(resizeMap, 400);
+window.addEventListener('resize', resizeMap);
+if (typeof ResizeObserver !== 'undefined') {
+  new ResizeObserver(resizeMap).observe(document.getElementById('map'));
+}
 </script>
 </body>
 </html>`;
@@ -197,6 +203,7 @@ const MapsSection = () => {
 
   const [webGoogleMapsApiKey, setWebGoogleMapsApiKey] = useState('');
   const [androidGoogleMapsApiKey, setAndroidGoogleMapsApiKey] = useState('');
+  const [mapBoxWidth, setMapBoxWidth] = useState(0);
   const [franchiseAddressCategories, setFranchiseAddressCategories] =
     useState([]);
   const [franchiseAddressCategoryIds, setFranchiseAddressCategoryIds] =
@@ -786,63 +793,54 @@ const MapsSection = () => {
                 </Text>
               </View>
             ) : (
-              <View
-                style={{
-                  alignSelf: 'stretch',
-                  width: '100%',
-                  minWidth: '100%',
-                  flexGrow: 1,
-                }}>
-                {Platform.OS === 'web' && leafletMapHtml
-                  ? (
-                      <View
-                        style={{
-                          alignSelf: 'stretch',
-                          width: '100%',
-                          minWidth: '100%',
+              <View style={{alignSelf: 'stretch', width: '100%'}}>
+                <View
+                  onLayout={event => {
+                    const nextWidth = Math.round(
+                      event?.nativeEvent?.layout?.width || 0,
+                    );
+                    if (nextWidth > 0 && nextWidth !== mapBoxWidth) {
+                      setMapBoxWidth(nextWidth);
+                    }
+                  }}
+                  style={{
+                    alignSelf: 'stretch',
+                    width: '100%',
+                    height: 360,
+                    borderRadius: 8,
+                    overflow: 'hidden',
+                    backgroundColor: themePalette.inputBackground || '#eee',
+                  }}>
+                  {Platform.OS === 'web' && leafletMapHtml && mapBoxWidth > 0
+                    ? createElement('iframe', {
+                        key: `franchise-map-${mapBoxWidth}-${mapMarkers.length}`,
+                        title: 'Mapa das franquias',
+                        srcDoc: leafletMapHtml,
+                        width: mapBoxWidth,
+                        height: 360,
+                        style: {
+                          width: mapBoxWidth,
                           height: 360,
-                          borderRadius: 8,
-                          overflow: 'hidden',
-                          backgroundColor:
-                            themePalette.inputBackground || '#eee',
-                          position: 'relative',
-                        }}>
-                        {createElement('iframe', {
-                          title: 'Mapa das franquias',
-                          srcDoc: leafletMapHtml,
-                          style: {
-                            position: 'absolute',
-                            left: 0,
-                            top: 0,
-                            right: 0,
-                            bottom: 0,
-                            width: '100%',
-                            height: '100%',
-                            border: 'none',
-                            display: 'block',
-                            maxWidth: '100%',
-                          },
-                        })}
-                      </View>
-                    )
-                  : previewMapUrl
-                    ? (
-                        <Image
-                          source={{uri: previewMapUrl}}
-                          style={{
-                            alignSelf: 'stretch',
-                            width: '100%',
-                            minWidth: '100%',
-                            height: 360,
-                            borderRadius: 8,
-                            backgroundColor:
-                              themePalette.inputBackground || '#eee',
-                          }}
-                          resizeMode="cover"
-                          accessibilityLabel="Mapa das franquias com pins"
-                        />
-                      )
-                    : null}
+                          border: 'none',
+                          display: 'block',
+                          margin: 0,
+                          padding: 0,
+                        },
+                      })
+                    : previewMapUrl
+                      ? (
+                          <Image
+                            source={{uri: previewMapUrl}}
+                            style={{
+                              width: '100%',
+                              height: 360,
+                            }}
+                            resizeMode="cover"
+                            accessibilityLabel="Mapa das franquias com pins"
+                          />
+                        )
+                      : null}
+                </View>
                 <Text style={localStyles.helperText}>
                   {mapMarkers.length} pin(s) no mapa
                   {visibleFranchiseCompanyIds.length > 0
