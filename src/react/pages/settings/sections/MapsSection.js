@@ -1,19 +1,19 @@
 /*
  * @agents This section controls map keys, shop primary entry (mapa vs vitrine),
- * franchise-locator enablement, franchise address categories and the franchise
- * directory (companies + addresses visibility) for app_type=shop.
- * Lat/long persist via Address API + DefaultAddress explicit fields.
- * app-community#360 — maps settings live here (not the Shop tab).
+ * franchise-locator enablement, franchise address categories, franchise list
+ * with visibility checkboxes and preview map pins for app_type=shop.
  */
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {
   ActivityIndicator,
+  Image,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import css from '@controleonline/ui-orders/src/react/css/orders';
 
 import {useStore} from '@store';
 import {
@@ -21,7 +21,6 @@ import {
   useGeneralSettingsStyles,
 } from '../GeneralSettings.styles';
 import GeneralSettingsSection from '../GeneralSettingsSection';
-import ShopFranchiseLocatorSection from './shop/ShopFranchiseLocatorSection';
 import {useGeneralSettingsConfig} from '../GeneralSettings.shared';
 import {
   GOOGLE_MAPS_ANDROID_API_KEY_CONFIG_KEY,
@@ -31,24 +30,77 @@ import {
 import {
   getEnabledShopHomeOptions,
   normalizeBooleanConfig,
+  normalizeShopEntityId,
   normalizeShopPrimaryEntry,
   resolveShopSettings,
   saveAndUpdateConfigValue,
   SHOP_FRANCHISE_ADDRESS_CATEGORY_CONTEXT,
   SHOP_FRANCHISE_ADDRESS_CATEGORY_IDS_CONFIG_KEY,
   SHOP_FRANCHISE_LOCATOR_ENABLED_CONFIG_KEY,
+  SHOP_FRANCHISE_VISIBLE_ADDRESS_IDS_CONFIG_KEY,
+  SHOP_FRANCHISE_VISIBLE_COMPANY_IDS_CONFIG_KEY,
   SHOP_HOME_OPTION_FRANCHISE_LOCATOR,
   SHOP_HOME_OPTION_SALES,
   SHOP_PRIMARY_ENTRY_CONFIG_KEY,
   SHOP_SALES_PAGE_ENABLED_CONFIG_KEY,
 } from '@controleonline/ui-common/src/react/utils/shopConfig';
+import {fetchAllShopFranchiseDirectory} from '@controleonline/ui-common/src/react/utils/shopFranchises';
+import ShopFranchiseLocatorSection from './shop/ShopFranchiseLocatorSection';
+import {
+  buildFranchiseAddressesById,
+  normalizeVisibleFranchiseIds,
+} from './shop/shopFranchiseVisibility';
+import {
+  resolveAddressLabel,
+  resolveCompanyLabel,
+} from './shop/shopSettingsShared';
 
 const PRIMARY_ENTRY_LABELS = {
   [SHOP_HOME_OPTION_SALES]: 'Vitrine do shop',
   [SHOP_HOME_OPTION_FRANCHISE_LOCATOR]: 'Mapa das franquias',
 };
 
+const parseCoord = value => {
+  if (value === null || value === undefined || value === '') {
+    return null;
+  }
+  const n = Number(value);
+  if (!Number.isFinite(n) || Math.abs(n) < 0.000001) {
+    return null;
+  }
+  return n;
+};
+
+const resolveAddressCoords = address => {
+  const lat = parseCoord(
+    address?.latitude ?? address?.lat ?? address?.geo?.latitude,
+  );
+  const lng = parseCoord(
+    address?.longitude ?? address?.lng ?? address?.lon ?? address?.geo?.longitude,
+  );
+  if (lat === null || lng === null) {
+    return null;
+  }
+  return {lat, lng};
+};
+
+const buildStaticMapUrl = ({apiKey, markers, size = '640x320'}) => {
+  if (!apiKey || !Array.isArray(markers) || markers.length === 0) {
+    return null;
+  }
+  const markerParams = markers
+    .slice(0, 40)
+    .map(
+      m =>
+        `markers=color:red%7C${encodeURIComponent(`${m.lat},${m.lng}`)}`,
+    )
+    .join('&');
+  const center = markers[0];
+  return `https://maps.googleapis.com/maps/api/staticmap?size=${size}&maptype=roadmap&center=${center.lat},${center.lng}&zoom=${markers.length === 1 ? 14 : 11}&${markerParams}&key=${encodeURIComponent(apiKey)}`;
+};
+
 const MapsSection = () => {
+  const {globalStyles} = css();
   const localStyles = useGeneralSettingsStyles();
   const themePalette = useGeneralSettingsPalette();
   const categoriesStore = useStore('categories');
@@ -72,11 +124,23 @@ const MapsSection = () => {
   const [salesPageEnabled, setSalesPageEnabled] = useState(false);
   const [franchiseLocatorEnabled, setFranchiseLocatorEnabled] = useState(false);
   const [primaryEntry, setPrimaryEntry] = useState('');
+  const [franchiseDirectory, setFranchiseDirectory] = useState([]);
+  const [isLoadingFranchiseDirectory, setIsLoadingFranchiseDirectory] =
+    useState(false);
+  const [visibleFranchiseAddressIds, setVisibleFranchiseAddressIds] = useState(
+    [],
+  );
+  const [visibleFranchiseCompanyIds, setVisibleFranchiseCompanyIds] = useState(
+    [],
+  );
 
   const defaultCompanyId = defaultCompany?.id || defaultCompany?.['@id'];
   const defaultCompanyIri = defaultCompanyId
     ? '/people/' + defaultCompanyId
     : '';
+  const currentCompanyId = normalizeShopEntityId(
+    currentCompany?.id || currentCompany?.['@id'],
+  );
   const shopSettings = useMemo(
     () => resolveShopSettings(effectiveCompanyConfigs),
     [effectiveCompanyConfigs],
@@ -106,6 +170,16 @@ const MapsSection = () => {
           franchiseLocatorEnabled: nextLocator,
           loyaltyCouponsEnabled: false,
         },
+      ),
+    );
+    setVisibleFranchiseCompanyIds(
+      normalizeVisibleFranchiseIds(
+        effectiveCompanyConfigs?.[SHOP_FRANCHISE_VISIBLE_COMPANY_IDS_CONFIG_KEY],
+      ),
+    );
+    setVisibleFranchiseAddressIds(
+      normalizeVisibleFranchiseIds(
+        effectiveCompanyConfigs?.[SHOP_FRANCHISE_VISIBLE_ADDRESS_IDS_CONFIG_KEY],
       ),
     );
   }, [effectiveCompanyConfigs, shopSettings.franchiseAddressCategoryIds]);
@@ -153,6 +227,35 @@ const MapsSection = () => {
     };
   }, [categoryActions, categoriesStore.getters, defaultCompanyIri]);
 
+  useEffect(() => {
+    if (!franchiseLocatorEnabled || !currentCompanyId) {
+      setFranchiseDirectory([]);
+      setIsLoadingFranchiseDirectory(false);
+      return undefined;
+    }
+    let cancelled = false;
+    setIsLoadingFranchiseDirectory(true);
+    fetchAllShopFranchiseDirectory({companyId: currentCompanyId})
+      .then(items => {
+        if (!cancelled) {
+          setFranchiseDirectory(Array.isArray(items) ? items : []);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setFranchiseDirectory([]);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsLoadingFranchiseDirectory(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [currentCompanyId, franchiseLocatorEnabled]);
+
   const enabledHomeOptions = useMemo(
     () =>
       getEnabledShopHomeOptions({
@@ -176,6 +279,47 @@ const MapsSection = () => {
           label: PRIMARY_ENTRY_LABELS[option] || option,
         })),
     [enabledHomeOptions],
+  );
+
+  const franchiseAddressesById = useMemo(
+    () => buildFranchiseAddressesById(franchiseDirectory),
+    [franchiseDirectory],
+  );
+
+  const mapMarkers = useMemo(() => {
+    const visibleSet = new Set(
+      (visibleFranchiseAddressIds || []).map(normalizeShopEntityId).filter(Boolean),
+    );
+    if (visibleSet.size === 0) {
+      return [];
+    }
+    const markers = [];
+    Object.values(franchiseAddressesById).forEach(address => {
+      const addressId = normalizeShopEntityId(address);
+      if (!visibleSet.has(addressId)) {
+        return;
+      }
+      const coords = resolveAddressCoords(address);
+      if (!coords) {
+        return;
+      }
+      markers.push({
+        ...coords,
+        addressId,
+        label: resolveAddressLabel(address),
+        companyLabel: resolveCompanyLabel(address?.linkedCompany),
+      });
+    });
+    return markers;
+  }, [franchiseAddressesById, visibleFranchiseAddressIds]);
+
+  const staticMapUrl = useMemo(
+    () =>
+      buildStaticMapUrl({
+        apiKey: webGoogleMapsApiKey,
+        markers: mapMarkers,
+      }),
+    [mapMarkers, webGoogleMapsApiKey],
   );
 
   const saveMapsSettings = useCallback(async () => {
@@ -248,7 +392,7 @@ const MapsSection = () => {
 
   return (
     <GeneralSettingsSection
-      description="Chaves do Google Maps, tela principal do shop (mapa de franquias vs vitrine), localizador, categorias e lista de franquias/endereços visíveis no mapa do shop."
+      description="Chaves do Google Maps, tela principal do shop (mapa de franquias vs vitrine), localizador e categorias de endereço no mapa."
       icon="map"
       iconBackgroundColor={themePalette.cardIconBackground}
       iconColor={themePalette.cardIconColor}
@@ -378,7 +522,6 @@ const MapsSection = () => {
         </Text>
         {primaryEntryOptions.length > 0 && (
           <View
-            testID="maps-primary-entry-options"
             style={{
               flexDirection: 'row',
               flexWrap: 'wrap',
@@ -477,15 +620,82 @@ const MapsSection = () => {
         )}
       </View>
 
-      <View testID="maps-franchise-locator">
-      <ShopFranchiseLocatorSection
-        currentCompanyId={currentCompany?.id || currentCompany?.['@id']}
-        effectiveCompanyConfigs={effectiveCompanyConfigs}
-        localStyles={localStyles}
-        saveConfigs={saveConfigs}
-        themePalette={themePalette}
-      />
-      </View>
+      {franchiseLocatorEnabled ? (
+        <>
+          <ShopFranchiseLocatorSection
+            currentCompanyId={currentCompanyId}
+            effectiveCompanyConfigs={effectiveCompanyConfigs}
+            localStyles={localStyles}
+            saveConfigs={saveConfigs}
+            themePalette={themePalette}
+            globalStyles={globalStyles}
+          />
+
+          <View style={localStyles.fieldBlock} testID="maps-franchise-map">
+            <Text style={localStyles.fieldLabel}>Mapa das franquias</Text>
+            <Text style={localStyles.helperText}>
+              Pins das franquias/endereços marcados como visíveis (com
+              latitude/longitude).
+            </Text>
+            {isLoadingFranchiseDirectory ? (
+              <ActivityIndicator
+                size="small"
+                color={themePalette.loadingSpinner || themePalette.primary}
+                style={localStyles.sectionLoader}
+              />
+            ) : mapMarkers.length === 0 ? (
+              <View style={localStyles.emptyBox}>
+                <Text style={localStyles.emptyTitle}>
+                  Nenhum pin para exibir
+                </Text>
+                <Text style={localStyles.emptyText}>
+                  Marque franquias e endereços com latitude/longitude na lista
+                  acima para aparecerem no mapa.
+                </Text>
+              </View>
+            ) : staticMapUrl ? (
+              <View>
+                <Image
+                  source={{uri: staticMapUrl}}
+                  style={{
+                    width: '100%',
+                    height: 280,
+                    borderRadius: 8,
+                    backgroundColor: themePalette.inputBackground || '#eee',
+                  }}
+                  resizeMode="cover"
+                  accessibilityLabel="Mapa das franquias com pins"
+                />
+                <Text style={localStyles.helperText}>
+                  {mapMarkers.length} pin(s) no mapa
+                  {visibleFranchiseCompanyIds.length > 0
+                    ? ` · ${visibleFranchiseCompanyIds.length} franquia(s) liberada(s)`
+                    : ''}
+                </Text>
+              </View>
+            ) : (
+              <View style={localStyles.emptyBox}>
+                <Text style={localStyles.emptyTitle}>
+                  {mapMarkers.length} endereço(s) com coordenadas
+                </Text>
+                <Text style={localStyles.emptyText}>
+                  Informe a chave do Google Maps Web acima para pré-visualizar o
+                  mapa com os pins.
+                </Text>
+                {mapMarkers.slice(0, 8).map(marker => (
+                  <Text
+                    key={`map-marker-${marker.addressId}`}
+                    style={localStyles.helperText}>
+                    • {marker.companyLabel ? `${marker.companyLabel} — ` : ''}
+                    {marker.label} ({marker.lat.toFixed(5)},{' '}
+                    {marker.lng.toFixed(5)})
+                  </Text>
+                ))}
+              </View>
+            )}
+          </View>
+        </>
+      ) : null}
     </GeneralSettingsSection>
   );
 };
