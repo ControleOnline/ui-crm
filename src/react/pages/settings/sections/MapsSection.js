@@ -73,10 +73,20 @@ const parseCoord = value => {
 
 const resolveAddressCoords = address => {
   const lat = parseCoord(
-    address?.latitude ?? address?.lat ?? address?.geo?.latitude,
+    address?.latitude ??
+      address?.lat ??
+      address?.map?.latitude ??
+      address?.map?.lat ??
+      address?.geo?.latitude,
   );
   const lng = parseCoord(
-    address?.longitude ?? address?.lng ?? address?.lon ?? address?.geo?.longitude,
+    address?.longitude ??
+      address?.lng ??
+      address?.lon ??
+      address?.map?.longitude ??
+      address?.map?.lng ??
+      address?.map?.lon ??
+      address?.geo?.longitude,
   );
   if (lat === null || lng === null) {
     return null;

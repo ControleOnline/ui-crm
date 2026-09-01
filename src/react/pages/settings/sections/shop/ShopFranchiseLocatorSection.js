@@ -3,6 +3,7 @@
  * Persist only on explicit user toggles — never auto-save prunes after refresh.
  */
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
+import {useNavigation} from '@react-navigation/native';
 import {
   ActivityIndicator,
   Text,
@@ -11,7 +12,10 @@ import {
   View,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import {fetchAllShopFranchiseDirectory} from '@controleonline/ui-common/src/react/utils/shopFranchises';
+import {
+  fetchAllShopFranchiseDirectory,
+  resolveFranchiseAddressCoords,
+} from '@controleonline/ui-common/src/react/utils/shopFranchises';
 import {
   normalizeShopEntityId,
   SHOP_FRANCHISE_VISIBLE_ADDRESS_IDS_CONFIG_KEY,
@@ -43,6 +47,7 @@ const ShopFranchiseLocatorSection = ({
   themePalette,
   globalStyles,
 }) => {
+  const navigation = useNavigation();
   const [visibleFranchiseCompanyIds, setVisibleFranchiseCompanyIds] = useState([]);
   const [visibleFranchiseAddressIds, setVisibleFranchiseAddressIds] = useState([]);
   const [franchiseCompanySearch, setFranchiseCompanySearch] = useState('');
@@ -330,73 +335,172 @@ const ShopFranchiseLocatorSection = ({
                       </Text>
                     </View>
                   </TouchableOpacity>
-                  {addresses.length > 0 ? (
-                    <View style={{marginLeft: 12, marginBottom: 8}}>
-                      {addresses.map(address => {
+                  <View style={{marginLeft: 12, marginBottom: 8}}>
+                    {addresses.length === 0 ? (
+                      <View
+                        style={[
+                          localStyles.printerItem,
+                          {alignItems: 'flex-start'},
+                        ]}>
+                        <View style={[localStyles.printerCopy, {flex: 1}]}>
+                          <Text style={localStyles.printerName}>
+                            Sem endereço cadastrado
+                          </Text>
+                          <Text style={localStyles.printerDevice}>
+                            Cadastre um endereço com latitude/longitude para
+                            aparecer no mapa.
+                          </Text>
+                        </View>
+                        <TouchableOpacity
+                          activeOpacity={0.85}
+                          onPress={() => {
+                            const id = normalizeShopEntityId(company);
+                            if (!id) return;
+                            navigation.navigate('MyCompanyDetails', {
+                              clientId: id,
+                              contextKey: 'company',
+                            });
+                          }}
+                          style={{padding: 6}}
+                          accessibilityLabel="Editar endereços da franquia">
+                          <Icon
+                            name="edit"
+                            size={20}
+                            color={themePalette.primary || themePalette.cardIconColor}
+                          />
+                        </TouchableOpacity>
+                      </View>
+                    ) : (
+                      addresses.map(address => {
                         const addressId = normalizeShopEntityId(address);
                         const addrSelected =
                           visibleFranchiseAddressIds.includes(addressId);
-                        const lat = address?.latitude ?? address?.lat;
-                        const lng =
-                          address?.longitude ?? address?.lng ?? address?.lon;
+                        const coords = resolveFranchiseAddressCoords(address);
                         const hasCoords =
-                          lat != null &&
-                          lng != null &&
-                          Math.abs(Number(lat)) > 0.000001 &&
-                          Math.abs(Number(lng)) > 0.000001;
-                        const coordLabel = hasCoords
-                          ? ` · ${Number(lat).toFixed(5)}, ${Number(lng).toFixed(5)}`
-                          : ' · sem lat/long';
+                          coords.latitude != null &&
+                          coords.longitude != null &&
+                          Math.abs(Number(coords.latitude)) > 0.000001 &&
+                          Math.abs(Number(coords.longitude)) > 0.000001;
+                        const title =
+                          String(
+                            address?.nickname ||
+                              address?.searchFor ||
+                              address?.search_for ||
+                              '',
+                          ).trim() || resolveAddressLabel(address);
+                        const lineAddress =
+                          resolveAddressDetail(address) ||
+                          resolveAddressLabel(address) ||
+                          'Endereço não informado';
+                        const lineCoords = hasCoords
+                          ? `${Number(coords.latitude).toFixed(6)}, ${Number(
+                              coords.longitude,
+                            ).toFixed(6)}`
+                          : 'Latitude/longitude não informadas';
+                        const needsEdit = !hasCoords || !lineAddress;
+
                         return (
-                          <TouchableOpacity
+                          <View
                             key={`shop-franchise-dir-addr-${addressId}`}
                             style={[
                               localStyles.printerItem,
                               addrSelected && localStyles.printerItemActive,
-                            ]}
-                            activeOpacity={0.85}
-                            onPress={() => {
-                              if (!selected) {
-                                toggleFranchiseCompany(company);
-                              }
-                              toggleFranchiseAddress({
-                                ...address,
-                                linkedCompany: {
-                                  id: company?.id,
-                                  alias: company?.alias,
-                                  name: company?.name,
-                                },
-                              });
-                            }}>
-                            <Icon
-                              name={
-                                addrSelected
-                                  ? 'check-box'
-                                  : 'check-box-outline-blank'
-                              }
-                              size={20}
-                              color={
-                                addrSelected
-                                  ? themePalette.iconActive ||
-                                    themePalette.primary
-                                  : themePalette.iconDisabled ||
-                                    themePalette.textMuted
-                              }
-                            />
-                            <View style={localStyles.printerCopy}>
+                              {alignItems: 'flex-start'},
+                            ]}>
+                            <TouchableOpacity
+                              activeOpacity={0.85}
+                              onPress={() => {
+                                if (!selected) {
+                                  toggleFranchiseCompany(company);
+                                }
+                                toggleFranchiseAddress({
+                                  ...address,
+                                  latitude: coords.latitude,
+                                  longitude: coords.longitude,
+                                  linkedCompany: {
+                                    id: company?.id,
+                                    alias: company?.alias,
+                                    name: company?.name,
+                                  },
+                                });
+                              }}
+                              style={{paddingTop: 2, marginRight: 8}}>
+                              <Icon
+                                name={
+                                  addrSelected
+                                    ? 'check-box'
+                                    : 'check-box-outline-blank'
+                                }
+                                size={22}
+                                color={
+                                  addrSelected
+                                    ? themePalette.iconActive ||
+                                      themePalette.primary
+                                    : themePalette.iconDisabled ||
+                                      themePalette.textMuted
+                                }
+                              />
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              activeOpacity={0.85}
+                              onPress={() => {
+                                if (!selected) {
+                                  toggleFranchiseCompany(company);
+                                }
+                                toggleFranchiseAddress({
+                                  ...address,
+                                  latitude: coords.latitude,
+                                  longitude: coords.longitude,
+                                  linkedCompany: {
+                                    id: company?.id,
+                                    alias: company?.alias,
+                                    name: company?.name,
+                                  },
+                                });
+                              }}
+                              style={[localStyles.printerCopy, {flex: 1}]}>
                               <Text style={localStyles.printerName}>
-                                {resolveAddressLabel(address)}
+                                {title}
                               </Text>
                               <Text style={localStyles.printerDevice}>
-                                {(resolveAddressDetail(address) || 'Endereço') +
-                                  coordLabel}
+                                {lineAddress}
                               </Text>
-                            </View>
-                          </TouchableOpacity>
+                              <Text
+                                style={[
+                                  localStyles.printerDevice,
+                                  !hasCoords && {opacity: 0.75},
+                                ]}>
+                                {lineCoords}
+                              </Text>
+                            </TouchableOpacity>
+                            {needsEdit ? (
+                              <TouchableOpacity
+                                activeOpacity={0.85}
+                                onPress={() => {
+                                  const id = normalizeShopEntityId(company);
+                                  if (!id) return;
+                                  navigation.navigate('MyCompanyDetails', {
+                                    clientId: id,
+                                    contextKey: 'company',
+                                  });
+                                }}
+                                style={{padding: 6}}
+                                accessibilityLabel="Editar endereço da franquia">
+                                <Icon
+                                  name="edit"
+                                  size={20}
+                                  color={
+                                    themePalette.primary ||
+                                    themePalette.cardIconColor
+                                  }
+                                />
+                              </TouchableOpacity>
+                            ) : null}
+                          </View>
                         );
-                      })}
-                    </View>
-                  ) : null}
+                      })
+                    )}
+                  </View>
                 </View>
               );
             })}
