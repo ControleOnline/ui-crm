@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import AnimatedModal from '@controleonline/ui-common/src/react/components/AnimatedModal';
 import {searchCompanyProducts} from '@controleonline/ui-common/src/react/utils/commercialDocumentOrders';
 import {buildAddressOptionSummary} from '@controleonline/ui-common/src/react/utils/entityDisplay';
 import {resolveFranchiseCompanyLabel} from '@controleonline/ui-common/src/react/utils/shopFranchises';
