@@ -3,6 +3,7 @@
  * Persist only on explicit user toggles — never auto-save prunes after refresh.
  */
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
+import {useNavigation} from '@react-navigation/native';
 import {
   ActivityIndicator,
   Text,
@@ -11,7 +12,10 @@ import {
   View,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import {fetchAllShopFranchiseDirectory} from '@controleonline/ui-common/src/react/utils/shopFranchises';
+import {
+  fetchAllShopFranchiseDirectory,
+  resolveFranchiseAddressCoords,
+} from '@controleonline/ui-common/src/react/utils/shopFranchises';
 import {
   normalizeShopEntityId,
   SHOP_FRANCHISE_VISIBLE_ADDRESS_IDS_CONFIG_KEY,
@@ -43,6 +47,7 @@ const ShopFranchiseLocatorSection = ({
   themePalette,
   globalStyles,
 }) => {
+  const navigation = useNavigation();
   const [visibleFranchiseCompanyIds, setVisibleFranchiseCompanyIds] = useState([]);
   const [visibleFranchiseAddressIds, setVisibleFranchiseAddressIds] = useState([]);
   const [franchiseCompanySearch, setFranchiseCompanySearch] = useState('');
@@ -199,16 +204,41 @@ const ShopFranchiseLocatorSection = ({
     company => {
       const companyId = normalizeShopEntityId(company);
       if (!companyId) return;
-      const nextCompanyIds = visibleFranchiseCompanyIds.includes(companyId)
+      const isSelected = visibleFranchiseCompanyIds.includes(companyId);
+      const nextCompanyIds = isSelected
         ? visibleFranchiseCompanyIds.filter(item => item !== companyId)
         : [...visibleFranchiseCompanyIds, companyId];
-      const nextAddressIds = visibleFranchiseAddressIds.filter(addressId => {
-        const address = franchiseAddressesById[addressId];
-        if (!address) return false;
-        return nextCompanyIds.includes(
-          normalizeShopEntityId(address?.linkedCompany),
+
+      // Keep address visibility in sync with selected companies.
+      // When selecting a franchise, auto-include all of its addresses for the map.
+      const companyAddressIds = (
+        Array.isArray(company?.shopAddresses) ? company.shopAddresses : []
+      )
+        .map(addr => normalizeShopEntityId(addr))
+        .filter(Boolean);
+
+      let nextAddressIds;
+      if (isSelected) {
+        nextAddressIds = visibleFranchiseAddressIds.filter(
+          addressId => !companyAddressIds.includes(addressId),
         );
-      });
+      } else {
+        const merged = new Set([
+          ...visibleFranchiseAddressIds,
+          ...companyAddressIds,
+        ]);
+        // Drop addresses whose company is no longer selected
+        nextAddressIds = Array.from(merged).filter(addressId => {
+          const address = franchiseAddressesById[addressId];
+          if (!address) {
+            return companyAddressIds.includes(addressId);
+          }
+          return nextCompanyIds.includes(
+            normalizeShopEntityId(address?.linkedCompany),
+          );
+        });
+      }
+
       saveFranchiseVisibility(nextCompanyIds, nextAddressIds);
     },
     [
@@ -284,100 +314,118 @@ const ShopFranchiseLocatorSection = ({
           )
         )}
         <Text style={localStyles.helperText}>
-          {visibleFranchiseCompanyIds.length > 0
-            ? `${visibleFranchiseCompanyIds.length} franquia(s) liberada(s) para o localizador.`
-            : 'Nenhuma franquia liberada ainda.'}
+          {availableFranchiseCompanies.length > 0
+            ? `${availableFranchiseCompanies.length} franquia(s) · ${visibleFranchiseCompanyIds.length} no mapa.`
+            : 'Nenhuma franquia vinculada à empresa atual.'}
         </Text>
-        {selectedFranchiseCompanies.length === 0 ? (
+        {isLoadingFranchiseDirectory ? (
+          <ActivityIndicator
+            size="small"
+            color={themePalette.loadingSpinner}
+            style={localStyles.sectionLoader}
+          />
+        ) : availableFranchiseCompanies.length === 0 ? (
           <View style={localStyles.emptyBox}>
-            <Text style={localStyles.emptyTitle}>Lista de franquias vazia</Text>
-            <Text style={localStyles.emptyText}>As empresas selecionadas aparecerao aqui para remocao rapida.</Text>
+            <Text style={localStyles.emptyTitle}>Nenhuma franquia encontrada</Text>
+            <Text style={localStyles.emptyText}>
+              Cadastre vínculos linkType=franchisee em Minha empresa → Franquias.
+            </Text>
           </View>
         ) : (
           <View style={localStyles.printerList}>
-            {selectedFranchiseCompanies.map(company => {
+            {availableFranchiseCompanies.map(company => {
               const companyId = normalizeShopEntityId(company);
-              return (
-                <TouchableOpacity
-                  key={`shop-franchise-company-selected-${companyId}`}
-                  style={[localStyles.printerItem, localStyles.printerItemActive]}
-                  activeOpacity={0.85}
-                  onPress={() => toggleFranchiseCompany(company)}>
-                  <Icon name="remove-circle-outline" size={20} color={themePalette.iconDanger} />
-                  <View style={localStyles.printerCopy}>
-                    <Text style={localStyles.printerName}>{resolveCompanyLabel(company)}</Text>
-                    <Text style={localStyles.printerDevice}>{resolveCompanyMeta(company) || 'Toque para remover'}</Text>
-                  </View>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        )}
-      </View>
+              const selected = visibleFranchiseCompanyIds.includes(companyId);
+              const addresses = Array.isArray(company?.shopAddresses)
+                ? company.shopAddresses
+                : [];
+              const primaryAddress = addresses[0] || null;
+              const coords = primaryAddress
+                ? resolveFranchiseAddressCoords(primaryAddress)
+                : {latitude: null, longitude: null};
+              const hasCoords =
+                coords.latitude != null &&
+                coords.longitude != null &&
+                Math.abs(Number(coords.latitude)) > 0.000001 &&
+                Math.abs(Number(coords.longitude)) > 0.000001;
+              const name = resolveCompanyLabel(company);
+              const addressLine = primaryAddress
+                ? resolveAddressDetail(primaryAddress) ||
+                  resolveAddressLabel(primaryAddress) ||
+                  'Endereço não informado'
+                : 'Sem endereço cadastrado';
+              const coordsLine = hasCoords
+                ? `${Number(coords.latitude).toFixed(6)}, ${Number(
+                    coords.longitude,
+                  ).toFixed(6)}`
+                : 'Latitude/longitude não informadas';
+              const needsEdit = !primaryAddress || !hasCoords;
 
-      <View style={localStyles.fieldBlock}>
-        <Text style={localStyles.fieldLabel}>Enderecos exibidos no localizador</Text>
-        <Text style={localStyles.helperText}>
-          Abaixo de cada franquia selecionada, marque quais enderecos entram no mapa. Ao remover a franquia acima, os enderecos dela saem junto.
-        </Text>
-        {visibleFranchiseCompanyIds.length === 0 ? (
-          <View style={localStyles.emptyBox}>
-            <Text style={localStyles.emptyTitle}>Selecione franquias primeiro</Text>
-            <Text style={localStyles.emptyText}>Os enderecos aparecem agrupados logo abaixo de cada franquia liberada.</Text>
-          </View>
-        ) : isLoadingFranchiseDirectory ? (
-          <ActivityIndicator size="small" color={themePalette.loadingSpinner} style={localStyles.sectionLoader} />
-        ) : (
-          <View style={localStyles.printerList}>
-            {selectedFranchiseAddressGroups.map(({company, addresses, selectedCount}) => {
-              const companyId = normalizeShopEntityId(company);
               return (
-                <View key={`shop-franchise-address-group-${companyId}`} style={localStyles.fieldBlock}>
-                  <Text style={localStyles.fieldLabel}>
-                    {resolveCompanyLabel(company)}
-                    {selectedCount > 0 ? ` (${selectedCount})` : ''}
-                  </Text>
-                  {addresses.length === 0 ? (
-                    <Text style={localStyles.helperText}>
-                      {company?.__orphan
-                        ? 'Franquia salva; enderecos aparecem quando o diretorio terminar de carregar.'
-                        : 'Essa franquia ainda nao trouxe enderecos para liberar no localizador.'}
+                <View
+                  key={`shop-franchise-card-${companyId}`}
+                  style={[
+                    localStyles.printerItem,
+                    selected && localStyles.printerItemActive,
+                    {alignItems: 'flex-start'},
+                  ]}>
+                  <TouchableOpacity
+                    activeOpacity={0.85}
+                    onPress={() => toggleFranchiseCompany(company)}
+                    style={{paddingTop: 2, marginRight: 10}}
+                    accessibilityRole="checkbox"
+                    accessibilityState={{checked: selected}}
+                    accessibilityLabel={`Exibir ${name} no mapa`}>
+                    <Icon
+                      name={selected ? 'check-box' : 'check-box-outline-blank'}
+                      size={24}
+                      color={
+                        selected
+                          ? themePalette.iconActive || themePalette.primary
+                          : themePalette.iconDisabled || themePalette.textMuted
+                      }
+                    />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    activeOpacity={0.85}
+                    onPress={() => toggleFranchiseCompany(company)}
+                    style={[localStyles.printerCopy, {flex: 1}]}>
+                    <Text style={localStyles.printerName}>{name}</Text>
+                    <Text style={localStyles.printerDevice}>{addressLine}</Text>
+                    <Text
+                      style={[
+                        localStyles.printerDevice,
+                        !hasCoords && {opacity: 0.75},
+                      ]}>
+                      {coordsLine}
                     </Text>
-                  ) : (
-                    addresses.map(address => {
-                      const addressId = normalizeShopEntityId(address);
-                      const selected = visibleFranchiseAddressIds.includes(addressId);
-                      return (
-                        <TouchableOpacity
-                          key={`shop-franchise-address-${addressId}`}
-                          style={[localStyles.printerItem, selected && localStyles.printerItemActive]}
-                          activeOpacity={0.85}
-                          onPress={() => toggleFranchiseAddress(address)}>
-                          <Icon
-                            name={selected ? 'check-circle' : 'radio-button-unchecked'}
-                            size={20}
-                            color={selected ? themePalette.iconActive : themePalette.iconDisabled}
-                          />
-                          <View style={localStyles.printerCopy}>
-                            <Text style={localStyles.printerName}>{resolveAddressLabel(address)}</Text>
-                            <Text style={localStyles.printerDevice}>
-                              {resolveAddressDetail(address) || 'Toque para liberar no mapa'}
-                            </Text>
-                          </View>
-                        </TouchableOpacity>
-                      );
-                    })
-                  )}
+                  </TouchableOpacity>
+                  {needsEdit ? (
+                    <TouchableOpacity
+                      activeOpacity={0.85}
+                      onPress={() => {
+                        if (!companyId) return;
+                        navigation.navigate('MyCompanyDetails', {
+                          clientId: companyId,
+                          contextKey: 'company',
+                        });
+                      }}
+                      style={{padding: 6}}
+                      accessibilityLabel={`Editar endereço de ${name}`}>
+                      <Icon
+                        name="edit"
+                        size={20}
+                        color={
+                          themePalette.primary || themePalette.cardIconColor
+                        }
+                      />
+                    </TouchableOpacity>
+                  ) : null}
                 </View>
               );
             })}
           </View>
         )}
-        <Text style={localStyles.helperText}>
-          {visibleFranchiseAddressIds.length > 0
-            ? `${visibleFranchiseAddressIds.length} endereco(s) liberado(s) para o mapa.`
-            : 'Nenhum endereco liberado ainda.'}
-        </Text>
       </View>
 
       <SelectionModal

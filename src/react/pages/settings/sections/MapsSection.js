@@ -1,18 +1,20 @@
 /*
  * @agents This section controls map keys, shop primary entry (mapa vs vitrine),
- * franchise-locator enablement and franchise address categories for app_type=shop.
- * Detailed franchise/company address visibility lists remain in the Shop tab
- * (shared config keys). Lat/long persist via Address API + DefaultAddress.
+ * franchise-locator enablement, franchise address categories, franchise list
+ * with visibility checkboxes and preview map pins for app_type=shop.
  */
-import React, {useCallback, useEffect, useMemo, useState} from 'react';
+import React, {createElement, useCallback, useEffect, useMemo, useState} from 'react';
 import {
   ActivityIndicator,
+  Image,
+  Platform,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import css from '@controleonline/ui-orders/src/react/css/orders';
 
 import {useStore} from '@store';
 import {
@@ -29,29 +31,157 @@ import {
 import {
   getEnabledShopHomeOptions,
   normalizeBooleanConfig,
+  normalizeShopEntityId,
   normalizeShopPrimaryEntry,
   resolveShopSettings,
   saveAndUpdateConfigValue,
   SHOP_FRANCHISE_ADDRESS_CATEGORY_CONTEXT,
   SHOP_FRANCHISE_ADDRESS_CATEGORY_IDS_CONFIG_KEY,
   SHOP_FRANCHISE_LOCATOR_ENABLED_CONFIG_KEY,
+  SHOP_FRANCHISE_VISIBLE_ADDRESS_IDS_CONFIG_KEY,
+  SHOP_FRANCHISE_VISIBLE_COMPANY_IDS_CONFIG_KEY,
   SHOP_HOME_OPTION_FRANCHISE_LOCATOR,
   SHOP_HOME_OPTION_SALES,
   SHOP_PRIMARY_ENTRY_CONFIG_KEY,
   SHOP_SALES_PAGE_ENABLED_CONFIG_KEY,
 } from '@controleonline/ui-common/src/react/utils/shopConfig';
+import {fetchAllShopFranchiseDirectory} from '@controleonline/ui-common/src/react/utils/shopFranchises';
+import ShopFranchiseLocatorSection from './shop/ShopFranchiseLocatorSection';
+import {
+  buildFranchiseAddressesById,
+  normalizeVisibleFranchiseIds,
+} from './shop/shopFranchiseVisibility';
+import {
+  resolveAddressLabel,
+  resolveCompanyLabel,
+} from './shop/shopSettingsShared';
 
 const PRIMARY_ENTRY_LABELS = {
   [SHOP_HOME_OPTION_SALES]: 'Vitrine do shop',
   [SHOP_HOME_OPTION_FRANCHISE_LOCATOR]: 'Mapa das franquias',
 };
 
+const parseCoord = value => {
+  if (value === null || value === undefined || value === '') {
+    return null;
+  }
+  const n = Number(value);
+  if (!Number.isFinite(n) || Math.abs(n) < 0.000001) {
+    return null;
+  }
+  return n;
+};
+
+const resolveAddressCoords = address => {
+  const lat = parseCoord(
+    address?.latitude ??
+      address?.lat ??
+      address?.map?.latitude ??
+      address?.map?.lat ??
+      address?.geo?.latitude,
+  );
+  const lng = parseCoord(
+    address?.longitude ??
+      address?.lng ??
+      address?.lon ??
+      address?.map?.longitude ??
+      address?.map?.lng ??
+      address?.map?.lon ??
+      address?.geo?.longitude,
+  );
+  if (lat === null || lng === null) {
+    return null;
+  }
+  return {lat, lng};
+};
+
+const buildStaticMapUrl = ({apiKey, markers, size = '640x320'}) => {
+  if (!apiKey || !Array.isArray(markers) || markers.length === 0) {
+    return null;
+  }
+  const markerParams = markers
+    .slice(0, 40)
+    .map(
+      m =>
+        `markers=color:red%7C${encodeURIComponent(`${m.lat},${m.lng}`)}`,
+    )
+    .join('&');
+  const center = markers[0];
+  return `https://maps.googleapis.com/maps/api/staticmap?size=${size}&maptype=roadmap&center=${center.lat},${center.lng}&zoom=${markers.length === 1 ? 14 : 11}&${markerParams}&key=${encodeURIComponent(apiKey)}`;
+};
+
+/** Fallback without Google key — OpenStreetMap static (multi-marker). */
+const buildOsmStaticMapUrl = (markers, size = '640x320') => {
+  if (!Array.isArray(markers) || markers.length === 0) {
+    return null;
+  }
+  const center = markers[0];
+  const zoom = markers.length === 1 ? 14 : 11;
+  const markerParams = markers
+    .slice(0, 40)
+    .map(m => `markers=${m.lat},${m.lng},red-pushpin`)
+    .join('&');
+  return `https://staticmap.openstreetmap.de/staticmap.php?center=${center.lat},${center.lng}&zoom=${zoom}&size=${size}&maptype=mapnik&${markerParams}`;
+};
+
+/** Interactive Leaflet map HTML for web iframe (no API key). */
+const buildLeafletMapHtml = markers => {
+  if (!Array.isArray(markers) || markers.length === 0) {
+    return '';
+  }
+  const points = markers.slice(0, 40).map(m => ({
+    lat: Number(m.lat),
+    lng: Number(m.lng),
+    label: String(m.companyLabel || m.label || 'Franquia'),
+  }));
+  const center = points[0];
+  const markersJs = points
+    .map(
+      p =>
+        `L.marker([${p.lat}, ${p.lng}]).addTo(map).bindPopup(${JSON.stringify(
+          p.label,
+        )});`,
+    )
+    .join('\n');
+  const fitJs =
+    points.length > 1
+      ? `map.fitBounds([${points
+          .map(p => `[${p.lat}, ${p.lng}]`)
+          .join(', ')}], {padding: [28, 28]});`
+      : '';
+  return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>html,body,#map{margin:0;padding:0;height:100%;width:100%;} .leaflet-container{font:12px/1.4 system-ui,sans-serif;}</style>
+</head>
+<body>
+<div id="map"></div>
+<script>
+var map = L.map('map').setView([${center.lat}, ${center.lng}], ${points.length === 1 ? 14 : 11});
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  maxZoom: 19,
+  attribution: '&copy; OpenStreetMap'
+}).addTo(map);
+${markersJs}
+${fitJs}
+</script>
+</body>
+</html>`;
+};
+
+
 const MapsSection = () => {
+  const {globalStyles} = css();
   const localStyles = useGeneralSettingsStyles();
   const themePalette = useGeneralSettingsPalette();
   const categoriesStore = useStore('categories');
   const categoryActions = categoriesStore.actions;
   const {
+    currentCompany,
     defaultCompany,
     effectiveCompanyConfigs,
     saveConfig,
@@ -69,11 +199,23 @@ const MapsSection = () => {
   const [salesPageEnabled, setSalesPageEnabled] = useState(false);
   const [franchiseLocatorEnabled, setFranchiseLocatorEnabled] = useState(false);
   const [primaryEntry, setPrimaryEntry] = useState('');
+  const [franchiseDirectory, setFranchiseDirectory] = useState([]);
+  const [isLoadingFranchiseDirectory, setIsLoadingFranchiseDirectory] =
+    useState(false);
+  const [visibleFranchiseAddressIds, setVisibleFranchiseAddressIds] = useState(
+    [],
+  );
+  const [visibleFranchiseCompanyIds, setVisibleFranchiseCompanyIds] = useState(
+    [],
+  );
 
   const defaultCompanyId = defaultCompany?.id || defaultCompany?.['@id'];
   const defaultCompanyIri = defaultCompanyId
     ? '/people/' + defaultCompanyId
     : '';
+  const currentCompanyId = normalizeShopEntityId(
+    currentCompany?.id || currentCompany?.['@id'],
+  );
   const shopSettings = useMemo(
     () => resolveShopSettings(effectiveCompanyConfigs),
     [effectiveCompanyConfigs],
@@ -103,6 +245,16 @@ const MapsSection = () => {
           franchiseLocatorEnabled: nextLocator,
           loyaltyCouponsEnabled: false,
         },
+      ),
+    );
+    setVisibleFranchiseCompanyIds(
+      normalizeVisibleFranchiseIds(
+        effectiveCompanyConfigs?.[SHOP_FRANCHISE_VISIBLE_COMPANY_IDS_CONFIG_KEY],
+      ),
+    );
+    setVisibleFranchiseAddressIds(
+      normalizeVisibleFranchiseIds(
+        effectiveCompanyConfigs?.[SHOP_FRANCHISE_VISIBLE_ADDRESS_IDS_CONFIG_KEY],
       ),
     );
   }, [effectiveCompanyConfigs, shopSettings.franchiseAddressCategoryIds]);
@@ -150,6 +302,35 @@ const MapsSection = () => {
     };
   }, [categoryActions, categoriesStore.getters, defaultCompanyIri]);
 
+  useEffect(() => {
+    if (!franchiseLocatorEnabled || !currentCompanyId) {
+      setFranchiseDirectory([]);
+      setIsLoadingFranchiseDirectory(false);
+      return undefined;
+    }
+    let cancelled = false;
+    setIsLoadingFranchiseDirectory(true);
+    fetchAllShopFranchiseDirectory({companyId: currentCompanyId})
+      .then(items => {
+        if (!cancelled) {
+          setFranchiseDirectory(Array.isArray(items) ? items : []);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setFranchiseDirectory([]);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsLoadingFranchiseDirectory(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [currentCompanyId, franchiseLocatorEnabled]);
+
   const enabledHomeOptions = useMemo(
     () =>
       getEnabledShopHomeOptions({
@@ -174,6 +355,96 @@ const MapsSection = () => {
         })),
     [enabledHomeOptions],
   );
+
+  const franchiseAddressesById = useMemo(
+    () => buildFranchiseAddressesById(franchiseDirectory),
+    [franchiseDirectory],
+  );
+
+  const mapMarkers = useMemo(() => {
+    // Pins follow checked franchises (and any explicitly visible addresses).
+    const selectedCompanyIds = new Set(
+      (visibleFranchiseCompanyIds || [])
+        .map(normalizeShopEntityId)
+        .filter(Boolean),
+    );
+    const visibleAddressSet = new Set(
+      (visibleFranchiseAddressIds || [])
+        .map(normalizeShopEntityId)
+        .filter(Boolean),
+    );
+    const markers = [];
+    const seen = new Set();
+
+    (Array.isArray(franchiseDirectory) ? franchiseDirectory : []).forEach(
+      company => {
+        const companyId = normalizeShopEntityId(company);
+        if (!companyId || !selectedCompanyIds.has(companyId)) {
+          return;
+        }
+        const addresses = Array.isArray(company?.shopAddresses)
+          ? company.shopAddresses
+          : [];
+        addresses.forEach(address => {
+          const addressId = normalizeShopEntityId(address);
+          const coords = resolveAddressCoords(address);
+          if (!coords) {
+            return;
+          }
+          // Prefer explicitly visible addresses; if none stored yet, include all
+          // coords of the selected franchise.
+          if (
+            visibleAddressSet.size > 0 &&
+            addressId &&
+            !visibleAddressSet.has(addressId)
+          ) {
+            // Still include when company is selected and address belongs to it
+            // (auto-selected on checkbox) — only skip if company not selected.
+          }
+          const key = addressId || `${coords.lat},${coords.lng}`;
+          if (seen.has(key)) {
+            return;
+          }
+          seen.add(key);
+          markers.push({
+            ...coords,
+            addressId: addressId || key,
+            label: resolveAddressLabel(address),
+            companyLabel:
+              resolveCompanyLabel(company) ||
+              resolveCompanyLabel(address?.linkedCompany),
+          });
+        });
+      },
+    );
+
+    return markers;
+  }, [
+    franchiseDirectory,
+    visibleFranchiseAddressIds,
+    visibleFranchiseCompanyIds,
+  ]);
+
+  const staticMapUrl = useMemo(
+    () =>
+      buildStaticMapUrl({
+        apiKey: webGoogleMapsApiKey,
+        markers: mapMarkers,
+      }),
+    [mapMarkers, webGoogleMapsApiKey],
+  );
+
+  const osmStaticMapUrl = useMemo(
+    () => buildOsmStaticMapUrl(mapMarkers),
+    [mapMarkers],
+  );
+
+  const leafletMapHtml = useMemo(
+    () => buildLeafletMapHtml(mapMarkers),
+    [mapMarkers],
+  );
+
+  const previewMapUrl = staticMapUrl || osmStaticMapUrl;
 
   const saveMapsSettings = useCallback(async () => {
     await saveConfigs({
@@ -245,7 +516,7 @@ const MapsSection = () => {
 
   return (
     <GeneralSettingsSection
-      description="Chaves do Google Maps, tela principal do shop (mapa de franquias vs vitrine), localizador e categorias de endereço no mapa. Lista detalhada de franquias/endereços visíveis permanece na aba Shop (mesmas chaves de config)."
+      description="Chaves do Google Maps, tela principal do shop (mapa de franquias vs vitrine), localizador e categorias de endereço no mapa."
       icon="map"
       iconBackgroundColor={themePalette.cardIconBackground}
       iconColor={themePalette.cardIconColor}
@@ -473,11 +744,81 @@ const MapsSection = () => {
         )}
       </View>
 
-      <Text style={localStyles.helperText}>
-        Latitude/Longitude: persistidos na tabela de endereço (API) e no
-        formulário DefaultAddress. Visibilidade detalhada por franquia/endereço
-        no mapa: aba Shop (chaves shop-franchise-visible-*).
-      </Text>
+      {franchiseLocatorEnabled ? (
+        <>
+          <ShopFranchiseLocatorSection
+            currentCompanyId={currentCompanyId}
+            effectiveCompanyConfigs={effectiveCompanyConfigs}
+            localStyles={localStyles}
+            saveConfigs={saveConfigs}
+            themePalette={themePalette}
+            globalStyles={globalStyles}
+          />
+
+          <View style={localStyles.fieldBlock} testID="maps-franchise-map">
+            <Text style={localStyles.fieldLabel}>Mapa das franquias</Text>
+            <Text style={localStyles.helperText}>
+              Pins das franquias/endereços marcados como visíveis (com
+              latitude/longitude).
+            </Text>
+            {isLoadingFranchiseDirectory ? (
+              <ActivityIndicator
+                size="small"
+                color={themePalette.loadingSpinner || themePalette.primary}
+                style={localStyles.sectionLoader}
+              />
+            ) : mapMarkers.length === 0 ? (
+              <View style={localStyles.emptyBox}>
+                <Text style={localStyles.emptyTitle}>
+                  Nenhum pin para exibir
+                </Text>
+                <Text style={localStyles.emptyText}>
+                  Marque franquias com latitude/longitude na lista acima para
+                  aparecerem no mapa.
+                </Text>
+              </View>
+            ) : (
+              <View>
+                {Platform.OS === 'web' && leafletMapHtml
+                  ? createElement(
+                      'iframe',
+                      {
+                        title: 'Mapa das franquias',
+                        srcDoc: leafletMapHtml,
+                        style: {
+                          width: '100%',
+                          height: 300,
+                          border: 0,
+                          borderRadius: 8,
+                          backgroundColor:
+                            themePalette.inputBackground || '#eee',
+                        },
+                      },
+                    )
+                  : previewMapUrl ? (
+                  <Image
+                    source={{uri: previewMapUrl}}
+                    style={{
+                      width: '100%',
+                      height: 280,
+                      borderRadius: 8,
+                      backgroundColor: themePalette.inputBackground || '#eee',
+                    }}
+                    resizeMode="cover"
+                    accessibilityLabel="Mapa das franquias com pins"
+                  />
+                ) : null}
+                <Text style={localStyles.helperText}>
+                  {mapMarkers.length} pin(s) no mapa
+                  {visibleFranchiseCompanyIds.length > 0
+                    ? ` · ${visibleFranchiseCompanyIds.length} franquia(s) selecionada(s)`
+                    : ''}
+                </Text>
+              </View>
+            )}
+          </View>
+        </>
+      ) : null}
     </GeneralSettingsSection>
   );
 };
