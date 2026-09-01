@@ -375,19 +375,14 @@ const MapsSection = () => {
   );
 
   const mapMarkers = useMemo(() => {
-    // Pins follow checked franchises (and any explicitly visible addresses).
+    // Exactly one pin per checked franchise (primary address with coordinates).
     const selectedCompanyIds = new Set(
       (visibleFranchiseCompanyIds || [])
         .map(normalizeShopEntityId)
         .filter(Boolean),
     );
-    const visibleAddressSet = new Set(
-      (visibleFranchiseAddressIds || [])
-        .map(normalizeShopEntityId)
-        .filter(Boolean),
-    );
     const markers = [];
-    const seen = new Set();
+    const seenCompanies = new Set();
 
     (Array.isArray(franchiseDirectory) ? franchiseDirectory : []).forEach(
       company => {
@@ -395,48 +390,40 @@ const MapsSection = () => {
         if (!companyId || !selectedCompanyIds.has(companyId)) {
           return;
         }
+        if (seenCompanies.has(companyId)) {
+          return;
+        }
+
         const addresses = Array.isArray(company?.shopAddresses)
           ? company.shopAddresses
           : [];
-        addresses.forEach(address => {
-          const addressId = normalizeShopEntityId(address);
+        // Prefer first address that has valid lat/long.
+        let chosen = null;
+        for (const address of addresses) {
           const coords = resolveAddressCoords(address);
-          if (!coords) {
-            return;
+          if (coords) {
+            chosen = {address, coords};
+            break;
           }
-          // Prefer explicitly visible addresses; if none stored yet, include all
-          // coords of the selected franchise.
-          if (
-            visibleAddressSet.size > 0 &&
-            addressId &&
-            !visibleAddressSet.has(addressId)
-          ) {
-            // Still include when company is selected and address belongs to it
-            // (auto-selected on checkbox) — only skip if company not selected.
-          }
-          const key = addressId || `${coords.lat},${coords.lng}`;
-          if (seen.has(key)) {
-            return;
-          }
-          seen.add(key);
-          markers.push({
-            ...coords,
-            addressId: addressId || key,
-            label: resolveAddressLabel(address),
-            companyLabel:
-              resolveCompanyLabel(company) ||
-              resolveCompanyLabel(address?.linkedCompany),
-          });
+        }
+        if (!chosen) {
+          return;
+        }
+
+        seenCompanies.add(companyId);
+        const addressId = normalizeShopEntityId(chosen.address);
+        markers.push({
+          ...chosen.coords,
+          addressId: addressId || `${companyId}-primary`,
+          companyId,
+          label: resolveAddressLabel(chosen.address),
+          companyLabel: resolveCompanyLabel(company),
         });
       },
     );
 
     return markers;
-  }, [
-    franchiseDirectory,
-    visibleFranchiseAddressIds,
-    visibleFranchiseCompanyIds,
-  ]);
+  }, [franchiseDirectory, visibleFranchiseCompanyIds]);
 
   const staticMapUrl = useMemo(
     () =>

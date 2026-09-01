@@ -230,29 +230,46 @@ const ShopFranchiseLocatorSection = ({
         ? visibleFranchiseCompanyIds.filter(item => item !== companyId)
         : [...visibleFranchiseCompanyIds, companyId];
 
-      // Keep address visibility in sync with selected companies.
-      // When selecting a franchise, auto-include all of its addresses for the map.
-      const companyAddressIds = (
-        Array.isArray(company?.shopAddresses) ? company.shopAddresses : []
-      )
+      // One primary address (first with coords) per franchise on the map.
+      const addresses = Array.isArray(company?.shopAddresses)
+        ? company.shopAddresses
+        : [];
+      const companyAddressIds = addresses
         .map(addr => normalizeShopEntityId(addr))
         .filter(Boolean);
+      let primaryAddressId = null;
+      for (const addr of addresses) {
+        const coords = resolveFranchiseAddressCoords(addr);
+        const has =
+          coords.latitude != null &&
+          coords.longitude != null &&
+          Math.abs(Number(coords.latitude)) > 0.000001 &&
+          Math.abs(Number(coords.longitude)) > 0.000001;
+        if (has) {
+          primaryAddressId = normalizeShopEntityId(addr);
+          break;
+        }
+      }
 
       let nextAddressIds;
       if (isSelected) {
+        // Deselecting: drop all addresses of this company.
         nextAddressIds = visibleFranchiseAddressIds.filter(
           addressId => !companyAddressIds.includes(addressId),
         );
       } else {
-        const merged = new Set([
-          ...visibleFranchiseAddressIds,
-          ...companyAddressIds,
-        ]);
-        // Drop addresses whose company is no longer selected
-        nextAddressIds = Array.from(merged).filter(addressId => {
+        // Selecting: keep other companies' addresses + this primary only.
+        const withoutThisCompany = visibleFranchiseAddressIds.filter(
+          addressId => !companyAddressIds.includes(addressId),
+        );
+        nextAddressIds = primaryAddressId
+          ? [...withoutThisCompany, primaryAddressId]
+          : withoutThisCompany;
+        // Prune orphans (company no longer selected).
+        nextAddressIds = nextAddressIds.filter(addressId => {
           const address = franchiseAddressesById[addressId];
           if (!address) {
-            return companyAddressIds.includes(addressId);
+            return primaryAddressId === addressId;
           }
           return nextCompanyIds.includes(
             normalizeShopEntityId(address?.linkedCompany),
