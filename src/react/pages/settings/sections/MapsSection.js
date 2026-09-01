@@ -3,10 +3,11 @@
  * franchise-locator enablement, franchise address categories, franchise list
  * with visibility checkboxes and preview map pins for app_type=shop.
  */
-import React, {useCallback, useEffect, useMemo, useState} from 'react';
+import React, {createElement, useCallback, useEffect, useMemo, useState} from 'react';
 import {
   ActivityIndicator,
   Image,
+  Platform,
   Text,
   TextInput,
   TouchableOpacity,
@@ -108,6 +109,70 @@ const buildStaticMapUrl = ({apiKey, markers, size = '640x320'}) => {
   const center = markers[0];
   return `https://maps.googleapis.com/maps/api/staticmap?size=${size}&maptype=roadmap&center=${center.lat},${center.lng}&zoom=${markers.length === 1 ? 14 : 11}&${markerParams}&key=${encodeURIComponent(apiKey)}`;
 };
+
+/** Fallback without Google key — OpenStreetMap static (multi-marker). */
+const buildOsmStaticMapUrl = (markers, size = '640x320') => {
+  if (!Array.isArray(markers) || markers.length === 0) {
+    return null;
+  }
+  const center = markers[0];
+  const zoom = markers.length === 1 ? 14 : 11;
+  const markerParams = markers
+    .slice(0, 40)
+    .map(m => `markers=${m.lat},${m.lng},red-pushpin`)
+    .join('&');
+  return `https://staticmap.openstreetmap.de/staticmap.php?center=${center.lat},${center.lng}&zoom=${zoom}&size=${size}&maptype=mapnik&${markerParams}`;
+};
+
+/** Interactive Leaflet map HTML for web iframe (no API key). */
+const buildLeafletMapHtml = markers => {
+  if (!Array.isArray(markers) || markers.length === 0) {
+    return '';
+  }
+  const points = markers.slice(0, 40).map(m => ({
+    lat: Number(m.lat),
+    lng: Number(m.lng),
+    label: String(m.companyLabel || m.label || 'Franquia'),
+  }));
+  const center = points[0];
+  const markersJs = points
+    .map(
+      p =>
+        `L.marker([${p.lat}, ${p.lng}]).addTo(map).bindPopup(${JSON.stringify(
+          p.label,
+        )});`,
+    )
+    .join('\n');
+  const fitJs =
+    points.length > 1
+      ? `map.fitBounds([${points
+          .map(p => `[${p.lat}, ${p.lng}]`)
+          .join(', ')}], {padding: [28, 28]});`
+      : '';
+  return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>html,body,#map{margin:0;padding:0;height:100%;width:100%;} .leaflet-container{font:12px/1.4 system-ui,sans-serif;}</style>
+</head>
+<body>
+<div id="map"></div>
+<script>
+var map = L.map('map').setView([${center.lat}, ${center.lng}], ${points.length === 1 ? 14 : 11});
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  maxZoom: 19,
+  attribution: '&copy; OpenStreetMap'
+}).addTo(map);
+${markersJs}
+${fitJs}
+</script>
+</body>
+</html>`;
+};
+
 
 const MapsSection = () => {
   const {globalStyles} = css();
@@ -297,31 +362,68 @@ const MapsSection = () => {
   );
 
   const mapMarkers = useMemo(() => {
-    const visibleSet = new Set(
-      (visibleFranchiseAddressIds || []).map(normalizeShopEntityId).filter(Boolean),
+    // Pins follow checked franchises (and any explicitly visible addresses).
+    const selectedCompanyIds = new Set(
+      (visibleFranchiseCompanyIds || [])
+        .map(normalizeShopEntityId)
+        .filter(Boolean),
     );
-    if (visibleSet.size === 0) {
-      return [];
-    }
+    const visibleAddressSet = new Set(
+      (visibleFranchiseAddressIds || [])
+        .map(normalizeShopEntityId)
+        .filter(Boolean),
+    );
     const markers = [];
-    Object.values(franchiseAddressesById).forEach(address => {
-      const addressId = normalizeShopEntityId(address);
-      if (!visibleSet.has(addressId)) {
-        return;
-      }
-      const coords = resolveAddressCoords(address);
-      if (!coords) {
-        return;
-      }
-      markers.push({
-        ...coords,
-        addressId,
-        label: resolveAddressLabel(address),
-        companyLabel: resolveCompanyLabel(address?.linkedCompany),
-      });
-    });
+    const seen = new Set();
+
+    (Array.isArray(franchiseDirectory) ? franchiseDirectory : []).forEach(
+      company => {
+        const companyId = normalizeShopEntityId(company);
+        if (!companyId || !selectedCompanyIds.has(companyId)) {
+          return;
+        }
+        const addresses = Array.isArray(company?.shopAddresses)
+          ? company.shopAddresses
+          : [];
+        addresses.forEach(address => {
+          const addressId = normalizeShopEntityId(address);
+          const coords = resolveAddressCoords(address);
+          if (!coords) {
+            return;
+          }
+          // Prefer explicitly visible addresses; if none stored yet, include all
+          // coords of the selected franchise.
+          if (
+            visibleAddressSet.size > 0 &&
+            addressId &&
+            !visibleAddressSet.has(addressId)
+          ) {
+            // Still include when company is selected and address belongs to it
+            // (auto-selected on checkbox) — only skip if company not selected.
+          }
+          const key = addressId || `${coords.lat},${coords.lng}`;
+          if (seen.has(key)) {
+            return;
+          }
+          seen.add(key);
+          markers.push({
+            ...coords,
+            addressId: addressId || key,
+            label: resolveAddressLabel(address),
+            companyLabel:
+              resolveCompanyLabel(company) ||
+              resolveCompanyLabel(address?.linkedCompany),
+          });
+        });
+      },
+    );
+
     return markers;
-  }, [franchiseAddressesById, visibleFranchiseAddressIds]);
+  }, [
+    franchiseDirectory,
+    visibleFranchiseAddressIds,
+    visibleFranchiseCompanyIds,
+  ]);
 
   const staticMapUrl = useMemo(
     () =>
@@ -331,6 +433,18 @@ const MapsSection = () => {
       }),
     [mapMarkers, webGoogleMapsApiKey],
   );
+
+  const osmStaticMapUrl = useMemo(
+    () => buildOsmStaticMapUrl(mapMarkers),
+    [mapMarkers],
+  );
+
+  const leafletMapHtml = useMemo(
+    () => buildLeafletMapHtml(mapMarkers),
+    [mapMarkers],
+  );
+
+  const previewMapUrl = staticMapUrl || osmStaticMapUrl;
 
   const saveMapsSettings = useCallback(async () => {
     await saveConfigs({
@@ -659,48 +773,47 @@ const MapsSection = () => {
                   Nenhum pin para exibir
                 </Text>
                 <Text style={localStyles.emptyText}>
-                  Marque franquias e endereços com latitude/longitude na lista
-                  acima para aparecerem no mapa.
-                </Text>
-              </View>
-            ) : staticMapUrl ? (
-              <View>
-                <Image
-                  source={{uri: staticMapUrl}}
-                  style={{
-                    width: '100%',
-                    height: 280,
-                    borderRadius: 8,
-                    backgroundColor: themePalette.inputBackground || '#eee',
-                  }}
-                  resizeMode="cover"
-                  accessibilityLabel="Mapa das franquias com pins"
-                />
-                <Text style={localStyles.helperText}>
-                  {mapMarkers.length} pin(s) no mapa
-                  {visibleFranchiseCompanyIds.length > 0
-                    ? ` · ${visibleFranchiseCompanyIds.length} franquia(s) liberada(s)`
-                    : ''}
+                  Marque franquias com latitude/longitude na lista acima para
+                  aparecerem no mapa.
                 </Text>
               </View>
             ) : (
-              <View style={localStyles.emptyBox}>
-                <Text style={localStyles.emptyTitle}>
-                  {mapMarkers.length} endereço(s) com coordenadas
+              <View>
+                {Platform.OS === 'web' && leafletMapHtml
+                  ? createElement(
+                      'iframe',
+                      {
+                        title: 'Mapa das franquias',
+                        srcDoc: leafletMapHtml,
+                        style: {
+                          width: '100%',
+                          height: 300,
+                          border: 0,
+                          borderRadius: 8,
+                          backgroundColor:
+                            themePalette.inputBackground || '#eee',
+                        },
+                      },
+                    )
+                  : previewMapUrl ? (
+                  <Image
+                    source={{uri: previewMapUrl}}
+                    style={{
+                      width: '100%',
+                      height: 280,
+                      borderRadius: 8,
+                      backgroundColor: themePalette.inputBackground || '#eee',
+                    }}
+                    resizeMode="cover"
+                    accessibilityLabel="Mapa das franquias com pins"
+                  />
+                ) : null}
+                <Text style={localStyles.helperText}>
+                  {mapMarkers.length} pin(s) no mapa
+                  {visibleFranchiseCompanyIds.length > 0
+                    ? ` · ${visibleFranchiseCompanyIds.length} franquia(s) selecionada(s)`
+                    : ''}
                 </Text>
-                <Text style={localStyles.emptyText}>
-                  Informe a chave do Google Maps Web acima para pré-visualizar o
-                  mapa com os pins.
-                </Text>
-                {mapMarkers.slice(0, 8).map(marker => (
-                  <Text
-                    key={`map-marker-${marker.addressId}`}
-                    style={localStyles.helperText}>
-                    • {marker.companyLabel ? `${marker.companyLabel} — ` : ''}
-                    {marker.label} ({marker.lat.toFixed(5)},{' '}
-                    {marker.lng.toFixed(5)})
-                  </Text>
-                ))}
               </View>
             )}
           </View>
