@@ -404,8 +404,6 @@ const ShopFranchiseLocatorSection = ({
         )}
       </View>
 
-      </View>
-
       <View style={localStyles.fieldBlock}>
         <Text style={localStyles.fieldLabel}>Enderecos exibidos no localizador</Text>
         <Text style={localStyles.helperText}>
