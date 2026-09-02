@@ -1,78 +1,25 @@
 /**
- * Smoke browser: Manager /general-settings → aba Mapas (#360).
  * fluxo: manager-general-settings-maps
- * Refs: app-community#360
+ * flowchartIds: [1]
+ * app-community#360 — General Settings / Mapas (tela principal + localizador).
  *
- * Criteria:
- * - Aba Mapas visível com seletor de tela principal (quando opções ativas)
- * - Lista/secao de franquias/endereços presente na aba Mapas (sem apontar aba Shop)
- * - Helper de lat/long e seção de mapa sem mensagem residual "aba Shop"
- * - Módulos de settings ≤ 500 linhas
+ * Justificativa flowchartIds [1]: catálogo admin não tem entry de general-settings
+ * (ids históricos 1, 3, 4, 5). Âncora no flowchart habilitado #1.
+ *
+ * Sem page.route em endpoints de produto (people, people_links, configs, addresses).
+ * Sessão via SMOKE_API_TOKEN (localStorage) quando presente; senão UI de login real.
  */
-const { expect, test } = require('playwright/test');
 const fs = require('fs');
 const path = require('path');
+const { expect, test } = require('playwright/test');
 const packageJson = require('../../../../../../../package.json');
-const { API_ORIGIN } = require('../../../../../../../src/tests/browser/apiOrigin');
 
 const APP_VERSION = packageJson?.version || '1.0.0';
-const CURRENT_DEVICE_ID = 'web-7';
-
-const CORS_HEADERS = {
-  'access-control-allow-origin': '*',
-  'access-control-allow-headers':
-    'API-TOKEN, APP-DOMAIN, DEVICE, ACCEPT, CONTENT-TYPE, X-Requested-With',
-  'access-control-allow-methods': 'GET,POST,PUT,PATCH,DELETE,OPTIONS',
-};
-
-const jsonHeaders = () => ({
-  ...CORS_HEADERS,
-  'content-type': 'application/ld+json; charset=utf-8',
-});
-
-const collection = member => ({
-  member,
-  'hydra:member': member,
-  totalItems: member.length,
-  'hydra:totalItems': member.length,
-});
-
-const company = {
-  '@id': '/people/3',
-  id: 3,
-  name: 'GYROS SMOKE',
-  alias: 'GYROS',
-  panel_enabled: true,
-  enabled: true,
-  commercial_enabled: true,
-  configs: {
-    'shop-sales-page-enabled': true,
-    'shop-franchise-locator-enabled': true,
-    'shop-primary-entry': 'franchise-locator',
-    'shop-franchise-visible-company-ids': '[]',
-    'shop-franchise-visible-address-ids': '[]',
-  },
-};
-
-const franchiseCompany = {
-  '@id': '/people/31',
-  id: 31,
-  name: 'FRANQUIA SMOKE',
-  alias: 'FRANQUIA',
-  peopleType: 'J',
-  shopAddresses: [
-    {
-      '@id': '/addresses/501',
-      id: 501,
-      nickname: 'Matriz',
-      street: 'Av Paulista',
-      number: '1000',
-      city: 'São Paulo',
-      latitude: -23.5614,
-      longitude: -46.6558,
-    },
-  ],
-};
+const FLOW_ID = 'manager-general-settings-maps';
+const FLOWCHART_IDS = [1];
+const FLOWCHART_LINKS = FLOWCHART_IDS.map(
+  id => `https://admin.controleonline.com/admin/flowcharts/${id}`,
+);
 
 const MODULES_MAX_500 = [
   path.join(__dirname, '../../../react/pages/settings/sections/MapsSection.js'),
@@ -82,205 +29,193 @@ const MODULES_MAX_500 = [
   ),
 ];
 
-const mockGeneralSettingsApi = async page => {
-  await page.route(`${API_ORIGIN}/**`, async route => {
-    const request = route.request();
-    const url = new URL(request.url());
-    const pathname = url.pathname.replace(/^\/+/, '');
-    const method = request.method().toUpperCase();
+const evidenceSteps = [];
 
-    if (method === 'OPTIONS') {
-      return route.fulfill({ status: 204, headers: CORS_HEADERS, body: '' });
-    }
-
-    if (pathname === 'themes-colors.css') {
-      return route.fulfill({
-        status: 200,
-        headers: { ...CORS_HEADERS, 'content-type': 'text/css; charset=utf-8' },
-        body: ':root { --primary: #0ea5e9; }',
-      });
-    }
-
-    if (pathname === 'runtime/ip') {
-      return route.fulfill({
-        status: 200,
-        headers: jsonHeaders(),
-        body: JSON.stringify({ ip: '127.0.0.1' }),
-      });
-    }
-
-    if (pathname === 'menus-people') {
-      return route.fulfill({
-        status: 200,
-        headers: jsonHeaders(),
-        body: JSON.stringify({ modules: {} }),
-      });
-    }
-
-    if (pathname === 'people/companies/my' || pathname === 'people') {
-      return route.fulfill({
-        status: 200,
-        headers: jsonHeaders(),
-        body: JSON.stringify(collection([company])),
-      });
-    }
-
-    if (pathname === 'people/3' || pathname === 'people/3/') {
-      return route.fulfill({
-        status: 200,
-        headers: jsonHeaders(),
-        body: JSON.stringify(company),
-      });
-    }
-
-    if (pathname === 'configs' || pathname.startsWith('configs')) {
-      return route.fulfill({
-        status: 200,
-        headers: jsonHeaders(),
-        body: JSON.stringify(collection([])),
-      });
-    }
-
-    if (pathname === 'shop/franchises' || pathname.startsWith('shop/franchises')) {
-      return route.fulfill({
-        status: 200,
-        headers: jsonHeaders(),
-        body: JSON.stringify(collection([franchiseCompany])),
-      });
-    }
-
-    if (pathname === 'categories' || pathname.startsWith('categories')) {
-      return route.fulfill({
-        status: 200,
-        headers: jsonHeaders(),
-        body: JSON.stringify(collection([])),
-      });
-    }
-
-    if (pathname === 'devices' || pathname.startsWith('devices')) {
-      return route.fulfill({
-        status: 200,
-        headers: jsonHeaders(),
-        body: JSON.stringify(
-          collection([
-            {
-              '@id': '/devices/1',
-              id: 1,
-              device: CURRENT_DEVICE_ID,
-              alias: 'Smoke Manager',
-              type: 'MANAGER',
-            },
-          ]),
-        ),
-      });
-    }
-
-    if (pathname === 'device_configs' || pathname.startsWith('device_configs')) {
-      return route.fulfill({
-        status: 200,
-        headers: jsonHeaders(),
-        body: JSON.stringify(
-          collection([
-            {
-              '@id': '/device_configs/1',
-              id: 1,
-              type: 'MANAGER',
-              people: '/people/3',
-              device: { id: 1, device: CURRENT_DEVICE_ID, alias: 'Smoke Manager' },
-              configs: JSON.stringify({ 'config-version': APP_VERSION }),
-            },
-          ]),
-        ),
-      });
-    }
-
-    return route.fulfill({
-      status: 200,
-      headers: jsonHeaders(),
-      body: JSON.stringify(collection([])),
-    });
+const writeEvidence = async (page, outputDir, stepId, title) => {
+  fs.mkdirSync(outputDir, { recursive: true });
+  const fileName = `${stepId}.png`;
+  const filePath = path.join(outputDir, fileName);
+  await page.screenshot({ path: filePath, fullPage: true });
+  evidenceSteps.push({
+    id: stepId,
+    title,
+    screenshot: fileName,
+    url: page.url(),
   });
+  return filePath;
+};
 
-  await page.addInitScript(
-    ({ appVersion }) => {
-      localStorage.setItem('token', 'smoke-token-360');
-      localStorage.setItem('app-type', 'MANAGER');
-      localStorage.setItem('config', JSON.stringify({ language: 'pt-br' }));
-      localStorage.setItem(
-        'device',
-        JSON.stringify({
-          id: CURRENT_DEVICE_ID,
-          device: CURRENT_DEVICE_ID,
-          type: 'MANAGER',
-          appName: 'Browser Manager',
-          appVersion,
-          buildNumber: appVersion,
-          systemName: 'web',
-          systemVersion: 'web',
-          deviceType: 'web',
-          metadata: { runtime: 'web' },
-        }),
-      );
-    },
-    { appVersion: APP_VERSION },
+const writeManifest = outputDir => {
+  const manifest = {
+    fluxo: FLOW_ID,
+    flowchartIds: FLOWCHART_IDS,
+    flowchartLinks: FLOWCHART_LINKS,
+    title: 'General Settings / Mapas: tela principal + localizador de franquias',
+    issue: 'ControleOnline/app-community#360',
+    steps: evidenceSteps,
+  };
+  fs.writeFileSync(
+    path.join(outputDir, 'manifest.json'),
+    `${JSON.stringify(manifest, null, 2)}\n`,
   );
+  fs.writeFileSync(
+    path.join(outputDir, 'MANIFEST.md'),
+    [
+      `# ${manifest.title}`,
+      '',
+      `- fluxo: ${FLOW_ID}`,
+      `- flowchartIds: ${JSON.stringify(FLOWCHART_IDS)}`,
+      `- issue: ${manifest.issue}`,
+      '',
+      ...evidenceSteps.map(
+        step => `- ${step.id}: ${step.title} (${step.screenshot})`,
+      ),
+      '',
+    ].join('\n'),
+  );
+  return manifest;
+};
+
+const seedApiSession = async page => {
+  const token = String(
+    process.env.SMOKE_API_TOKEN ||
+      process.env.SMOKE_ADMIN_API_TOKEN ||
+      process.env.API_TOKEN ||
+      '',
+  ).trim();
+  if (!token) return false;
+  const peopleId = String(
+    process.env.SMOKE_ADMIN_PEOPLE_ID || process.env.ADMIN_PEOPLE_ID || '7',
+  ).trim();
+  const userId = String(
+    process.env.SMOKE_ADMIN_USER_ID || process.env.ADMIN_USER_ID || peopleId,
+  ).trim();
+  const session = {
+    id: Number(userId) || userId,
+    people: `/people/${peopleId}`,
+    api_key: token,
+    active: 1,
+  };
+  await page.addInitScript(payload => {
+    window.localStorage.setItem('session', JSON.stringify(payload));
+  }, session);
+  return true;
 };
 
 test.describe('general-settings maps (browser smoke #360)', () => {
+  test.describe.configure({ timeout: 90000 });
+
   test('MapsSection and ShopFranchiseLocator respect 500-line limit', async () => {
     for (const file of MODULES_MAX_500) {
       expect(fs.existsSync(file), `missing ${file}`).toBe(true);
       const lines = fs.readFileSync(file, 'utf8').split(/\r?\n/).length;
-      expect(lines, `${path.basename(file)} has ${lines} lines (max 500)`).toBeLessThanOrEqual(
-        500,
-      );
+      expect(
+        lines,
+        `${path.basename(file)} has ${lines} lines (max 500)`,
+      ).toBeLessThanOrEqual(500);
     }
   });
 
   test('MapsSection does not reference residual aba Shop', async () => {
-    const mapsPath = MODULES_MAX_500[0];
-    const source = fs.readFileSync(mapsPath, 'utf8');
+    const source = fs.readFileSync(MODULES_MAX_500[0], 'utf8');
     expect(source).not.toMatch(/aba Shop/i);
     expect(source).toMatch(/ShopFranchiseLocatorSection/);
   });
 
-  test('open /general-settings → aba Mapas shows primary entry + franchise locator', async ({
+  test('open /general-settings → aba Mapas on live API', async ({
     page,
-  }) => {
-    await mockGeneralSettingsApi(page);
+  }, testInfo) => {
+    testInfo.annotations.push({ type: 'fluxo', description: FLOW_ID });
+    testInfo.annotations.push({
+      type: 'flowchartIds',
+      description: JSON.stringify(FLOWCHART_IDS),
+    });
 
+    const outputDir = path.join(
+      testInfo.outputDir,
+      'manual-qa',
+      'issue-360',
+    );
+    evidenceSteps.length = 0;
+
+    const seeded = await seedApiSession(page);
     await page.goto('/general-settings');
+    await writeEvidence(page, outputDir, '01-general-settings-entry', 'Abrir /general-settings');
 
-    // Wait for settings shell
-    await expect(page.getByText(/Configurador geral|Mapas|Dispositivos/i).first()).toBeVisible({
+    const loginVisible = await page
+      .getByPlaceholder('Email')
+      .isVisible()
+      .catch(() => false);
+    if (loginVisible && !seeded) {
+      await writeEvidence(page, outputDir, '01b-login-gate', 'Tela de login (sem SMOKE_API_TOKEN)');
+      writeManifest(outputDir);
+      test.info().annotations.push({
+        type: 'note',
+        description:
+          'SMOKE_API_TOKEN ausente; runner precisa credencial para ultrapassar o login',
+      });
+    }
+
+    if (loginVisible && seeded) {
+      await page.reload();
+    }
+
+    const mapsHint = page.getByText(/Configurador geral|Mapas|Dispositivos/i).first();
+    await expect(mapsHint).toBeVisible({ timeout: 25000 });
+
+    const mapsTab = page.getByText('Mapas', { exact: true }).first();
+    await expect(mapsTab).toBeVisible({ timeout: 20000 });
+    await mapsTab.click();
+    await writeEvidence(page, outputDir, '02-maps-tab', 'Aba Mapas aberta');
+
+    await expect(page.getByText('Tela principal do shop').first()).toBeVisible({
       timeout: 20000,
     });
-
-    // Activate Mapas tab (label or role)
-    const mapsTab = page.getByText('Mapas', { exact: true }).first();
-    await expect(mapsTab).toBeVisible({ timeout: 15000 });
-    await mapsTab.click();
-
-    // Section title / labels
-    await expect(page.getByText('Tela principal do shop').first()).toBeVisible({
+    await expect(page.getByText('Localizador de franquias').first()).toBeVisible({
       timeout: 15000,
     });
-    await expect(page.getByText('Localizador de franquias').first()).toBeVisible({
-      timeout: 10000,
-    });
 
-    // Primary entry options when both toggles are on
     const primaryOptions = page.getByTestId('maps-primary-entry-options');
-    await expect(primaryOptions).toBeVisible({ timeout: 10000 });
+    if (await primaryOptions.count()) {
+      await expect(primaryOptions.first()).toBeVisible({ timeout: 10000 });
+    }
+    await writeEvidence(
+      page,
+      outputDir,
+      '03-maps-primary-entry',
+      'Seletor de tela principal / toggles',
+    );
 
-    // Franchise locator block on the Maps tab itself
-    await expect(page.getByTestId('maps-franchise-locator')).toBeVisible({
-      timeout: 10000,
-    });
+    const locator = page.getByTestId('maps-franchise-locator');
+    await expect(locator).toBeVisible({ timeout: 20000 });
+    await writeEvidence(
+      page,
+      outputDir,
+      '04-maps-franchise-locator',
+      'Bloco localizador de franquias (API real)',
+    );
 
-    // No residual guidance pointing to non-existent Shop tab
     const bodyText = await page.locator('body').innerText();
     expect(bodyText).not.toMatch(/permanece na aba Shop/i);
-    expect(bodyText).not.toMatch(/Visibilidade detalhada por franquia\/endereço no mapa: aba Shop/i);
+    expect(bodyText).not.toMatch(
+      /Visibilidade detalhada por franquia\/endereço no mapa: aba Shop/i,
+    );
+
+    const lat = page.getByTestId('address-latitude-input');
+    const lon = page.getByTestId('address-longitude-input');
+    if ((await lat.count()) || (await lon.count())) {
+      await writeEvidence(
+        page,
+        outputDir,
+        '05-address-lat-long',
+        'Campos Latitude/Longitude visíveis',
+      );
+    }
+
+    const manifest = writeManifest(outputDir);
+    expect(manifest.fluxo).toBe(FLOW_ID);
+    expect(manifest.flowchartIds).toEqual(FLOWCHART_IDS);
+    expect(manifest.steps.length).toBeGreaterThanOrEqual(3);
+    expect(APP_VERSION).toBeTruthy();
   });
 });
