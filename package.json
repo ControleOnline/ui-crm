@@ -9,7 +9,7 @@
     "test": "npm run test:client-details-navigation && npm run test:client-seller-visibility && npm run test:crm-empty-state && npm run test:opportunity-status-filter && npm run test:general-settings && npm run test:opportunity-editor-references && npm run test:royalties-payable && npm run test:royalties-receivable && npm run test:income-statements && npm run test:seller-commissions && npm run test:proposal-product-selection && npm run test:proposal-products-navigation && npm run test:shop-franchise-visibility && npm run test:marketing-events",
     "test:crm-empty-state": "node --test src/tests/react/utils/opportunityEmptyState.test.js",
     "test:opportunity-status-filter": "node --test src/tests/react/utils/opportunityStatusFilter.test.cjs",
-    "test:general-settings": "node --test src/tests/react/pages/settings/generalSettings.shared.test.js",
+    "test:general-settings": "node --test src/tests/react/pages/settings/generalSettings.shared.test.js && node --test src/tests/react/pages/settings/sections/mapsSectionHelpers.test.js",
     "test:opportunity-editor-references": "node --test src/tests/react/utils/opportunityEditorReferences.test.js",
     "test:royalties-payable": "node --test src/tests/react/utils/royaltiesPayableParams.test.js",
     "test:royalties-receivable": "node --test src/tests/react/pages/royalties/royaltiesReceivableHelpers.test.js",
