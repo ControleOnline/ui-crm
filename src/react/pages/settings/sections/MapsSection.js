@@ -55,136 +55,15 @@ import {
   resolveAddressLabel,
   resolveCompanyLabel,
 } from './shop/shopSettingsShared';
-
-const PRIMARY_ENTRY_LABELS = {
-  [SHOP_HOME_OPTION_SALES]: 'Vitrine do shop',
-  [SHOP_HOME_OPTION_FRANCHISE_LOCATOR]: 'Mapa das franquias',
-};
-
-const parseCoord = value => {
-  if (value === null || value === undefined || value === '') {
-    return null;
-  }
-  const n = Number(value);
-  if (!Number.isFinite(n) || Math.abs(n) < 0.000001) {
-    return null;
-  }
-  return n;
-};
-
-const resolveAddressCoords = address => {
-  const lat = parseCoord(
-    address?.latitude ??
-      address?.lat ??
-      address?.map?.latitude ??
-      address?.map?.lat ??
-      address?.geo?.latitude,
-  );
-  const lng = parseCoord(
-    address?.longitude ??
-      address?.lng ??
-      address?.lon ??
-      address?.map?.longitude ??
-      address?.map?.lng ??
-      address?.map?.lon ??
-      address?.geo?.longitude,
-  );
-  if (lat === null || lng === null) {
-    return null;
-  }
-  return {lat, lng};
-};
-
-const buildStaticMapUrl = ({apiKey, markers, size = '640x320'}) => {
-  if (!apiKey || !Array.isArray(markers) || markers.length === 0) {
-    return null;
-  }
-  const markerParams = markers
-    .slice(0, 40)
-    .map(
-      m =>
-        `markers=color:red%7C${encodeURIComponent(`${m.lat},${m.lng}`)}`,
-    )
-    .join('&');
-  const center = markers[0];
-  return `https://maps.googleapis.com/maps/api/staticmap?size=${size}&maptype=roadmap&center=${center.lat},${center.lng}&zoom=${markers.length === 1 ? 14 : 11}&${markerParams}&key=${encodeURIComponent(apiKey)}`;
-};
-
-/** Fallback without Google key — OpenStreetMap static (multi-marker). */
-const buildOsmStaticMapUrl = (markers, size = '640x320') => {
-  if (!Array.isArray(markers) || markers.length === 0) {
-    return null;
-  }
-  const center = markers[0];
-  const zoom = markers.length === 1 ? 14 : 11;
-  const markerParams = markers
-    .slice(0, 40)
-    .map(m => `markers=${m.lat},${m.lng},red-pushpin`)
-    .join('&');
-  return `https://staticmap.openstreetmap.de/staticmap.php?center=${center.lat},${center.lng}&zoom=${zoom}&size=${size}&maptype=mapnik&${markerParams}`;
-};
-
-/** Interactive Leaflet map HTML for web iframe (no API key). */
-const buildLeafletMapHtml = markers => {
-  if (!Array.isArray(markers) || markers.length === 0) {
-    return '';
-  }
-  const points = markers.slice(0, 40).map(m => ({
-    lat: Number(m.lat),
-    lng: Number(m.lng),
-    label: String(m.companyLabel || m.label || 'Franquia'),
-  }));
-  const center = points[0];
-  const markersJs = points
-    .map(
-      p =>
-        `L.marker([${p.lat}, ${p.lng}]).addTo(map).bindPopup(${JSON.stringify(
-          p.label,
-        )});`,
-    )
-    .join('\n');
-  const fitJs =
-    points.length > 1
-      ? `map.fitBounds([${points
-          .map(p => `[${p.lat}, ${p.lng}]`)
-          .join(', ')}], {padding: [28, 28]});`
-      : '';
-  return `<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<style>
-html,body{margin:0;padding:0;height:100%;width:100%;overflow:hidden;}
-#map{position:absolute;inset:0;width:100%;height:100%;}
-.leaflet-container{width:100%!important;height:100%!important;font:12px/1.4 system-ui,sans-serif;}
-</style>
-</head>
-<body style="position:relative;width:100%;height:100%;">
-<div id="map"></div>
-<script>
-var map = L.map('map').setView([${center.lat}, ${center.lng}], ${points.length === 1 ? 14 : 11});
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  maxZoom: 19,
-  attribution: '&copy; OpenStreetMap'
-}).addTo(map);
-${markersJs}
-${fitJs}
-function resizeMap(){ map.invalidateSize(true); }
-setTimeout(resizeMap, 0);
-setTimeout(resizeMap, 100);
-setTimeout(resizeMap, 400);
-window.addEventListener('resize', resizeMap);
-if (typeof ResizeObserver !== 'undefined') {
-  new ResizeObserver(resizeMap).observe(document.getElementById('map'));
-}
-</script>
-</body>
-</html>`;
-};
-
+import {
+  PRIMARY_ENTRY_LABELS,
+  resolveAddressCoords,
+  buildStaticMapUrl,
+  buildOsmStaticMapUrl,
+  buildLeafletMapHtml,
+} from './mapsSectionHelpers';
+import MapsMapasControls from './MapsMapasControls';
+import MapsFranchisePreview from './MapsFranchisePreview';
 
 const MapsSection = () => {
   const {globalStyles} = css();
@@ -522,228 +401,26 @@ const MapsSection = () => {
       iconBackgroundColor={themePalette.cardIconBackground}
       iconColor={themePalette.cardIconColor}
       title="Mapas">
-      <View style={localStyles.fieldBlock}>
-        <Text style={localStyles.fieldLabel}>Chave do Google Maps Web</Text>
-        <Text style={localStyles.helperText}>
-          Usada no display web e no mapa de franquias do shop.
-        </Text>
-        <TextInput
-          value={webGoogleMapsApiKey}
-          onChangeText={setWebGoogleMapsApiKey}
-          onBlur={saveMapsSettings}
-          autoCapitalize="none"
-          autoCorrect={false}
-          placeholder="Cole a chave do Google Maps para web"
-          placeholderTextColor={themePalette.inputPlaceholderText}
-          style={localStyles.input}
-        />
-      </View>
-
-      <View style={localStyles.fieldBlock}>
-        <Text style={localStyles.fieldLabel}>Chave do Google Maps Android</Text>
-        <Text style={localStyles.helperText}>
-          Reserve para fluxos nativos. O display de entregas no Android usa a
-          chave web (WebView).
-        </Text>
-        <TextInput
-          value={androidGoogleMapsApiKey}
-          onChangeText={setAndroidGoogleMapsApiKey}
-          onBlur={saveMapsSettings}
-          autoCapitalize="none"
-          autoCorrect={false}
-          placeholder="Cole a chave do Google Maps para Android"
-          placeholderTextColor={themePalette.inputPlaceholderText}
-          style={localStyles.input}
-        />
-      </View>
-
-      <View style={localStyles.settingRow}>
-        <View style={localStyles.settingCopy}>
-          <Text style={localStyles.statusLabel}>Vitrine do shop</Text>
-          <Text style={localStyles.settingDescription}>
-            Ativa a vitrine principal (categorias/produtos) como entrada do
-            app_type=shop.
-          </Text>
-        </View>
-        <TouchableOpacity
-          style={[
-            localStyles.statusChip,
-            salesPageEnabled
-              ? localStyles.statusChipEnabled
-              : localStyles.statusChipDisabled,
-          ]}
-          activeOpacity={0.85}
-          onPress={toggleSalesPage}>
-          <Icon
-            name={salesPageEnabled ? 'check-circle' : 'block'}
-            size={16}
-            color={
-              salesPageEnabled
-                ? themePalette.badgeSelectedText
-                : themePalette.badgeDisabledText
-            }
-          />
-          <Text
-            style={[
-              localStyles.statusChipText,
-              {
-                color: salesPageEnabled
-                  ? themePalette.badgeSelectedText
-                  : themePalette.badgeDisabledText,
-              },
-            ]}>
-            {salesPageEnabled ? 'Ativado' : 'Desativado'}
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={localStyles.settingRow}>
-        <View style={localStyles.settingCopy}>
-          <Text style={localStyles.statusLabel}>Localizador de franquias</Text>
-          <Text style={localStyles.settingDescription}>
-            Ativa o mapa das franquias como entrada do app_type=shop.
-          </Text>
-        </View>
-        <TouchableOpacity
-          style={[
-            localStyles.statusChip,
-            franchiseLocatorEnabled
-              ? localStyles.statusChipEnabled
-              : localStyles.statusChipDisabled,
-          ]}
-          activeOpacity={0.85}
-          onPress={toggleFranchiseLocator}>
-          <Icon
-            name={franchiseLocatorEnabled ? 'check-circle' : 'block'}
-            size={16}
-            color={
-              franchiseLocatorEnabled
-                ? themePalette.badgeSelectedText
-                : themePalette.badgeDisabledText
-            }
-          />
-          <Text
-            style={[
-              localStyles.statusChipText,
-              {
-                color: franchiseLocatorEnabled
-                  ? themePalette.badgeSelectedText
-                  : themePalette.badgeDisabledText,
-              },
-            ]}>
-            {franchiseLocatorEnabled ? 'Ativado' : 'Desativado'}
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={localStyles.fieldBlock}>
-        <Text style={localStyles.fieldLabel}>Tela principal do shop</Text>
-        <Text style={localStyles.helperText}>
-          {primaryEntryOptions.length === 0
-            ? 'Ative a vitrine e/ou o localizador acima para escolher a entrada principal.'
-            : primaryEntryOptions.length === 1
-              ? 'Apenas uma entrada está ativa — ela é usada automaticamente.'
-              : 'Escolha qual entrada o app_type=shop abre primeiro: mapa das franquias ou vitrine.'}
-        </Text>
-        {primaryEntryOptions.length > 0 && (
-          <View
-            style={{
-              flexDirection: 'row',
-              flexWrap: 'wrap',
-              gap: 8,
-              marginTop: 8,
-            }}>
-            {primaryEntryOptions.map(option => {
-              const selected = primaryEntry === option.value;
-              const locked = primaryEntryOptions.length === 1;
-              return (
-                <TouchableOpacity
-                  key={option.value}
-                  style={[
-                    localStyles.statusChip,
-                    selected
-                      ? localStyles.statusChipEnabled
-                      : localStyles.statusChipDisabled,
-                  ]}
-                  activeOpacity={locked ? 1 : 0.85}
-                  onPress={() => selectPrimaryEntry(option.value)}
-                  disabled={locked}>
-                  <Icon
-                    name={
-                      option.value === SHOP_HOME_OPTION_FRANCHISE_LOCATOR
-                        ? 'map'
-                        : 'storefront'
-                    }
-                    size={16}
-                    color={
-                      selected
-                        ? themePalette.badgeSelectedText
-                        : themePalette.badgeDisabledText
-                    }
-                  />
-                  <Text
-                    style={[
-                      localStyles.statusChipText,
-                      {
-                        color: selected
-                          ? themePalette.badgeSelectedText
-                          : themePalette.badgeDisabledText,
-                      },
-                    ]}>
-                    {option.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        )}
-      </View>
-
-      <View style={localStyles.fieldBlock}>
-        <Text style={localStyles.fieldLabel}>
-          Categorias de endereços no mapa de franquias
-        </Text>
-        {isLoadingCategories ? (
-          <ActivityIndicator size={22} color={themePalette.primary} />
-        ) : franchiseAddressCategories.length === 0 ? (
-          <Text style={localStyles.helperText}>
-            Nenhuma categoria de endereço encontrada.
-          </Text>
-        ) : (
-          <View>
-            {franchiseAddressCategories.map(category => {
-              const categoryId = String(category?.id || category?.['@id'] || '')
-                .replace(/\D+/g, '')
-                .trim();
-              const selected = franchiseAddressCategoryIds.includes(categoryId);
-
-              return (
-                <TouchableOpacity
-                  activeOpacity={0.85}
-                  key={category?.['@id'] || category?.id}
-                  onPress={() => toggleFranchiseAddressCategory(category)}
-                  style={[
-                    localStyles.franchiseAddressOption,
-                    selected && localStyles.franchiseAddressOptionActive,
-                  ]}>
-                  <View style={localStyles.franchiseAddressOptionCopy}>
-                    <Text style={localStyles.franchiseAddressName}>
-                      {category?.name || `Categoria #${categoryId}`}
-                    </Text>
-                  </View>
-                  <Icon
-                    name={selected ? 'check-box' : 'check-box-outline-blank'}
-                    size={22}
-                    color={
-                      selected ? themePalette.primary : themePalette.textMuted
-                    }
-                  />
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        )}
-      </View>
+      <MapsMapasControls
+        androidGoogleMapsApiKey={androidGoogleMapsApiKey}
+        franchiseAddressCategories={franchiseAddressCategories}
+        franchiseAddressCategoryIds={franchiseAddressCategoryIds}
+        franchiseLocatorEnabled={franchiseLocatorEnabled}
+        isLoadingCategories={isLoadingCategories}
+        localStyles={localStyles}
+        primaryEntry={primaryEntry}
+        primaryEntryOptions={primaryEntryOptions}
+        salesPageEnabled={salesPageEnabled}
+        saveMapsSettings={saveMapsSettings}
+        selectPrimaryEntry={selectPrimaryEntry}
+        setAndroidGoogleMapsApiKey={setAndroidGoogleMapsApiKey}
+        setWebGoogleMapsApiKey={setWebGoogleMapsApiKey}
+        themePalette={themePalette}
+        toggleFranchiseAddressCategory={toggleFranchiseAddressCategory}
+        toggleFranchiseLocator={toggleFranchiseLocator}
+        toggleSalesPage={toggleSalesPage}
+        webGoogleMapsApiKey={webGoogleMapsApiKey}
+      />
 
       {franchiseLocatorEnabled ? (
         <>
@@ -756,87 +433,17 @@ const MapsSection = () => {
             globalStyles={globalStyles}
           />
 
-          <View
-            style={[localStyles.fieldBlock, {alignSelf: 'stretch', width: '100%'}]}
-            testID="maps-franchise-map">
-            <Text style={localStyles.fieldLabel}>Mapa das franquias</Text>
-            <Text style={localStyles.helperText}>
-              Pins das franquias marcadas acima (com latitude/longitude).
-            </Text>
-            {isLoadingFranchiseDirectory ? (
-              <ActivityIndicator
-                size="small"
-                color={themePalette.loadingSpinner || themePalette.primary}
-                style={localStyles.sectionLoader}
-              />
-            ) : mapMarkers.length === 0 ? (
-              <View style={localStyles.emptyBox}>
-                <Text style={localStyles.emptyTitle}>
-                  Nenhum pin para exibir
-                </Text>
-                <Text style={localStyles.emptyText}>
-                  Marque franquias com latitude/longitude na lista acima para
-                  aparecerem no mapa.
-                </Text>
-              </View>
-            ) : (
-              <View style={{alignSelf: 'stretch', width: '100%'}}>
-                <View
-                  onLayout={event => {
-                    const nextWidth = Math.round(
-                      event?.nativeEvent?.layout?.width || 0,
-                    );
-                    if (nextWidth > 0 && nextWidth !== mapBoxWidth) {
-                      setMapBoxWidth(nextWidth);
-                    }
-                  }}
-                  style={{
-                    alignSelf: 'stretch',
-                    width: '100%',
-                    height: 360,
-                    borderRadius: 8,
-                    overflow: 'hidden',
-                    backgroundColor: themePalette.inputBackground || '#eee',
-                  }}>
-                  {Platform.OS === 'web' && leafletMapHtml && mapBoxWidth > 0
-                    ? createElement('iframe', {
-                        key: `franchise-map-${mapBoxWidth}-${mapMarkers.length}`,
-                        title: 'Mapa das franquias',
-                        srcDoc: leafletMapHtml,
-                        width: mapBoxWidth,
-                        height: 360,
-                        style: {
-                          width: mapBoxWidth,
-                          height: 360,
-                          border: 'none',
-                          display: 'block',
-                          margin: 0,
-                          padding: 0,
-                        },
-                      })
-                    : previewMapUrl
-                      ? (
-                          <Image
-                            source={{uri: previewMapUrl}}
-                            style={{
-                              width: '100%',
-                              height: 360,
-                            }}
-                            resizeMode="cover"
-                            accessibilityLabel="Mapa das franquias com pins"
-                          />
-                        )
-                      : null}
-                </View>
-                <Text style={localStyles.helperText}>
-                  {mapMarkers.length} pin(s) no mapa
-                  {visibleFranchiseCompanyIds.length > 0
-                    ? ` · ${visibleFranchiseCompanyIds.length} franquia(s) selecionada(s)`
-                    : ''}
-                </Text>
-              </View>
-            )}
-          </View>
+          <MapsFranchisePreview
+            isLoadingFranchiseDirectory={isLoadingFranchiseDirectory}
+            leafletMapHtml={leafletMapHtml}
+            localStyles={localStyles}
+            mapBoxWidth={mapBoxWidth}
+            mapMarkers={mapMarkers}
+            previewMapUrl={previewMapUrl}
+            setMapBoxWidth={setMapBoxWidth}
+            themePalette={themePalette}
+            visibleFranchiseCompanyIds={visibleFranchiseCompanyIds}
+          />
         </>
       ) : null}
     </GeneralSettingsSection>
