@@ -1,3 +1,4 @@
+// fluxo: vendedor-cadastro | etapa: seller-routes | wiki: https://github.com/ControleOnline/app-community/wiki/Venda-Producao
 import Comissions from '@controleonline/ui-crm/src/react/pages/comissions';
 import SellerCommissionsPage from '@controleonline/ui-crm/src/react/pages/comissions/SellerCommissionsPage';
 import RoyaltiesPayablePage from '@controleonline/ui-crm/src/react/pages/royalties/RoyaltiesPayablePage';

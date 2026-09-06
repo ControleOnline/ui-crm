@@ -1,3 +1,4 @@
+// fluxo: vendedor-cadastro | etapa: seller-operation-and-commission | wiki: https://github.com/ControleOnline/app-community/wiki/Venda-Producao
 /*
  * Seller commissions view — invoices tipo `comission`.
  * O vendedor recebe da empresa (resumo mensal). Não misturar com royalties.

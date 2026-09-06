@@ -1,3 +1,4 @@
+// fluxo: vendedor-cadastro | etapa: seller-commission | wiki: https://github.com/ControleOnline/app-community/wiki/Venda-Producao
 /**
  * Smoke: Visão Vendedor — Minhas comissões (invoice tipo comission).
  * Runs inside app-community browser harness (playwright + API mock).
