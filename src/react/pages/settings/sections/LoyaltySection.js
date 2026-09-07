@@ -47,7 +47,7 @@ const LoyaltySection = () => {
   const {globalStyles} = css();
   const palette = useGeneralSettingsPalette();
   const styles = useGeneralSettingsStyles();
-  const {currentCompany, effectiveCompanyConfigs, saveConfig} =
+  const {currentCompany, effectiveCompanyConfigs, saveConfig, selectedCompanyId} =
     useGeneralSettingsConfig();
   const productActions = useStore('products').actions;
 
@@ -63,11 +63,11 @@ const LoyaltySection = () => {
   const [giftVisible, setGiftVisible] = useState(false);
 
   const participantsBrowser = useProductBrowser({
-    companyId: currentCompany?.id,
+    companyId: selectedCompanyId || currentCompany?.id,
     visible: participantsVisible,
   });
   const giftBrowser = useProductBrowser({
-    companyId: currentCompany?.id,
+    companyId: selectedCompanyId || currentCompany?.id,
     visible: giftVisible,
   });
 

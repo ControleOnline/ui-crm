@@ -486,5 +486,6 @@ export const useGeneralSettingsConfig = () => {
     saveConfig,
     saveConfigs,
     saveDefaultCompanyConfigs,
+    selectedCompanyId,
   };
 };
