@@ -130,6 +130,22 @@ const buildFranchiseCompaniesById = (directory = []) => {
   return map;
 };
 
+const resolveFranchiseMapAddress = (addresses = [], resolveCoordinates) => {
+  const list = Array.isArray(addresses) ? addresses : [];
+  const resolver = typeof resolveCoordinates === 'function'
+    ? resolveCoordinates
+    : () => ({latitude: null, longitude: null});
+  return list.find(address => {
+    const coordinates = resolver(address);
+    return (
+      coordinates?.latitude != null &&
+      coordinates?.longitude != null &&
+      Math.abs(Number(coordinates.latitude)) > 0.000001 &&
+      Math.abs(Number(coordinates.longitude)) > 0.000001
+    );
+  }) || list[0] || null;
+};
+
 module.exports = {
   buildFranchiseAddressesById,
   buildFranchiseCompaniesById,
@@ -137,5 +153,6 @@ module.exports = {
   normalizeVisibleFranchiseIds,
   parseConfigListValue,
   pruneFranchiseAddressIds,
+  resolveFranchiseMapAddress,
   resolveSelectedFranchiseCompanies,
 };
