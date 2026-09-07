@@ -26,6 +26,7 @@ import {
   buildFranchiseCompaniesById,
   normalizeVisibleFranchiseIds,
   pruneFranchiseAddressIds,
+  resolveFranchiseMapAddress,
   resolveSelectedFranchiseCompanies,
 } from './shopFranchiseVisibility';
 import {
@@ -204,7 +205,10 @@ const ShopFranchiseLocatorSection = ({
     const addresses = Array.isArray(company?.shopAddresses)
       ? company.shopAddresses
       : [];
-    const primary = addresses[0];
+    const primary = resolveFranchiseMapAddress(
+      addresses,
+      resolveFranchiseAddressCoords,
+    );
     if (!primary) {
       return false;
     }
@@ -378,7 +382,10 @@ const ShopFranchiseLocatorSection = ({
               const addresses = Array.isArray(company?.shopAddresses)
                 ? company.shopAddresses
                 : [];
-              const primaryAddress = addresses[0] || null;
+              const primaryAddress = resolveFranchiseMapAddress(
+                addresses,
+                resolveFranchiseAddressCoords,
+              );
               const coords = primaryAddress
                 ? resolveFranchiseAddressCoords(primaryAddress)
                 : {latitude: null, longitude: null};
