@@ -242,6 +242,8 @@ test.describe('general-settings maps (browser smoke #360)', () => {
     const source = fs.readFileSync(mapsPath, 'utf8');
     expect(source).not.toMatch(/aba Shop/i);
     expect(source).toMatch(/ShopFranchiseLocatorSection/);
+    expect(source).toMatch(/visibleFranchiseCompanyIds/);
+    expect(source).toMatch(/mapMarkers/);
   });
 
   test('open /general-settings → aba Mapas shows primary entry + franchise locator', async ({
@@ -275,6 +277,9 @@ test.describe('general-settings maps (browser smoke #360)', () => {
 
     // Franchise locator block on the Maps tab itself
     await expect(page.getByTestId('maps-franchise-locator')).toBeVisible({
+      timeout: 10000,
+    });
+    await expect(page.getByTestId('maps-franchise-map')).toBeVisible({
       timeout: 10000,
     });
 
