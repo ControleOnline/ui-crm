@@ -417,7 +417,7 @@ export const SelectionModal = ({
               styles.selectionModalActionButton,
             ]}
             onPress={onClose}>
-            <Text style={styles.primaryButtonText}>Concluir selecao</Text>
+            <Text style={styles.primaryButtonText}>Concluir seleção</Text>
           </TouchableOpacity>
         )}
       </View>
