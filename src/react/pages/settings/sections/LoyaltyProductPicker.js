@@ -1,23 +1,15 @@
 /*
  * @agents Shared product picker helpers for Loyalty (Fidelidade) settings.
+ * ProductSelectionModal reuses the canonical SelectionModal chrome from shop settings.
  */
 import React, {useEffect, useState} from 'react';
-import {
-  ActivityIndicator,
-  ScrollView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
-import Icon from 'react-native-vector-icons/MaterialIcons';
-import AnimatedModal from '@controleonline/ui-common/src/react/components/AnimatedModal';
-import {searchCompanyProducts} from '@controleonline/ui-common/src/react/utils/commercialDocumentOrders';
 import {normalizeShopProductId} from '@controleonline/ui-common/src/react/utils/shopConfig';
+import {searchCompanyProducts} from '@controleonline/ui-common/src/react/utils/commercialDocumentOrders';
 import {
   filterProductsByCompany,
   normalizeLoyaltyCompanyId,
 } from './loyaltyProductCompany';
+import {SelectionModal} from './shop/shopSettingsShared';
 
 export const resolveProductLabel = product => {
   const normalizedId = normalizeShopProductId(product);
@@ -119,139 +111,33 @@ export const ProductSelectionModal = ({
   palette,
   styles,
   globalStyles,
-}) => {
-  const selectedSet = selectedIds || new Set();
-  const selectedId = String(selectedItemId || '').trim();
-
-  return (
-    <AnimatedModal visible={visible} onRequestClose={onClose}>
-      <View style={styles.selectionModal}>
-        <View style={styles.selectionModalHeader}>
-          <View style={styles.selectionModalHeaderCopy}>
-            <Text style={styles.selectionModalTitle}>{title}</Text>
-            {helperText ? (
-              <Text style={styles.selectionModalSubtitle}>{helperText}</Text>
-            ) : null}
-          </View>
-          <TouchableOpacity
-            style={styles.selectionModalClose}
-            onPress={onClose}
-            activeOpacity={0.85}>
-            <Icon name="close" size={20} color={palette.iconDefault} />
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.selectorRow}>
-          <Icon
-            name="search"
-            size={18}
-            color={palette.iconMuted}
-            style={{marginRight: 8}}
-          />
-          <TextInput
-            value={browser.query}
-            onChangeText={browser.setQuery}
-            placeholder="Pesquisar produto..."
-            placeholderTextColor={palette.inputPlaceholderText}
-            style={[styles.input, styles.selectorInput, {flex: 1}]}
-            returnKeyType="search"
-          />
-        </View>
-
-        <ScrollView
-          style={styles.selectionModalList}
-          contentContainerStyle={styles.selectionModalListContent}
-          keyboardShouldPersistTaps="handled">
-          {browser.isLoading ? (
-            <ActivityIndicator
-              size="small"
-              color={palette.loadingSpinner}
-              style={styles.sectionLoader}
-            />
-          ) : browser.results.length === 0 ? (
-            <View style={styles.searchEmptyState}>
-              <Icon name="inventory-2" size={28} color={palette.iconMuted} />
-              <Text style={styles.searchEmptyStateTitle}>
-                Nenhum produto encontrado
-              </Text>
-              <Text style={styles.searchEmptyStateText}>
-                {String(browser.query || '').trim()
-                  ? 'Tente outro termo para localizar um produto existente.'
-                  : 'Nenhum item disponível apareceu para seleção.'}
-              </Text>
-            </View>
-          ) : (
-            browser.results.map(item => {
-              const itemId = normalizeShopProductId(item);
-              const selected = multiSelect
-                ? selectedSet.has(itemId)
-                : itemId === selectedId;
-
-              return (
-                <TouchableOpacity
-                  key={`loyalty-picker-${itemId}`}
-                  style={[
-                    styles.selectionModalItem,
-                    selected && styles.selectionModalItemActive,
-                  ]}
-                  activeOpacity={0.85}
-                  onPress={() => onSelect(item)}>
-                  <Icon
-                    name={
-                      selected
-                        ? multiSelect
-                          ? 'check-circle'
-                          : 'radio-button-checked'
-                        : multiSelect
-                          ? 'add-circle-outline'
-                          : 'radio-button-unchecked'
-                    }
-                    size={20}
-                    color={selected ? palette.iconActive : palette.iconDisabled}
-                  />
-                  <View style={styles.selectionModalItemCopy}>
-                    <Text style={styles.selectionModalItemTitle} numberOfLines={2}>
-                      {resolveProductLabel(item)}
-                    </Text>
-                    <Text style={styles.selectionModalItemMeta} numberOfLines={1}>
-                      {selected
-                        ? multiSelect
-                          ? 'Selecionado para participar da fidelidade'
-                          : 'Selecionado como brinde'
-                        : resolveProductMetaParts(item).metaLine ||
-                          resolveProductMetaParts(item).sku ||
-                          'Toque para selecionar'}
-                    </Text>
-                  </View>
-                  {!!resolveProductMetaParts(item).priceLabel && (
-                    <Text
-                      style={{
-                        fontSize: 13,
-                        fontWeight: '700',
-                        color: palette.iconSuccess || palette.success,
-                        marginLeft: 8,
-                      }}>
-                      {resolveProductMetaParts(item).priceLabel}
-                    </Text>
-                  )}
-                </TouchableOpacity>
-              );
-            })
-          )}
-        </ScrollView>
-
-        {multiSelect ? (
-          <TouchableOpacity
-            style={[
-              globalStyles.button,
-              styles.primaryButton,
-              styles.selectionModalActionButton,
-            ]}
-            onPress={onClose}>
-            <Text style={styles.primaryButtonText}>Concluir seleção</Text>
-          </TouchableOpacity>
-        ) : null}
-      </View>
-    </AnimatedModal>
-  );
-};
+}) => (
+  <SelectionModal
+    visible={visible}
+    title={title}
+    helperText={helperText}
+    browser={browser}
+    globalStyles={globalStyles}
+    onClose={onClose}
+    onSelect={onSelect}
+    selectedIds={selectedIds}
+    selectedItemId={selectedItemId}
+    multiSelect={multiSelect}
+    emptyIconName="inventory-2"
+    emptyTitle="Nenhum produto encontrado"
+    emptyText="Tente outro termo para localizar um produto existente."
+    resolveItemId={normalizeShopProductId}
+    resolveItemLabel={resolveProductLabel}
+    resolveItemMeta={product =>
+      resolveProductMeta(product) || 'Toque para selecionar'
+    }
+    searchPlaceholder="Pesquisar produto..."
+    selectionMeta={() =>
+      multiSelect
+        ? 'Selecionado para participar da fidelidade'
+        : 'Selecionado como brinde'
+    }
+    palette={palette}
+    styles={styles}
+  />
+);
