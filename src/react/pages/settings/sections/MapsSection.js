@@ -291,28 +291,6 @@ const MapsSection = () => {
     return markers;
   }, [franchiseDirectory, visibleFranchiseCompanyIds]);
 
-  const staticMapUrl = useMemo(
-    () =>
-      buildStaticMapUrl({
-        apiKey: webGoogleMapsApiKey,
-        markers: mapMarkers,
-        size: '1280x480',
-      }),
-    [mapMarkers, webGoogleMapsApiKey],
-  );
-
-  const osmStaticMapUrl = useMemo(
-    () => buildOsmStaticMapUrl(mapMarkers, '1280x480'),
-    [mapMarkers],
-  );
-
-  const leafletMapHtml = useMemo(
-    () => buildLeafletMapHtml(mapMarkers),
-    [mapMarkers],
-  );
-
-  const previewMapUrl = staticMapUrl || osmStaticMapUrl;
-
   const saveMapsSettings = useCallback(async () => {
     await saveConfigs({
       [GOOGLE_MAPS_WEB_API_KEY_CONFIG_KEY]: String(
