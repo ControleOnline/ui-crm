@@ -46,6 +46,7 @@ const ShopFranchiseLocatorSection = ({
   saveConfigs,
   themePalette,
   globalStyles,
+  onVisibilityChange,
 }) => {
   const navigation = useNavigation();
   const [visibleFranchiseCompanyIds, setVisibleFranchiseCompanyIds] = useState([]);
@@ -192,12 +193,15 @@ const ShopFranchiseLocatorSection = ({
     (nextCompanyIds, nextAddressIds) => {
       setVisibleFranchiseCompanyIds(nextCompanyIds);
       setVisibleFranchiseAddressIds(nextAddressIds);
+      if (typeof onVisibilityChange === 'function') {
+        onVisibilityChange(nextCompanyIds, nextAddressIds);
+      }
       return saveConfigs({
         [SHOP_FRANCHISE_VISIBLE_COMPANY_IDS_CONFIG_KEY]: nextCompanyIds,
         [SHOP_FRANCHISE_VISIBLE_ADDRESS_IDS_CONFIG_KEY]: nextAddressIds,
       });
     },
-    [saveConfigs],
+    [onVisibilityChange, saveConfigs],
   );
 
   const companyHasMapCoords = useCallback(company => {
@@ -302,7 +306,7 @@ const ShopFranchiseLocatorSection = ({
 
   return (
     <>
-      <View style={localStyles.fieldBlock}>
+      <View style={localStyles.fieldBlock} testID="maps-franchise-locator">
         <Text style={localStyles.fieldLabel}>Franquias exibidas no localizador</Text>
         <Text style={localStyles.helperText}>
           Selecione quais empresas vinculadas como franquia podem aparecer no mapa do shop.
