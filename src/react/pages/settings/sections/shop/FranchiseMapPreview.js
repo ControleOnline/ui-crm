@@ -1,7 +1,6 @@
 /*
  * Preview map (Leaflet iframe / static image) for selected franchise pins.
- * Full-bleed horizontal: map edges stick to the window content laterals.
- * Important: negative margin alone only shifts the box — width must grow by 2*bleed.
+ * Same content width as franchise cards above (section padding only — no bleed).
  */
 import React, {createElement, useState} from 'react';
 import {ActivityIndicator, Image, Platform, Text, View} from 'react-native';
@@ -11,11 +10,6 @@ import {
   buildStaticMapUrl,
 } from './mapsFranchiseMapHelpers';
 
-/** GeneralSettings.styles sectionCard.padding */
-const SECTION_CARD_PADDING = 18;
-/** ui-orders Settings.scrollContent.paddingHorizontal */
-const PAGE_CONTENT_PADDING = 20;
-const MAP_SIDE_BLEED = SECTION_CARD_PADDING + PAGE_CONTENT_PADDING;
 const MAP_HEIGHT = 360;
 
 const FranchiseMapPreview = ({
@@ -36,22 +30,6 @@ const FranchiseMapPreview = ({
   const osmStaticMapUrl = buildOsmStaticMapUrl(mapMarkers, '1280x480');
   const leafletMapHtml = buildLeafletMapHtml(mapMarkers);
   const previewMapUrl = staticMapUrl || osmStaticMapUrl;
-
-  // Grow width by 2*bleed AND pull left — margin alone only translates the box.
-  const bleedStyle =
-    Platform.OS === 'web'
-      ? {
-          alignSelf: 'stretch',
-          width: `calc(100% + ${MAP_SIDE_BLEED * 2}px)`,
-          marginLeft: -MAP_SIDE_BLEED,
-          marginRight: -MAP_SIDE_BLEED,
-          maxWidth: 'none',
-        }
-      : {
-          alignSelf: 'stretch',
-          width: '100%',
-          marginHorizontal: -MAP_SIDE_BLEED,
-        };
 
   return (
     <View
@@ -76,7 +54,7 @@ const FranchiseMapPreview = ({
           </Text>
         </View>
       ) : (
-        <View style={bleedStyle}>
+        <View style={{alignSelf: 'stretch', width: '100%'}}>
           <View
             onLayout={event => {
               const nextWidth = Math.round(
@@ -90,7 +68,7 @@ const FranchiseMapPreview = ({
               alignSelf: 'stretch',
               width: '100%',
               height: MAP_HEIGHT,
-              borderRadius: 0,
+              borderRadius: 8,
               overflow: 'hidden',
               backgroundColor: themePalette.inputBackground || '#eee',
             }}>
@@ -99,7 +77,7 @@ const FranchiseMapPreview = ({
                   key: `franchise-map-${mapBoxWidth}-${mapMarkers.length}`,
                   title: 'Mapa das franquias',
                   srcDoc: leafletMapHtml,
-                  width: '100%',
+                  width: mapBoxWidth,
                   height: MAP_HEIGHT,
                   style: {
                     width: '100%',
@@ -108,7 +86,7 @@ const FranchiseMapPreview = ({
                     display: 'block',
                     margin: 0,
                     padding: 0,
-                    maxWidth: '100%',
+                    boxSizing: 'border-box',
                   },
                 })
               : previewMapUrl
@@ -122,14 +100,7 @@ const FranchiseMapPreview = ({
                   )
                 : null}
           </View>
-          <Text
-            style={[
-              localStyles.helperText,
-              {
-                paddingHorizontal: MAP_SIDE_BLEED,
-                marginTop: 8,
-              },
-            ]}>
+          <Text style={localStyles.helperText}>
             {mapMarkers.length} pin(s) no mapa
             {visibleFranchiseCompanyIds.length > 0
               ? ` · ${visibleFranchiseCompanyIds.length} franquia(s) selecionada(s)`
