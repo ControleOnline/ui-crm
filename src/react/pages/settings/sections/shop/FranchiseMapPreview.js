@@ -1,7 +1,7 @@
 /*
  * Preview map (Leaflet iframe / static image) for selected franchise pins.
- * Full-bleed horizontal: map edges stick to the window content laterals
- * (cancels sectionCard padding 18 + Settings.scrollContent paddingHorizontal 20).
+ * Full-bleed horizontal: map edges stick to the window content laterals.
+ * Important: negative margin alone only shifts the box — width must grow by 2*bleed.
  */
 import React, {createElement, useState} from 'react';
 import {ActivityIndicator, Image, Platform, Text, View} from 'react-native';
@@ -37,12 +37,21 @@ const FranchiseMapPreview = ({
   const leafletMapHtml = buildLeafletMapHtml(mapMarkers);
   const previewMapUrl = staticMapUrl || osmStaticMapUrl;
 
-  const bleedStyle = {
-    alignSelf: 'stretch',
-    width: '100%',
-    marginHorizontal: -MAP_SIDE_BLEED,
-    maxWidth: 'none',
-  };
+  // Grow width by 2*bleed AND pull left — margin alone only translates the box.
+  const bleedStyle =
+    Platform.OS === 'web'
+      ? {
+          alignSelf: 'stretch',
+          width: `calc(100% + ${MAP_SIDE_BLEED * 2}px)`,
+          marginLeft: -MAP_SIDE_BLEED,
+          marginRight: -MAP_SIDE_BLEED,
+          maxWidth: 'none',
+        }
+      : {
+          alignSelf: 'stretch',
+          width: '100%',
+          marginHorizontal: -MAP_SIDE_BLEED,
+        };
 
   return (
     <View
