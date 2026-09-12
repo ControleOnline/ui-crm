@@ -65,8 +65,11 @@ const buildOsmStaticMapUrl = (markers, size = '640x320') => {
   return `https://staticmap.openstreetmap.de/staticmap.php?center=${center.lat},${center.lng}&zoom=${zoom}&size=${size}&maptype=mapnik&${markerParams}`;
 };
 
-/** Interactive Leaflet map HTML for web iframe (no API key). */
-const buildLeafletMapHtml = markers => {
+/** Interactive Leaflet map HTML for web iframe (no API key).
+ * Pass explicit width/height (px) so the map fills the iframe — % height
+ * often resolves to 0/wrong size inside srcDoc iframes.
+ */
+const buildLeafletMapHtml = (markers, {width = 0, height = 360} = {}) => {
   if (!Array.isArray(markers) || markers.length === 0) {
     return '';
   }
@@ -76,6 +79,12 @@ const buildLeafletMapHtml = markers => {
     label: String(m.companyLabel || m.label || 'Franquia'),
   }));
   const center = points[0];
+  const w = width > 0 ? Math.round(width) : 0;
+  const h = height > 0 ? Math.round(height) : 360;
+  const sizeCss =
+    w > 0
+      ? `html,body,#map{margin:0;padding:0;width:${w}px;height:${h}px;overflow:hidden;}`
+      : `html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;}#map{position:absolute;inset:0;width:100%;height:100%;}`;
   const markersJs = points
     .map(
       p =>
@@ -94,32 +103,41 @@ const buildLeafletMapHtml = markers => {
 <html>
 <head>
 <meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
-html,body{margin:0;padding:0;height:100%;width:100%;overflow:hidden;}
-#map{position:absolute;inset:0;width:100%;height:100%;}
+${sizeCss}
 .leaflet-container{width:100%!important;height:100%!important;font:12px/1.4 system-ui,sans-serif;}
 </style>
 </head>
-<body style="position:relative;width:100%;height:100%;">
+<body>
 <div id="map"></div>
 <script>
-var map = L.map('map').setView([${center.lat}, ${center.lng}], ${points.length === 1 ? 14 : 11});
+var map = L.map('map', {preferCanvas: false}).setView([${center.lat}, ${center.lng}], ${points.length === 1 ? 14 : 11});
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   maxZoom: 19,
   attribution: '&copy; OpenStreetMap'
 }).addTo(map);
 ${markersJs}
 ${fitJs}
-function resizeMap(){ map.invalidateSize(true); }
+function resizeMap(){
+  try {
+    var el = document.getElementById('map');
+    if (el && ${w} > 0) {
+      el.style.width = '${w}px';
+      el.style.height = '${h}px';
+    }
+    map.invalidateSize(true);
+  } catch (e) {}
+}
 setTimeout(resizeMap, 0);
-setTimeout(resizeMap, 100);
-setTimeout(resizeMap, 400);
+setTimeout(resizeMap, 50);
+setTimeout(resizeMap, 200);
+setTimeout(resizeMap, 500);
 window.addEventListener('resize', resizeMap);
 if (typeof ResizeObserver !== 'undefined') {
-  new ResizeObserver(resizeMap).observe(document.getElementById('map'));
+  new ResizeObserver(resizeMap).observe(document.body);
 }
 </script>
 </body>

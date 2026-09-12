@@ -1,6 +1,7 @@
 /*
  * Preview map (Leaflet iframe / static image) for selected franchise pins.
- * Same content width as franchise cards above (section padding only — no bleed).
+ * Outer box = full content width; Leaflet HTML gets explicit px size so the
+ * map fills the iframe (srcDoc % height often leaves empty space on the right).
  */
 import React, {createElement, useState} from 'react';
 import {ActivityIndicator, Image, Platform, Text, View} from 'react-native';
@@ -28,7 +29,13 @@ const FranchiseMapPreview = ({
     size: '1280x480',
   });
   const osmStaticMapUrl = buildOsmStaticMapUrl(mapMarkers, '1280x480');
-  const leafletMapHtml = buildLeafletMapHtml(mapMarkers);
+  const leafletMapHtml =
+    mapBoxWidth > 0
+      ? buildLeafletMapHtml(mapMarkers, {
+          width: mapBoxWidth,
+          height: MAP_HEIGHT,
+        })
+      : '';
   const previewMapUrl = staticMapUrl || osmStaticMapUrl;
 
   return (
@@ -80,13 +87,13 @@ const FranchiseMapPreview = ({
                   width: mapBoxWidth,
                   height: MAP_HEIGHT,
                   style: {
-                    width: '100%',
+                    width: mapBoxWidth,
                     height: MAP_HEIGHT,
                     border: 'none',
                     display: 'block',
                     margin: 0,
                     padding: 0,
-                    boxSizing: 'border-box',
+                    maxWidth: '100%',
                   },
                 })
               : previewMapUrl
