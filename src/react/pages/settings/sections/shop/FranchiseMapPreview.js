@@ -1,5 +1,7 @@
 /*
  * Preview map (Leaflet iframe / static image) for selected franchise pins.
+ * Full-bleed horizontal: map edges stick to the window content laterals
+ * (cancels sectionCard padding 18 + Settings.scrollContent paddingHorizontal 20).
  */
 import React, {createElement, useState} from 'react';
 import {ActivityIndicator, Image, Platform, Text, View} from 'react-native';
@@ -8,6 +10,13 @@ import {
   buildOsmStaticMapUrl,
   buildStaticMapUrl,
 } from './mapsFranchiseMapHelpers';
+
+/** GeneralSettings.styles sectionCard.padding */
+const SECTION_CARD_PADDING = 18;
+/** ui-orders Settings.scrollContent.paddingHorizontal */
+const PAGE_CONTENT_PADDING = 20;
+const MAP_SIDE_BLEED = SECTION_CARD_PADDING + PAGE_CONTENT_PADDING;
+const MAP_HEIGHT = 360;
 
 const FranchiseMapPreview = ({
   isLoading,
@@ -27,6 +36,13 @@ const FranchiseMapPreview = ({
   const osmStaticMapUrl = buildOsmStaticMapUrl(mapMarkers, '1280x480');
   const leafletMapHtml = buildLeafletMapHtml(mapMarkers);
   const previewMapUrl = staticMapUrl || osmStaticMapUrl;
+
+  const bleedStyle = {
+    alignSelf: 'stretch',
+    width: '100%',
+    marginHorizontal: -MAP_SIDE_BLEED,
+    maxWidth: 'none',
+  };
 
   return (
     <View
@@ -51,7 +67,7 @@ const FranchiseMapPreview = ({
           </Text>
         </View>
       ) : (
-        <View style={{alignSelf: 'stretch', width: '100%'}}>
+        <View style={bleedStyle}>
           <View
             onLayout={event => {
               const nextWidth = Math.round(
@@ -64,8 +80,8 @@ const FranchiseMapPreview = ({
             style={{
               alignSelf: 'stretch',
               width: '100%',
-              height: 360,
-              borderRadius: 8,
+              height: MAP_HEIGHT,
+              borderRadius: 0,
               overflow: 'hidden',
               backgroundColor: themePalette.inputBackground || '#eee',
             }}>
@@ -74,29 +90,37 @@ const FranchiseMapPreview = ({
                   key: `franchise-map-${mapBoxWidth}-${mapMarkers.length}`,
                   title: 'Mapa das franquias',
                   srcDoc: leafletMapHtml,
-                  width: mapBoxWidth,
-                  height: 360,
+                  width: '100%',
+                  height: MAP_HEIGHT,
                   style: {
-                    width: mapBoxWidth,
-                    height: 360,
+                    width: '100%',
+                    height: MAP_HEIGHT,
                     border: 'none',
                     display: 'block',
                     margin: 0,
                     padding: 0,
+                    maxWidth: '100%',
                   },
                 })
               : previewMapUrl
                 ? (
                     <Image
                       source={{uri: previewMapUrl}}
-                      style={{width: '100%', height: 360}}
+                      style={{width: '100%', height: MAP_HEIGHT}}
                       resizeMode="cover"
                       accessibilityLabel="Mapa das franquias com pins"
                     />
                   )
                 : null}
           </View>
-          <Text style={localStyles.helperText}>
+          <Text
+            style={[
+              localStyles.helperText,
+              {
+                paddingHorizontal: MAP_SIDE_BLEED,
+                marginTop: 8,
+              },
+            ]}>
             {mapMarkers.length} pin(s) no mapa
             {visibleFranchiseCompanyIds.length > 0
               ? ` · ${visibleFranchiseCompanyIds.length} franquia(s) selecionada(s)`
