@@ -217,7 +217,7 @@ const mockGeneralSettingsApi = async page => {
           id: 360,
           active: true,
           type: 'MANAGER',
-          people: '/people/3',
+          people: 3,
           api_key: 'smoke-token-360',
           name: 'Manager Smoke',
         }),
