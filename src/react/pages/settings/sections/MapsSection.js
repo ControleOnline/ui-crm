@@ -1,4 +1,6 @@
 /*
+ * fluxo: manager-general-settings-maps | etapa: maps-settings
+ * wikiPage: https://github.com/ControleOnline/app-community/wiki/Smoke-Test-Flows
  * @agents This section controls map keys, shop primary entry (mapa vs vitrine),
  * franchise-locator enablement, franchise address categories, franchise list
  * with visibility checkboxes and preview map pins for app_type=shop.

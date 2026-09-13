@@ -1,4 +1,6 @@
 /*
+ * fluxo: manager-general-settings-maps | etapa: franchise-locator
+ * wikiPage: https://github.com/ControleOnline/app-community/wiki/Smoke-Test-Flows
  * @agents Franchise locator visibility (companies + addresses) for shop general settings.
  * Persist only on explicit user toggles — never auto-save prunes after refresh.
  */
