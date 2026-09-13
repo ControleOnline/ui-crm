@@ -366,7 +366,7 @@ const MapsSection = () => {
       iconBackgroundColor={themePalette.cardIconBackground}
       iconColor={themePalette.cardIconColor}
       title="Mapas">
-      <View style={localStyles.fieldBlock}>
+      <View style={localStyles.fieldBlock} testID="maps-primary-entry-options">
         <Text style={localStyles.fieldLabel}>Chave do Google Maps Web</Text>
         <Text style={localStyles.helperText}>
           Usada no display web e no mapa de franquias do shop.
@@ -449,6 +449,7 @@ const MapsSection = () => {
           </Text>
         </View>
         <TouchableOpacity
+          testID="maps-franchise-locator-toggle"
           style={[
             localStyles.statusChip,
             franchiseLocatorEnabled

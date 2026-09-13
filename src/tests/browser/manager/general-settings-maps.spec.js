@@ -89,7 +89,7 @@ const MODULES_MAX_500 = [
 ];
 
 const mockGeneralSettingsApi = async page => {
-  await page.route(`${API_ORIGIN}/**`, async route => {
+  await page.route(/https:\/\/(?:api|s)\.controleonline\.com\/.*/, async route => {
     const request = route.request();
     const url = new URL(request.url());
     const pathname = url.pathname.replace(/^\/+/, '');
@@ -115,13 +115,15 @@ const mockGeneralSettingsApi = async page => {
       });
     }
 
-    if (pathname === 'token') {
+    if (pathname === 'token' || pathname === 'token/') {
       return route.fulfill({
         status: 200,
         headers: jsonHeaders(),
         body: JSON.stringify({
           id: 360,
-          active: true,
+          // Keep the fixture identical to the API contract used by the
+          // production token response and the auth store's numeric checks.
+          active: 1,
           type: 'MANAGER',
           people: 3,
           api_key: 'smoke-token-360',
@@ -166,6 +168,22 @@ const mockGeneralSettingsApi = async page => {
         status: 200,
         headers: jsonHeaders(),
         body: JSON.stringify(collection([franchiseCompany])),
+      });
+    }
+
+    if (pathname === 'people_links' || pathname.startsWith('people_links')) {
+      return route.fulfill({
+        status: 200,
+        headers: jsonHeaders(),
+        body: JSON.stringify(
+          collection([
+            {
+              company: '/people/3',
+              people: franchiseCompany,
+              linkType: 'franchisee',
+            },
+          ]),
+        ),
       });
     }
 
@@ -229,7 +247,7 @@ const mockGeneralSettingsApi = async page => {
         'session',
         JSON.stringify({
           id: 360,
-          active: true,
+          active: 1,
           type: 'MANAGER',
           people: 3,
           api_key: 'smoke-token-360',
@@ -309,6 +327,11 @@ test.describe('general-settings maps (browser smoke #792)', () => {
       timeout: 10000,
     });
 
+    const locatorToggle = page.getByTestId('maps-franchise-locator-toggle');
+    if ((await locatorToggle.innerText()).includes('Desativado')) {
+      await locatorToggle.click();
+    }
+
     // Primary entry options when both toggles are on
     const primaryOptions = page.getByTestId('maps-primary-entry-options');
     await expect(primaryOptions).toBeVisible({ timeout: 10000 });
@@ -320,11 +343,23 @@ test.describe('general-settings maps (browser smoke #792)', () => {
 
     await captureEvidence(page, testInfo, '03-franchise-list', 'Lista de franquias e toggle visíveis', evidence);
 
-    const checkbox = page.getByRole('checkbox').first();
+    const checkbox = page.getByLabel(/Exibir FRANQUIA no mapa/);
     await expect(checkbox).toBeVisible();
     await checkbox.click();
     await expect(page.getByTestId('maps-franchise-map')).toBeVisible();
     await captureEvidence(page, testInfo, '04-pins-checkbox-map', 'Checkbox de pin e mapa carregado', evidence);
+
+    const mapFrame = page.frameLocator('iframe[title="Mapa das franquias"]');
+    await expect(mapFrame.locator('.leaflet-marker-icon').first()).toBeVisible({
+      timeout: 15000,
+    });
+    await mapFrame.locator('.leaflet-marker-icon').first().evaluate(marker =>
+      marker.dispatchEvent(new MouseEvent('click', {bubbles: true})),
+    );
+    await expect(mapFrame.locator('.leaflet-popup').first()).toBeVisible({
+      timeout: 5000,
+    });
+    await captureEvidence(page, testInfo, '04b-pin-popup', 'Pin aberto com popup no mapa', evidence);
 
     await page.setViewportSize({width: 480, height: 900});
     await captureEvidence(page, testInfo, '05-responsive-resize', 'Viewport estreito após resize', evidence);
