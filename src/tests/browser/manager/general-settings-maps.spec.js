@@ -210,6 +210,17 @@ const mockGeneralSettingsApi = async page => {
   await page.addInitScript(
     ({ appVersion }) => {
       localStorage.setItem('token', 'smoke-token-360');
+      // CheckLogin restores authentication from the session object on web.
+      localStorage.setItem(
+        'session',
+        JSON.stringify({
+          id: 360,
+          active: true,
+          type: 'MANAGER',
+          token: 'smoke-token-360',
+          name: 'Manager Smoke',
+        }),
+      );
       localStorage.setItem('app-type', 'MANAGER');
       localStorage.setItem('config', JSON.stringify({ language: 'pt-br' }));
       localStorage.setItem(
