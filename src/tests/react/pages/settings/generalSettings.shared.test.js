@@ -86,4 +86,17 @@ describe('generalSettings shared helpers', () => {
     );
     assert.equal(readGeneralSettingsActiveTab(), 'shop');
   });
+
+  it('escapes script closing markers in Leaflet popup labels', async () => {
+    const {buildLeafletMapHtml} = await import(
+      '../../../../react/pages/settings/sections/shop/mapsFranchiseMapHelpers.js'
+    );
+    const html = buildLeafletMapHtml(
+      [{lat: -23.56, lng: -46.65, companyLabel: '</script><script>alert(1)</script>'}],
+      {width: 884, height: 360},
+    );
+
+    assert.ok(html.includes('\\u003c/script>'));
+    assert.equal(html.includes('</script><script>alert(1)</script>'), false);
+  });
 });

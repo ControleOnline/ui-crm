@@ -1,6 +1,13 @@
 /*
+ * fluxo: outros | etapa: general-settings-mapas-map-preview
+ * https://github.com/ControleOnline/app-community/wiki/Smoke-Test-Flows
  * Static / Leaflet map URL helpers for franchise locator preview (MapsSection).
  */
+
+// JSON is valid JavaScript, but a literal `</script>` still closes the parent
+// srcDoc script element before the browser can evaluate the string safely.
+const serializeScriptString = value =>
+  JSON.stringify(value).replace(/</g, '\\u003c');
 
 const parseCoord = value => {
   if (value === null || value === undefined || value === '') {
@@ -88,7 +95,7 @@ const buildLeafletMapHtml = (markers, {width = 0, height = 360} = {}) => {
   const markersJs = points
     .map(
       p =>
-        `L.marker([${p.lat}, ${p.lng}]).addTo(map).bindPopup(${JSON.stringify(
+        `L.marker([${p.lat}, ${p.lng}]).addTo(map).bindPopup(${serializeScriptString(
           p.label,
         )});`,
     )
@@ -152,4 +159,5 @@ export {
   buildStaticMapUrl,
   buildOsmStaticMapUrl,
   buildLeafletMapHtml,
+  serializeScriptString,
 };

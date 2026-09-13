@@ -1,7 +1,8 @@
 /**
- * Smoke browser: Manager /general-settings → aba Mapas (#360).
- * fluxo: manager-general-settings-maps
- * Refs: app-community#360
+ * Smoke browser: Manager /general-settings → aba Mapas (#792).
+ * fluxo: outros
+ * flowchartIds: [1]
+ * Refs: app-community#792
  *
  * Criteria:
  * - Aba Mapas visível com seletor de tela principal (quando opções ativas)
@@ -17,6 +18,14 @@ const { API_ORIGIN } = require('../../../../../../../src/tests/browser/apiOrigin
 
 const APP_VERSION = packageJson?.version || '1.0.0';
 const CURRENT_DEVICE_ID = 'web-7';
+
+const captureEvidence = async (page, testInfo, stepId, title, steps) => {
+  const outputDir = path.join(testInfo.outputDir, 'manual-qa', 'issue-792');
+  fs.mkdirSync(outputDir, {recursive: true});
+  const screenshot = `${stepId}.png`;
+  await page.screenshot({path: path.join(outputDir, screenshot), fullPage: true});
+  steps.push({id: stepId, title, screenshot, viewport: page.viewportSize(), url: page.url()});
+};
 
 const CORS_HEADERS = {
   'access-control-allow-origin': '*',
@@ -75,11 +84,8 @@ const franchiseCompany = {
 };
 
 const MODULES_MAX_500 = [
-  path.join(__dirname, '../../../react/pages/settings/sections/MapsSection.js'),
-  path.join(
-    __dirname,
-    '../../../react/pages/settings/sections/shop/ShopFranchiseLocatorSection.js',
-  ),
+  path.join(__dirname, '../../../react/pages/settings/sections/shop/FranchiseMapPreview.js'),
+  path.join(__dirname, '../../../react/pages/settings/sections/shop/mapsFranchiseMapHelpers.js'),
 ];
 
 const mockGeneralSettingsApi = async page => {
@@ -226,7 +232,7 @@ const mockGeneralSettingsApi = async page => {
   );
 };
 
-test.describe('general-settings maps (browser smoke #360)', () => {
+test.describe('general-settings maps (browser smoke #792)', () => {
   test('MapsSection and ShopFranchiseLocator respect 500-line limit', async () => {
     for (const file of MODULES_MAX_500) {
       expect(fs.existsSync(file), `missing ${file}`).toBe(true);
@@ -237,19 +243,19 @@ test.describe('general-settings maps (browser smoke #360)', () => {
     }
   });
 
-  test('MapsSection does not reference residual aba Shop', async () => {
+  test('Map preview keeps the safe Leaflet helper', async () => {
     const mapsPath = MODULES_MAX_500[0];
     const source = fs.readFileSync(mapsPath, 'utf8');
-    expect(source).not.toMatch(/aba Shop/i);
-    expect(source).toMatch(/ShopFranchiseLocatorSection/);
+    expect(source).toMatch(/buildLeafletMapHtml/);
+    expect(source).toMatch(/srcDoc/);
   });
 
-  test('open /general-settings → aba Mapas shows primary entry + franchise locator', async ({
-    page,
-  }) => {
+  test('open /general-settings → aba Mapas shows primary entry + franchise locator', async ({page}, testInfo) => {
+    const evidence = [];
     await mockGeneralSettingsApi(page);
 
     await page.goto('/general-settings');
+    await captureEvidence(page, testInfo, '01-general-settings-entry', 'Tela inicial de General Settings', evidence);
 
     // Wait for settings shell
     await expect(page.getByText(/Configurador geral|Mapas|Dispositivos/i).first()).toBeVisible({
@@ -260,6 +266,7 @@ test.describe('general-settings maps (browser smoke #360)', () => {
     const mapsTab = page.getByText('Mapas', { exact: true }).first();
     await expect(mapsTab).toBeVisible({ timeout: 15000 });
     await mapsTab.click();
+    await captureEvidence(page, testInfo, '02-mapas-tab', 'Aba MAPAS aberta', evidence);
 
     // Section title / labels
     await expect(page.getByText('Tela principal do shop').first()).toBeVisible({
@@ -277,6 +284,26 @@ test.describe('general-settings maps (browser smoke #360)', () => {
     await expect(page.getByTestId('maps-franchise-locator')).toBeVisible({
       timeout: 10000,
     });
+
+    await captureEvidence(page, testInfo, '03-franchise-list', 'Lista de franquias e toggle visíveis', evidence);
+
+    const checkbox = page.getByRole('checkbox').first();
+    await expect(checkbox).toBeVisible();
+    await checkbox.click();
+    await expect(page.getByTestId('maps-franchise-map')).toBeVisible();
+    await captureEvidence(page, testInfo, '04-pins-checkbox-map', 'Checkbox de pin e mapa carregado', evidence);
+
+    await page.setViewportSize({width: 480, height: 900});
+    await captureEvidence(page, testInfo, '05-responsive-resize', 'Viewport estreito após resize', evidence);
+    const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+    const clientWidth = await page.evaluate(() => document.documentElement.clientWidth);
+    expect(scrollWidth).toBeLessThanOrEqual(clientWidth + 1);
+
+    await page.setViewportSize({width: 1280, height: 900});
+    await captureEvidence(page, testInfo, '06-desktop-final', 'Desktop final com mapa e pins', evidence);
+    const outputDir = path.join(testInfo.outputDir, 'manual-qa', 'issue-792');
+    fs.writeFileSync(path.join(outputDir, 'manifest.json'), JSON.stringify({fluxo: 'outros', flowchartIds: [1], issue: 'ControleOnline/app-community#792', build: APP_VERSION, steps: evidence}, null, 2) + '\n'
+);
 
     // No residual guidance pointing to non-existent Shop tab
     const bodyText = await page.locator('body').innerText();
