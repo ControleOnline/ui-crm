@@ -115,6 +115,20 @@ const mockGeneralSettingsApi = async page => {
       });
     }
 
+    if (pathname === 'token') {
+      return route.fulfill({
+        status: 200,
+        headers: jsonHeaders(),
+        body: JSON.stringify({
+          id: 360,
+          active: true,
+          type: 'MANAGER',
+          people: 3,
+          api_key: 'smoke-token-360',
+        }),
+      });
+    }
+
     if (pathname === 'menus-people') {
       return route.fulfill({
         status: 200,
@@ -268,6 +282,13 @@ test.describe('general-settings maps (browser smoke #792)', () => {
 
     await page.goto('/general-settings');
     await captureEvidence(page, testInfo, '01-general-settings-entry', 'Tela inicial de General Settings', evidence);
+
+    // Keep the smoke self-contained if the app rejects the synthetic session.
+    if (await page.getByPlaceholder('Email').isVisible().catch(() => false)) {
+      await page.getByPlaceholder('Email').fill('smoke@example.com');
+      await page.getByPlaceholder('Senha').fill('smoke-password');
+      await page.getByText('Entrar', {exact: true}).click();
+    }
 
     // Wait for settings shell
     await expect(page.getByText(/Configurador geral|Mapas|Dispositivos/i).first()).toBeVisible({
