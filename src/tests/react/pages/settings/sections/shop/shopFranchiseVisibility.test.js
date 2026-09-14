@@ -8,6 +8,7 @@ const {
   resolveSelectedFranchiseCompanies,
   buildFranchiseAddressesById,
   buildFranchiseCompaniesById,
+  resolveFranchiseMapAddress,
 } = require('../../../../../../react/pages/settings/sections/shop/shopFranchiseVisibility');
 
 describe('shopFranchiseVisibility helpers', () => {
@@ -63,5 +64,17 @@ describe('shopFranchiseVisibility helpers', () => {
     assert.ok(companies['7']);
     assert.equal(addresses['100'].linkedCompany.id, 7);
     assert.equal(addresses['101'].linkedCompany.id, 7);
+  });
+
+  it('uses the first address with coordinates for the map card', () => {
+    const addresses = [
+      {id: 100, latitude: null, longitude: null},
+      {id: 101, latitude: -23.561, longitude: -46.656},
+    ];
+    const selected = resolveFranchiseMapAddress(
+      addresses,
+      address => ({latitude: address.latitude, longitude: address.longitude}),
+    );
+    assert.equal(selected.id, 101);
   });
 });
