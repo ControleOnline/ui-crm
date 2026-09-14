@@ -1,6 +1,7 @@
 /**
  * Smoke browser: Manager /general-settings → aba Mapas (#792).
- * fluxo: outros
+ * fluxo: outros | etapa: general-settings-maps
+ * wikiPage: https://github.com/ControleOnline/app-community/wiki/Smoke-Test-Flows
  * flowchartIds: [1]
  * Refs: app-community#792
  *
@@ -296,6 +297,20 @@ test.describe('general-settings maps (browser smoke #792)', () => {
 
   test('open /general-settings → aba Mapas shows primary entry + franchise locator', async ({page}, testInfo) => {
     const evidence = [];
+    const consoleIssues = [];
+    const apiRequestCounts = new Map();
+    page.on("console", message => {
+      if (message.type() === "error" || message.type() === "warning") {
+        consoleIssues.push(message.type() + ": " + message.text());
+      }
+    });
+    page.on("request", request => {
+      const url = new URL(request.url());
+      if (!/^https:\/\/(?:api|s)\.controleonline\.com\//.test(url.href)) return;
+      if (request.method().toUpperCase() === "OPTIONS") return;
+      const key = request.method().toUpperCase() + " " + url.pathname + url.search;
+      apiRequestCounts.set(key, (apiRequestCounts.get(key) || 0) + 1);
+    });
     await mockGeneralSettingsApi(page);
 
     await page.goto('/general-settings');
@@ -370,12 +385,16 @@ test.describe('general-settings maps (browser smoke #792)', () => {
     await page.setViewportSize({width: 1280, height: 900});
     await captureEvidence(page, testInfo, '06-desktop-final', 'Desktop final com mapa e pins', evidence);
     const outputDir = path.join(testInfo.outputDir, 'manual-qa', 'issue-792');
-    fs.writeFileSync(path.join(outputDir, 'manifest.json'), JSON.stringify({fluxo: 'outros', flowchartIds: [1], issue: 'ControleOnline/app-community#792', build: APP_VERSION, steps: evidence}, null, 2) + '\n'
+    fs.writeFileSync(path.join(outputDir, 'manifest.json'), JSON.stringify({wikiPage: 'https://github.com/ControleOnline/app-community/wiki/Smoke-Test-Flows', fluxo: 'outros', flowchartIds: [1], issue: 'ControleOnline/app-community#792', build: APP_VERSION, steps: evidence}, null, 2) + '\n'
 );
 
     // No residual guidance pointing to non-existent Shop tab
     const bodyText = await page.locator('body').innerText();
     expect(bodyText).not.toMatch(/permanece na aba Shop/i);
     expect(bodyText).not.toMatch(/Visibilidade detalhada por franquia\/endereço no mapa: aba Shop/i);
+
+    expect(consoleIssues, "browser console issues: " + consoleIssues.join("\n")).toEqual([]);
+    const duplicateRequests = [...apiRequestCounts.entries()].filter(([, count]) => count > 1);
+    expect(duplicateRequests, "duplicate API requests: " + JSON.stringify(duplicateRequests)).toEqual([]);
   });
 });
