@@ -1,4 +1,6 @@
 /*
+ * fluxo: outros | etapa: general-settings-mapas-map-preview
+ * https://github.com/ControleOnline/app-community/wiki/Smoke-Test-Flows
  * Preview map (Leaflet iframe / static image) for selected franchise pins.
  * Outer box = full content width; Leaflet HTML gets explicit px size so the
  * map fills the iframe (srcDoc % height often leaves empty space on the right).

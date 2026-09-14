@@ -1,4 +1,7 @@
 /*
+ * fluxo: outros | etapa: general-settings-maps
+ * wikiPage: https://github.com/ControleOnline/app-community/wiki/Smoke-Test-Flows
+ *
  * @agents This section controls map keys, shop primary entry (mapa vs vitrine),
  * franchise-locator enablement, franchise address categories, franchise list
  * with visibility checkboxes and preview map pins for app_type=shop.
@@ -366,7 +369,7 @@ const MapsSection = () => {
       iconBackgroundColor={themePalette.cardIconBackground}
       iconColor={themePalette.cardIconColor}
       title="Mapas">
-      <View style={localStyles.fieldBlock}>
+      <View style={localStyles.fieldBlock} testID="maps-primary-entry-options">
         <Text style={localStyles.fieldLabel}>Chave do Google Maps Web</Text>
         <Text style={localStyles.helperText}>
           Usada no display web e no mapa de franquias do shop.
@@ -449,6 +452,7 @@ const MapsSection = () => {
           </Text>
         </View>
         <TouchableOpacity
+          testID="maps-franchise-locator-toggle"
           style={[
             localStyles.statusChip,
             franchiseLocatorEnabled
