@@ -388,7 +388,8 @@ const ShopFranchiseLocatorSection = ({
                     coords.longitude,
                   ).toFixed(6)}`
                 : 'Latitude/longitude não informadas';
-              const needsEdit = !primaryAddress || !hasCoords;
+              // app-community#812: lápis de edição em todos os cards de franquia
+              const needsEdit = true;
 
               return (
                 <View
