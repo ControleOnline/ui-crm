@@ -73,11 +73,11 @@ const MapsSection = () => {
   const categoryActions = categoriesStore.actions;
   const {
     currentCompany,
-    defaultCompany,
+    mainCompany,
     effectiveCompanyConfigs,
     saveConfig,
     saveConfigs,
-    saveDefaultCompanyConfigs,
+    saveMainCompanyConfigs,
   } = useGeneralSettingsConfig();
 
   const [webGoogleMapsApiKey, setWebGoogleMapsApiKey] = useState('');
@@ -101,9 +101,9 @@ const MapsSection = () => {
     [],
   );
 
-  const defaultCompanyId = defaultCompany?.id || defaultCompany?.['@id'];
-  const defaultCompanyIri = defaultCompanyId
-    ? '/people/' + defaultCompanyId
+  const mainCompanyId = mainCompany?.id || mainCompany?.['@id'];
+  const mainCompanyIri = mainCompanyId
+    ? '/people/' + mainCompanyId
     : '';
   const currentCompanyId = normalizeShopEntityId(
     currentCompany?.id || currentCompany?.['@id'],
@@ -152,7 +152,7 @@ const MapsSection = () => {
   }, [effectiveCompanyConfigs, shopSettings.franchiseAddressCategoryIds]);
 
   useEffect(() => {
-    if (!defaultCompanyIri || !categoryActions?.getItems) {
+    if (!mainCompanyIri || !categoryActions?.getItems) {
       setFranchiseAddressCategories([]);
       return undefined;
     }
@@ -163,7 +163,7 @@ const MapsSection = () => {
     categoryActions
       .getItems({
         context: SHOP_FRANCHISE_ADDRESS_CATEGORY_CONTEXT,
-        people: defaultCompanyIri,
+        people: mainCompanyIri,
         itemsPerPage: 100,
       })
       .then(result => {
@@ -192,7 +192,7 @@ const MapsSection = () => {
     return () => {
       isMounted = false;
     };
-  }, [categoryActions, categoriesStore.getters, defaultCompanyIri]);
+  }, [categoryActions, categoriesStore.getters, mainCompanyIri]);
 
   useEffect(() => {
     if (!franchiseLocatorEnabled || !currentCompanyId) {
@@ -349,14 +349,14 @@ const MapsSection = () => {
         ? franchiseAddressCategoryIds.filter(id => id !== categoryId)
         : [...franchiseAddressCategoryIds, categoryId];
       setFranchiseAddressCategoryIds(nextIds);
-      const saved = saveDefaultCompanyConfigs?.({
+      const saved = saveMainCompanyConfigs?.({
         [SHOP_FRANCHISE_ADDRESS_CATEGORY_IDS_CONFIG_KEY]: nextIds,
       });
       if (!saved) {
         setFranchiseAddressCategoryIds(franchiseAddressCategoryIds);
       }
     },
-    [franchiseAddressCategoryIds, saveDefaultCompanyConfigs],
+    [franchiseAddressCategoryIds, saveMainCompanyConfigs],
   );
 
   const toggleSalesPage = useCallback(() => {
