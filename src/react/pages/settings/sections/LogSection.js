@@ -108,8 +108,8 @@ const LogSection = () => {
   const {showError, showSuccess} = useToastMessage();
   const {
     currentCompany,
-    defaultCompany,
-    defaultCompanyLabel,
+    mainCompany,
+    mainCompanyLabel,
     effectiveCompanyConfigs,
     isMainCompanySelected,
     isSaving,
@@ -122,8 +122,8 @@ const LogSection = () => {
       return effectiveCompanyConfigs;
     }
 
-    return defaultCompany?.configs || {};
-  }, [defaultCompany?.configs, effectiveCompanyConfigs, isMainCompanySelected]);
+    return mainCompany?.configs || {};
+  }, [mainCompany?.configs, effectiveCompanyConfigs, isMainCompanySelected]);
 
   const [emailAlertsEnabled, setEmailAlertsEnabled] = useState(false);
   const [recipientInput, setRecipientInput] = useState('');
@@ -150,9 +150,9 @@ const LogSection = () => {
       nextLogPolicy = logPolicy,
       nextRecipientInput = recipientInput,
     } = {}) => {
-      if (!defaultCompany?.id || !isMainCompanySelected) {
+      if (!mainCompany?.id || !isMainCompanySelected) {
         showError(
-          `Abra a empresa principal (${defaultCompanyLabel}) para editar as configuracoes de log.`,
+          `Abra a empresa principal (${mainCompanyLabel}) para editar as configuracoes de log.`,
         );
         return false;
       }
@@ -188,15 +188,15 @@ const LogSection = () => {
       }
 
       try {
-        await peopleActions.defaultCompany();
+        await peopleActions.mainCompany();
       } catch {}
 
       showSuccess('Configuracoes de log salvas com sucesso.');
       return true;
     },
     [
-      defaultCompany?.id,
-      defaultCompanyLabel,
+      mainCompany?.id,
+      mainCompanyLabel,
       emailAlertsEnabled,
       isMainCompanySelected,
       logPolicy,
@@ -242,7 +242,7 @@ const LogSection = () => {
       iconColor={themePalette.cardIconColor}
       title="Logs e alertas">
       <Text style={localStyles.helperText}>
-        {`Essas configuracoes sao globais e ficam vinculadas a empresa principal (${defaultCompanyLabel}).`}
+        {`Essas configuracoes sao globais e ficam vinculadas a empresa principal (${mainCompanyLabel}).`}
       </Text>
 
       {!isMainCompanySelected && (
