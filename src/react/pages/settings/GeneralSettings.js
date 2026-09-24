@@ -136,8 +136,8 @@ const GeneralSettings = () => {
   const {
     companies,
     currentCompany,
-    mainCompany,
-    hasMainCompanyAccess,
+    defaultCompany,
+    hasDefaultCompanyAccess,
     isMainCompanySelected,
     peopleActions,
   } =
@@ -157,9 +157,9 @@ const GeneralSettings = () => {
       SETTINGS_TABS.filter(
         tab =>
           (!MAIN_COMPANY_ONLY_TABS.has(tab.key) || isMainCompanySelected) &&
-          (!TECHNICAL_TABS.has(tab.key) || hasMainCompanyAccess),
+          (!TECHNICAL_TABS.has(tab.key) || hasDefaultCompanyAccess),
       ),
-    [hasMainCompanyAccess, isMainCompanySelected],
+    [hasDefaultCompanyAccess, isMainCompanySelected],
   );
 
   useFocusEffect(
@@ -176,10 +176,10 @@ const GeneralSettings = () => {
         }
       }
 
-      if (!mainCompany?.id) {
-        const mainCompanyRequest = peopleActions.mainCompany?.();
-        if (mainCompanyRequest?.then) {
-          requests.push(mainCompanyRequest.catch(() => {}));
+      if (!defaultCompany?.id) {
+        const defaultCompanyRequest = peopleActions.defaultCompany?.();
+        if (defaultCompanyRequest?.then) {
+          requests.push(defaultCompanyRequest.catch(() => {}));
         }
       }
 
@@ -196,7 +196,7 @@ const GeneralSettings = () => {
       return () => {
         cancelled = true;
       };
-    }, [companies, mainCompany?.id, peopleActions]),
+    }, [companies, defaultCompany?.id, peopleActions]),
   );
 
   /*

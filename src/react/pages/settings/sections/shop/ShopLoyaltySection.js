@@ -29,7 +29,6 @@ import {
   SelectionModal,
   resolveProductLabel,
   resolveProductMeta,
-  resolveProductMetaParts,
   useShopProductBrowser,
   useShopProductSearch,
 } from './shopSettingsShared';
@@ -293,26 +292,11 @@ const ShopLoyaltySection = ({
                   onPress={() => toggleLoyaltyProduct(product)}>
                   <Icon name="remove-circle-outline" size={20} color={themePalette.iconDanger} />
                   <View style={localStyles.printerCopy}>
-                    <Text style={localStyles.printerName} numberOfLines={2}>
-                      {resolveProductLabel(product)}
-                    </Text>
-                    <Text style={localStyles.printerDevice} numberOfLines={1}>
-                      {resolveProductMetaParts(product).metaLine ||
-                        resolveProductMetaParts(product).sku ||
-                        'Toque para remover'}
+                    <Text style={localStyles.printerName}>{resolveProductLabel(product)}</Text>
+                    <Text style={localStyles.printerDevice}>
+                      {resolveProductMeta(product) || 'Toque para remover'}
                     </Text>
                   </View>
-                  {!!resolveProductMetaParts(product).priceLabel && (
-                    <Text
-                      style={{
-                        fontSize: 13,
-                        fontWeight: '700',
-                        color: themePalette.iconSuccess || themePalette.success,
-                        marginLeft: 8,
-                      }}>
-                      {resolveProductMetaParts(product).priceLabel}
-                    </Text>
-                  )}
                 </TouchableOpacity>
               );
             })}
@@ -326,26 +310,11 @@ const ShopLoyaltySection = ({
                   onPress={() => toggleLoyaltyProduct(product)}>
                   <Icon name="inventory-2" size={20} color={themePalette.cardIconColor} />
                   <View style={localStyles.printerCopy}>
-                    <Text style={localStyles.printerName} numberOfLines={2}>
-                      {resolveProductLabel(product)}
-                    </Text>
-                    <Text style={localStyles.printerDevice} numberOfLines={1}>
-                      {resolveProductMetaParts(product).metaLine ||
-                        resolveProductMetaParts(product).sku ||
-                        'Toque para incluir'}
+                    <Text style={localStyles.printerName}>{resolveProductLabel(product)}</Text>
+                    <Text style={localStyles.printerDevice}>
+                      {resolveProductMeta(product) || 'Toque para incluir'}
                     </Text>
                   </View>
-                  {!!resolveProductMetaParts(product).priceLabel && (
-                    <Text
-                      style={{
-                        fontSize: 13,
-                        fontWeight: '700',
-                        color: themePalette.iconSuccess || themePalette.success,
-                        marginLeft: 8,
-                      }}>
-                      {resolveProductMetaParts(product).priceLabel}
-                    </Text>
-                  )}
                 </TouchableOpacity>
               );
             })}
@@ -382,26 +351,11 @@ const ShopLoyaltySection = ({
               onPress={clearGiftProduct}>
               <Icon name="remove-circle-outline" size={20} color={themePalette.iconDanger} />
               <View style={localStyles.printerCopy}>
-                <Text style={localStyles.printerName} numberOfLines={2}>
+                <Text style={localStyles.printerName}>
                   {resolveProductLabel(selectedGiftProduct)}
                 </Text>
-                <Text style={localStyles.printerDevice} numberOfLines={1}>
-                  {resolveProductMetaParts(selectedGiftProduct).metaLine ||
-                    resolveProductMetaParts(selectedGiftProduct).sku ||
-                    'Toque para limpar'}
-                </Text>
+                <Text style={localStyles.printerDevice}>Toque para limpar</Text>
               </View>
-              {!!resolveProductMetaParts(selectedGiftProduct).priceLabel && (
-                <Text
-                  style={{
-                    fontSize: 13,
-                    fontWeight: '700',
-                    color: themePalette.iconSuccess || themePalette.success,
-                    marginLeft: 8,
-                  }}>
-                  {resolveProductMetaParts(selectedGiftProduct).priceLabel}
-                </Text>
-              )}
             </TouchableOpacity>
           ) : null}
           <View style={localStyles.printerList}>
