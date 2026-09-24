@@ -68,9 +68,9 @@ const IntegrationsSection = () => {
   const {showError, showSuccess} = useToastMessage();
   const {
     configActions,
-    mainCompany,
-    mainCompanyLabel,
-    hasMainCompanyAccess,
+    defaultCompany,
+    defaultCompanyLabel,
+    hasDefaultCompanyAccess,
     isMainCompanySelected,
     isSaving,
     peopleActions,
@@ -87,7 +87,7 @@ const IntegrationsSection = () => {
    * This is the only place in the section that reads the company-scoped private payload remotely.
    */
   useEffect(() => {
-    if (!hasMainCompanyAccess || !mainCompany?.id) {
+    if (!hasDefaultCompanyAccess || !defaultCompany?.id) {
       setPrivateConfigs({});
       setIsLoadingPrivateConfigs(false);
       return undefined;
@@ -99,7 +99,7 @@ const IntegrationsSection = () => {
     api
       .fetch('/configs', {
         params: {
-          people: '/people/' + mainCompany.id,
+          people: '/people/' + defaultCompany.id,
           visibility: 'private',
         },
       })
@@ -142,7 +142,7 @@ const IntegrationsSection = () => {
     return () => {
       cancelled = true;
     };
-  }, [mainCompany?.id, hasMainCompanyAccess, showError]);
+  }, [defaultCompany?.id, hasDefaultCompanyAccess, showError]);
 
   useEffect(() => {
     setCieloConfig(resolveCieloConfig(privateConfigs));
@@ -152,7 +152,7 @@ const IntegrationsSection = () => {
 
   const savePrivateConfig = useCallback(
     (configKey, configValue) => {
-      if (!hasMainCompanyAccess || !mainCompany?.id) {
+      if (!hasDefaultCompanyAccess || !defaultCompany?.id) {
         showError(
           'Nao foi possivel identificar a empresa principal para salvar a integracao.',
         );
@@ -161,7 +161,7 @@ const IntegrationsSection = () => {
 
       if (!isMainCompanySelected) {
         showError(
-          `Abra a empresa principal (${mainCompanyLabel}) para editar essas credenciais.`,
+          `Abra a empresa principal (${defaultCompanyLabel}) para editar essas credenciais.`,
         );
         return Promise.resolve(false);
       }
@@ -172,7 +172,7 @@ const IntegrationsSection = () => {
             .addConfigs({
               configKey,
               configValue: toConfigRequestValue(configValue),
-              people: '/people/' + mainCompany.id,
+              people: '/people/' + defaultCompany.id,
               module: 4,
               visibility: 'private',
             })
@@ -183,7 +183,7 @@ const IntegrationsSection = () => {
               }));
 
               try {
-                await peopleActions.mainCompany();
+                await peopleActions.defaultCompany();
               } catch {}
 
               showSuccess('Configuracao tecnica salva com sucesso.');
@@ -201,9 +201,9 @@ const IntegrationsSection = () => {
     },
     [
       configActions,
-      mainCompany?.id,
-      mainCompanyLabel,
-      hasMainCompanyAccess,
+      defaultCompany?.id,
+      defaultCompanyLabel,
+      hasDefaultCompanyAccess,
       isMainCompanySelected,
       peopleActions,
       showError,
@@ -225,8 +225,8 @@ const IntegrationsSection = () => {
   );
 
   const editable =
-    hasMainCompanyAccess &&
-    !!mainCompany?.id &&
+    hasDefaultCompanyAccess &&
+    !!defaultCompany?.id &&
     isMainCompanySelected &&
     !isSaving &&
     !isLoadingPrivateConfigs;
@@ -242,9 +242,9 @@ const IntegrationsSection = () => {
         iconColor={themePalette.cardIconColor}
         title="Cielo">
         <Text style={localStyles.helperText}>
-          {`Esses dados privados ficam vinculados a empresa principal (${mainCompanyLabel}).`}
+          {`Esses dados privados ficam vinculados a empresa principal (${defaultCompanyLabel}).`}
         </Text>
-        {!isMainCompanySelected && hasMainCompanyAccess && (
+        {!isMainCompanySelected && hasDefaultCompanyAccess && (
           <Text style={localStyles.helperText}>
             Abra a empresa principal para editar as credenciais. Fora dela esta
             tela fica somente para consulta.
