@@ -29,25 +29,16 @@ export const resolveProductLabel = product => {
   );
 };
 
-export const resolveProductMetaParts = product => {
+export const resolveProductMeta = product => {
   const sku = String(product?.sku || '').trim();
   const price = Number(product?.price || 0);
-  const priceLabel =
-    Number.isFinite(price) && price > 0
-      ? `R$ ${price.toFixed(2).replace('.', ',')}`
-      : '';
+  const priceLabel = Number.isFinite(price)
+    ? `R$ ${price.toFixed(2).replace('.', ',')}`
+    : '';
 
-  return {
-    sku: sku ? `SKU ${sku}` : '',
-    priceLabel,
-    metaLine: [sku ? `SKU ${sku}` : null].filter(Boolean).join(' • '),
-  };
-};
-
-/** Prefer resolveProductMetaParts when layout needs price separated. */
-export const resolveProductMeta = product => {
-  const {sku, priceLabel} = resolveProductMetaParts(product);
-  return [sku || null, priceLabel || null].filter(Boolean).join(' • ');
+  return [sku ? `SKU ${sku}` : null, price > 0 ? priceLabel : null]
+    .filter(Boolean)
+    .join(' • ');
 };
 
 export const resolveCompanyLabel = company =>
@@ -401,29 +392,17 @@ export const SelectionModal = ({
                     color={selected ? palette.iconActive : palette.iconDisabled}
                   />
                   <View style={styles.selectionModalItemCopy}>
-                    <Text style={styles.selectionModalItemTitle} numberOfLines={2}>
+                    <Text style={styles.selectionModalItemTitle}>
                       {resolveItemLabel(item)}
                     </Text>
-                    <Text style={styles.selectionModalItemMeta} numberOfLines={1}>
+                    <Text style={styles.selectionModalItemMeta}>
                       {(selected
                         ? selectionMeta?.(item, {selected, multiSelect})
                         : null) ||
-                        resolveProductMetaParts(item).metaLine ||
-                        resolveProductMetaParts(item).sku ||
+                        resolveItemMeta(item) ||
                         'Toque para selecionar'}
                     </Text>
                   </View>
-                  {!!resolveProductMetaParts(item).priceLabel && (
-                    <Text
-                      style={{
-                        fontSize: 13,
-                        fontWeight: '700',
-                        color: palette.iconSuccess || palette.success,
-                        marginLeft: 8,
-                      }}>
-                      {resolveProductMetaParts(item).priceLabel}
-                    </Text>
-                  )}
                 </TouchableOpacity>
               );
             })
@@ -438,7 +417,7 @@ export const SelectionModal = ({
               styles.selectionModalActionButton,
             ]}
             onPress={onClose}>
-            <Text style={styles.primaryButtonText}>Concluir seleção</Text>
+            <Text style={styles.primaryButtonText}>Concluir selecao</Text>
           </TouchableOpacity>
         )}
       </View>

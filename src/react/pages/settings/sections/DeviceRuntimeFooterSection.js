@@ -21,25 +21,25 @@ const DeviceRuntimeFooterSection = () => {
   const themePalette = useGeneralSettingsPalette();
   const {
     configActions,
-    mainCompany,
-    mainCompanyLabel,
-    hasMainCompanyAccess,
+    defaultCompany,
+    defaultCompanyLabel,
+    hasDefaultCompanyAccess,
     isMainCompanySelected,
     peopleActions,
   } = useGeneralSettingsConfig();
   const [deviceRuntimeFooterText, setDeviceRuntimeFooterText] = useState('');
-  const canEditFooterText = !!mainCompany?.id && hasMainCompanyAccess;
+  const canEditFooterText = !!defaultCompany?.id && hasDefaultCompanyAccess;
 
   useEffect(() => {
     setDeviceRuntimeFooterText(
       normalizeRuntimeFooterText(
-        mainCompany?.configs?.[DEVICE_RUNTIME_FOOTER_TEXT_CONFIG_KEY],
+        defaultCompany?.configs?.[DEVICE_RUNTIME_FOOTER_TEXT_CONFIG_KEY],
       ),
     );
-  }, [mainCompany?.configs]);
+  }, [defaultCompany?.configs]);
 
   const saveDeviceRuntimeFooter = useCallback(() => {
-    if (!mainCompany?.id) {
+    if (!defaultCompany?.id) {
       Alert.alert(
         'Empresa principal indisponivel',
         'Nao foi possivel identificar a empresa principal para salvar o rodape.',
@@ -55,7 +55,7 @@ const DeviceRuntimeFooterSection = () => {
           .addConfigs({
             configKey: DEVICE_RUNTIME_FOOTER_TEXT_CONFIG_KEY,
             configValue: toConfigRequestValue(normalizedText),
-            people: '/people/' + mainCompany.id,
+            people: '/people/' + defaultCompany.id,
             module: 4,
             visibility: 'public',
           })
@@ -63,7 +63,7 @@ const DeviceRuntimeFooterSection = () => {
             setDeviceRuntimeFooterText(normalizedText);
 
             try {
-              await peopleActions.mainCompany();
+              await peopleActions.defaultCompany();
             } catch {}
 
             resolve(true);
@@ -79,7 +79,7 @@ const DeviceRuntimeFooterSection = () => {
     });
   }, [
     configActions,
-    mainCompany?.id,
+    defaultCompany?.id,
     deviceRuntimeFooterText,
     peopleActions,
   ]);
@@ -92,7 +92,7 @@ const DeviceRuntimeFooterSection = () => {
       iconColor={themePalette.cardIconColor}
       title="Rodape dos devices">
       <Text style={localStyles.helperText}>
-        {`Esse texto livre e salvo na empresa principal (${mainCompanyLabel}) e compartilhado com todos os devices.`}
+        {`Esse texto livre e salvo na empresa principal (${defaultCompanyLabel}) e compartilhado com todos os devices.`}
       </Text>
 
       {!isMainCompanySelected && (

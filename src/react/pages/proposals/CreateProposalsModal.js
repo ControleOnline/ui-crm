@@ -106,7 +106,6 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
         const results = await searchCompanyProducts({
           companyId: currentCompany.id,
           query: productQuery,
-          categoryId: selectedModelCategoryId,
         });
 
         const filteredResults = filterProductsByModelCategory({
