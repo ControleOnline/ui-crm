@@ -16,9 +16,6 @@ import {
 } from '../../../utils/opportunityPeople';
 
 const { getOpportunityEmptyStateMode } = require('../../../utils/opportunityEmptyState');
-const {
-  resolveClientDetailsNavigation,
-} = require('../../../utils/clientDetailsNavigation');
 
 const getStatusFilterLabel = item => {
   const normalized = String(item?.realStatus || item?.status || '')
@@ -421,31 +418,28 @@ const useCrmData = ({ iconComponent, navigation, showError }) => {
   const handleEditProvider = useCallback(
     opportunity => {
       const reference = normalizePeopleReferenceValue(opportunity?.client);
-      const matchedPerson = getPersonByReference(opportunity?.client);
-      const navigationContext = resolveClientDetailsNavigation({
-        reference,
-        matchedPerson,
-        opportunityClient: opportunity?.client,
-        fallbackName:
-          getProviderName(opportunity?.client) ||
-          global.t?.t('people', 'label', 'client'),
-      });
-
-      if (!navigationContext) {
+      if (!reference) {
         showError?.(global.t?.t('people', 'toast', 'providerNotIdentified'));
         return;
       }
 
-      peopleActions?.setItem?.(navigationContext.selectedClient);
-      navigation.navigate('ClientDetails', navigationContext.params);
+      const matchedPerson = getPersonByReference(opportunity?.client);
+      const selectedClient =
+        matchedPerson ||
+        (typeof opportunity?.client === 'object' && opportunity?.client
+          ? opportunity.client
+          : null) ||
+        {
+          id: String(reference || '').replace(/\D/g, ''),
+          '@id': reference,
+          name:
+            getProviderName(opportunity?.client) ||
+            global.t?.t('people', 'label', 'client'),
+        };
+
+      navigation.navigate('ClientDetails', { client: selectedClient });
     },
-    [
-      getPersonByReference,
-      getProviderName,
-      navigation,
-      peopleActions,
-      showError,
-    ],
+    [getPersonByReference, getProviderName, navigation, showError],
   );
 
   return {

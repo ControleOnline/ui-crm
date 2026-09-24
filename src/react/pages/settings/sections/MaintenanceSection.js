@@ -26,16 +26,16 @@ const MaintenanceSection = () => {
   const themePalette = useGeneralSettingsPalette();
   const {showError, showSuccess} = useToastMessage();
   const {
-    mainCompany,
-    mainCompanyLabel,
-    hasMainCompanyAccess,
+    defaultCompany,
+    defaultCompanyLabel,
+    hasDefaultCompanyAccess,
     isMainCompanySelected,
     isSaving,
     peopleActions,
     saveConfigs,
   } = useGeneralSettingsConfig();
   const [routines, setRoutines] = useState(
-    normalizeMaintenanceRoutines(mainCompany?.configs?.[
+    normalizeMaintenanceRoutines(defaultCompany?.configs?.[
       MAINTENANCE_ROUTINES_CONFIG_KEY
     ]),
   );
@@ -43,22 +43,22 @@ const MaintenanceSection = () => {
   useEffect(() => {
     setRoutines(
       normalizeMaintenanceRoutines(
-        mainCompany?.configs?.[MAINTENANCE_ROUTINES_CONFIG_KEY],
+        defaultCompany?.configs?.[MAINTENANCE_ROUTINES_CONFIG_KEY],
       ),
     );
-  }, [mainCompany?.configs]);
+  }, [defaultCompany?.configs]);
 
   const editable =
-    hasMainCompanyAccess &&
-    !!mainCompany?.id &&
+    hasDefaultCompanyAccess &&
+    !!defaultCompany?.id &&
     isMainCompanySelected &&
     !isSaving;
 
   const saveRoutines = useCallback(
     async (nextRoutines = routines) => {
-    if (!hasMainCompanyAccess || !mainCompany?.id || !isMainCompanySelected) {
+    if (!hasDefaultCompanyAccess || !defaultCompany?.id || !isMainCompanySelected) {
       showError(
-        `Abra a empresa principal (${mainCompanyLabel}) para editar as rotinas.`,
+        `Abra a empresa principal (${defaultCompanyLabel}) para editar as rotinas.`,
       );
       return;
     }
@@ -87,16 +87,16 @@ const MaintenanceSection = () => {
       }
 
       try {
-        await peopleActions.mainCompany();
+        await peopleActions.defaultCompany();
       } catch {}
 
       showSuccess('Rotinas de manutencao salvas com sucesso.');
       return true;
     },
     [
-      mainCompany?.id,
-      mainCompanyLabel,
-      hasMainCompanyAccess,
+      defaultCompany?.id,
+      defaultCompanyLabel,
+      hasDefaultCompanyAccess,
       isMainCompanySelected,
       peopleActions,
       routines,
@@ -133,10 +133,10 @@ const MaintenanceSection = () => {
       iconColor={themePalette.cardIconColor}
       title="Rotinas de manutencao">
       <Text style={localStyles.helperText}>
-        {`Essas rotinas ficam gravadas na empresa principal (${mainCompanyLabel}) e o cron geral tenta executa-las a cada minuto.`}
+        {`Essas rotinas ficam gravadas na empresa principal (${defaultCompanyLabel}) e o cron geral tenta executa-las a cada minuto.`}
       </Text>
 
-      {!isMainCompanySelected && hasMainCompanyAccess && (
+      {!isMainCompanySelected && hasDefaultCompanyAccess && (
         <Text style={localStyles.helperText}>
           Abra a empresa principal para editar a agenda. Fora dela esta tela
           fica somente para consulta.
