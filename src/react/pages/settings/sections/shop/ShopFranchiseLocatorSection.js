@@ -1,26 +1,9 @@
-/*
- * @agents Franchise locator visibility (companies + addresses) for shop general settings.
- * Persist only on explicit user toggles — never auto-save prunes after refresh.
- */
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {useNavigation} from '@react-navigation/native';
-import {
-  ActivityIndicator,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import {ActivityIndicator, Text, TextInput, TouchableOpacity, View} from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import {
-  fetchAllShopFranchiseDirectory,
-  resolveFranchiseAddressCoords,
-} from '@controleonline/ui-common/src/react/utils/shopFranchises';
-import {
-  normalizeShopEntityId,
-  SHOP_FRANCHISE_VISIBLE_ADDRESS_IDS_CONFIG_KEY,
-  SHOP_FRANCHISE_VISIBLE_COMPANY_IDS_CONFIG_KEY,
-} from '@controleonline/ui-common/src/react/utils/shopConfig';
+import {fetchAllShopFranchiseDirectory, resolveFranchiseAddressCoords} from '@controleonline/ui-common/src/react/utils/shopFranchises';
+import {normalizeShopEntityId, SHOP_FRANCHISE_VISIBLE_ADDRESS_IDS_CONFIG_KEY, SHOP_FRANCHISE_VISIBLE_COMPANY_IDS_CONFIG_KEY} from '@controleonline/ui-common/src/react/utils/shopConfig';
 import {
   buildFranchiseAddressesById,
   buildFranchiseCompaniesById,
@@ -47,7 +30,6 @@ const ShopFranchiseLocatorSection = ({
   saveConfigs,
   themePalette,
   globalStyles,
-  onVisibilityChange,
 }) => {
   const navigation = useNavigation();
   const [visibleFranchiseCompanyIds, setVisibleFranchiseCompanyIds] = useState([]);
@@ -194,15 +176,12 @@ const ShopFranchiseLocatorSection = ({
     (nextCompanyIds, nextAddressIds) => {
       setVisibleFranchiseCompanyIds(nextCompanyIds);
       setVisibleFranchiseAddressIds(nextAddressIds);
-      if (typeof onVisibilityChange === 'function') {
-        onVisibilityChange(nextCompanyIds, nextAddressIds);
-      }
       return saveConfigs({
         [SHOP_FRANCHISE_VISIBLE_COMPANY_IDS_CONFIG_KEY]: nextCompanyIds,
         [SHOP_FRANCHISE_VISIBLE_ADDRESS_IDS_CONFIG_KEY]: nextAddressIds,
       });
     },
-    [onVisibilityChange, saveConfigs],
+    [saveConfigs],
   );
 
   const companyHasMapCoords = useCallback(company => {
@@ -309,8 +288,8 @@ const ShopFranchiseLocatorSection = ({
   );
 
   return (
-    <>
-      <View style={localStyles.fieldBlock} testID="maps-franchise-locator">
+    <View testID="maps-franchise-locator">
+      <View style={localStyles.fieldBlock}>
         <Text style={localStyles.fieldLabel}>Franquias exibidas no localizador</Text>
         <Text style={localStyles.helperText}>
           Selecione quais empresas vinculadas como franquia podem aparecer no mapa do shop.
@@ -519,7 +498,7 @@ const ShopFranchiseLocatorSection = ({
         selectionMeta={() => 'Franquia liberada para o localizador'}
         styles={localStyles}
       />
-    </>
+    </View>
   );
 };
 

@@ -96,6 +96,15 @@ const productGeral = {
   price: 50,
 };
 
+// Real API shape: Product has productCategory[] join, not product.category
+const productServicoJoin = {
+  id: 103,
+  name: 'Serviço via productCategory',
+  '@id': '/products/103',
+  productCategory: [{ category: categoryServicos }],
+  price: 150,
+};
+
 test.describe('Create proposal — product filter by model category (#85)', () => {
   test('filters products by selected model category and clears incompatible selections', async ({
     page,
@@ -145,5 +154,21 @@ test.describe('Create proposal — product filter by model category (#85)', () =
       selectedModelCategoryId: consultCatId,
     });
     expect(kept.map(p => p.id)).toEqual([101]);
+
+    // productCategory join (canonical API shape) must match model category
+    const filteredJoin = filterProductsByModelCategory({
+      products: [productServicoJoin, productConsultoria],
+      selectedModelCategoryId: servicosCatId,
+    });
+    expect(filteredJoin.map(p => p.id)).toEqual([103]);
+
+    // Sparse payload (no embedded categories) is kept — API filter is source of truth
+    const sparse = [{ id: 200, '@id': '/products/200' }];
+    expect(
+      filterProductsByModelCategory({
+        products: sparse,
+        selectedModelCategoryId: servicosCatId,
+      }),
+    ).toHaveLength(1);
   });
 });
