@@ -1,7 +1,7 @@
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {ActivityIndicator, Text, TouchableOpacity, View} from 'react-native';
 import {api} from '@controleonline/ui-common/src/api';
-import {colors} from '@controleonline/../../src/styles/colors';
+import {colors} from '@controleonline/ui-layout/src/styles/colors';
 import {
   EVENT_LABELS,
   normalizePeopleIri,

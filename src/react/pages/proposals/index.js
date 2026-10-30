@@ -2,7 +2,7 @@ import React, { useCallback, useState, useEffect, useLayoutEffect } from 'react'
 import { Text, View, TouchableOpacity, FlatList, ActivityIndicator, TextInput, RefreshControl, Platform, ScrollView } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useStore } from '@store';
-import { colors } from '@controleonline/../../src/styles/colors';
+import { colors } from '@controleonline/ui-layout/src/styles/colors';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import IconAdd from 'react-native-vector-icons/MaterialIcons';
 import MaterialIcon from 'react-native-vector-icons/MaterialIcons';
