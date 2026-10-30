@@ -204,7 +204,7 @@ const isMethodNotAllowedError = error => {
 
 export const useGeneralSettingsConfig = () => {
   const peopleStore = useStore('people');
-  const {companies, currentCompany, defaultCompany} = peopleStore.getters;
+  const {companies, currentCompany, mainCompany} = peopleStore.getters;
   const peopleActions = peopleStore.actions;
 
   const configsStore = useStore('configs');
@@ -228,26 +228,26 @@ export const useGeneralSettingsConfig = () => {
     () => normalizeEntityId(currentCompany?.id || currentCompany?.['@id']),
     [currentCompany?.['@id'], currentCompany?.id],
   );
-  const defaultCompanyId = useMemo(
-    () => normalizeEntityId(defaultCompany?.id || defaultCompany?.['@id']),
-    [defaultCompany?.['@id'], defaultCompany?.id],
+  const mainCompanyId = useMemo(
+    () => normalizeEntityId(mainCompany?.id || mainCompany?.['@id']),
+    [mainCompany?.['@id'], mainCompany?.id],
   );
-  const hasDefaultCompanyAccess = useMemo(() => {
-    if (defaultCompanyId === '') {
+  const hasMainCompanyAccess = useMemo(() => {
+    if (mainCompanyId === '') {
       return false;
     }
 
     return (Array.isArray(companies) ? companies : []).some(
       company =>
-        normalizeEntityId(company?.id || company?.['@id']) === defaultCompanyId,
+        normalizeEntityId(company?.id || company?.['@id']) === mainCompanyId,
     );
-  }, [companies, defaultCompanyId]);
+  }, [companies, mainCompanyId]);
   const isMainCompanySelected =
     selectedCompanyId !== '' &&
-    defaultCompanyId !== '' &&
-    selectedCompanyId === defaultCompanyId;
-  const defaultCompanyLabel =
-    defaultCompany?.alias || defaultCompany?.name || 'empresa principal';
+    mainCompanyId !== '' &&
+    selectedCompanyId === mainCompanyId;
+  const mainCompanyLabel =
+    mainCompany?.alias || mainCompany?.name || 'empresa principal';
 
   const syncConfigCache = useCallback(
     entries => {
@@ -366,9 +366,9 @@ export const useGeneralSettingsConfig = () => {
     [configActions, currentCompany?.id, syncConfigCache],
   );
 
-  const saveDefaultCompanyConfigs = useCallback(
+  const saveMainCompanyConfigs = useCallback(
     entries => {
-      if (!defaultCompanyId) {
+      if (!mainCompanyId) {
         Alert.alert(
           'Empresa principal nao selecionada',
           'Selecione uma empresa principal para salvar as configuracoes.',
@@ -412,7 +412,7 @@ export const useGeneralSettingsConfig = () => {
           try {
             const data = await configActions.addManyConfigs({
               configs: requestConfigItems,
-              people: '/people/' + defaultCompanyId,
+              people: '/people/' + mainCompanyId,
               module: 4,
               visibility: 'public',
             });
@@ -429,7 +429,7 @@ export const useGeneralSettingsConfig = () => {
         configActions.initQueue();
       });
     },
-    [configActions, defaultCompanyId, syncConfigCache],
+    [configActions, mainCompanyId, syncConfigCache],
   );
 
   const saveConfig = useCallback(
@@ -476,15 +476,15 @@ export const useGeneralSettingsConfig = () => {
     companies,
     configActions,
     currentCompany,
-    defaultCompany,
-    defaultCompanyLabel,
+    mainCompany,
+    mainCompanyLabel,
     effectiveCompanyConfigs,
-    hasDefaultCompanyAccess,
+    hasMainCompanyAccess,
     isMainCompanySelected,
     isSaving,
     peopleActions,
     saveConfig,
     saveConfigs,
-    saveDefaultCompanyConfigs,
+    saveMainCompanyConfigs,
   };
 };

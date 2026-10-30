@@ -26,12 +26,14 @@ Sempre comece pela **Home** da wiki e siga as categorias abaixo.
 | [Oportunidades — ordenação por data de retorno](https://github.com/ControleOnline/ui-crm/wiki/Oportunidades-Ordenacao-por-Data-de-Retorno) | Ordenação client-side por dueDate/alterDate (mais antiga → mais nova) |
 | [Income Statements — Demonstrativo geral](https://github.com/ControleOnline/ui-crm/wiki) | Visão empresa por categorias (comission/royalties); ver `docs/technical/Income-Statements-Demonstrativo.md` |
 | [Visão Vendedor — Comissões](https://github.com/ControleOnline/ui-crm/wiki/Visao-Vendedor-Comissoes) | Invoices tipo `comission`; vendedor recebe; filtro cliente + período |
+| [Royalties a pagar — visão Franqueado](https://github.com/ControleOnline/ui-crm/wiki/Royalties-a-pagar-Franqueado) | Invoices tipo `royalties`; franqueado paga à franqueadora; payer=currentCompany |
 
 
 Cópias versionadas no Git:
 - `docs/technical/Cliente-Vendedor-Vinculo-e-Permissoes.md`
 - `docs/technical/Propostas-Filtro-de-Status.md`
 - `docs/technical/Visao-Vendedor-Comissoes.md`
+- `docs/technical/Royalties-a-pagar-Franqueado.md`
 
 ### Visão deste módulo
 

@@ -1,14 +1,13 @@
 /*
- * fluxo: outros | etapa: general-settings-maps
- * wikiPage: https://github.com/ControleOnline/app-community/wiki/Smoke-Test-Flows
- *
  * @agents This section controls map keys, shop primary entry (mapa vs vitrine),
  * franchise-locator enablement, franchise address categories, franchise list
  * with visibility checkboxes and preview map pins for app_type=shop.
  */
-import React, {useCallback, useEffect, useMemo, useState} from 'react';
+import React, {createElement, useCallback, useEffect, useMemo, useState} from 'react';
 import {
   ActivityIndicator,
+  Image,
+  Platform,
   Text,
   TextInput,
   TouchableOpacity,
@@ -48,18 +47,23 @@ import {
 } from '@controleonline/ui-common/src/react/utils/shopConfig';
 import {fetchAllShopFranchiseDirectory} from '@controleonline/ui-common/src/react/utils/shopFranchises';
 import ShopFranchiseLocatorSection from './shop/ShopFranchiseLocatorSection';
-import {normalizeVisibleFranchiseIds} from './shop/shopFranchiseVisibility';
+import {
+  buildFranchiseAddressesById,
+  normalizeVisibleFranchiseIds,
+} from './shop/shopFranchiseVisibility';
 import {
   resolveAddressLabel,
   resolveCompanyLabel,
 } from './shop/shopSettingsShared';
-import {resolveAddressCoords} from './shop/mapsFranchiseMapHelpers';
-import FranchiseMapPreview from './shop/FranchiseMapPreview';
-
-const PRIMARY_ENTRY_LABELS = {
-  [SHOP_HOME_OPTION_SALES]: 'Vitrine do shop',
-  [SHOP_HOME_OPTION_FRANCHISE_LOCATOR]: 'Mapa das franquias',
-};
+import {
+  PRIMARY_ENTRY_LABELS,
+  resolveAddressCoords,
+  buildStaticMapUrl,
+  buildOsmStaticMapUrl,
+  buildLeafletMapHtml,
+} from './mapsSectionHelpers';
+import MapsMapasControls from './MapsMapasControls';
+import MapsFranchisePreview from './MapsFranchisePreview';
 
 const MapsSection = () => {
   const {globalStyles} = css();
@@ -69,15 +73,16 @@ const MapsSection = () => {
   const categoryActions = categoriesStore.actions;
   const {
     currentCompany,
-    defaultCompany,
+    mainCompany,
     effectiveCompanyConfigs,
     saveConfig,
     saveConfigs,
-    saveDefaultCompanyConfigs,
+    saveMainCompanyConfigs,
   } = useGeneralSettingsConfig();
 
   const [webGoogleMapsApiKey, setWebGoogleMapsApiKey] = useState('');
   const [androidGoogleMapsApiKey, setAndroidGoogleMapsApiKey] = useState('');
+  const [mapBoxWidth, setMapBoxWidth] = useState(0);
   const [franchiseAddressCategories, setFranchiseAddressCategories] =
     useState([]);
   const [franchiseAddressCategoryIds, setFranchiseAddressCategoryIds] =
@@ -96,9 +101,9 @@ const MapsSection = () => {
     [],
   );
 
-  const defaultCompanyId = defaultCompany?.id || defaultCompany?.['@id'];
-  const defaultCompanyIri = defaultCompanyId
-    ? '/people/' + defaultCompanyId
+  const mainCompanyId = mainCompany?.id || mainCompany?.['@id'];
+  const mainCompanyIri = mainCompanyId
+    ? '/people/' + mainCompanyId
     : '';
   const currentCompanyId = normalizeShopEntityId(
     currentCompany?.id || currentCompany?.['@id'],
@@ -147,7 +152,7 @@ const MapsSection = () => {
   }, [effectiveCompanyConfigs, shopSettings.franchiseAddressCategoryIds]);
 
   useEffect(() => {
-    if (!defaultCompanyIri || !categoryActions?.getItems) {
+    if (!mainCompanyIri || !categoryActions?.getItems) {
       setFranchiseAddressCategories([]);
       return undefined;
     }
@@ -158,7 +163,7 @@ const MapsSection = () => {
     categoryActions
       .getItems({
         context: SHOP_FRANCHISE_ADDRESS_CATEGORY_CONTEXT,
-        people: defaultCompanyIri,
+        people: mainCompanyIri,
         itemsPerPage: 100,
       })
       .then(result => {
@@ -187,7 +192,7 @@ const MapsSection = () => {
     return () => {
       isMounted = false;
     };
-  }, [categoryActions, categoriesStore.getters, defaultCompanyIri]);
+  }, [categoryActions, categoriesStore.getters, mainCompanyIri]);
 
   useEffect(() => {
     if (!franchiseLocatorEnabled || !currentCompanyId) {
@@ -243,6 +248,11 @@ const MapsSection = () => {
     [enabledHomeOptions],
   );
 
+  const franchiseAddressesById = useMemo(
+    () => buildFranchiseAddressesById(franchiseDirectory),
+    [franchiseDirectory],
+  );
+
   const mapMarkers = useMemo(() => {
     // Exactly one pin per checked franchise (primary address with coordinates).
     const selectedCompanyIds = new Set(
@@ -294,6 +304,28 @@ const MapsSection = () => {
     return markers;
   }, [franchiseDirectory, visibleFranchiseCompanyIds]);
 
+  const staticMapUrl = useMemo(
+    () =>
+      buildStaticMapUrl({
+        apiKey: webGoogleMapsApiKey,
+        markers: mapMarkers,
+        size: '1280x480',
+      }),
+    [mapMarkers, webGoogleMapsApiKey],
+  );
+
+  const osmStaticMapUrl = useMemo(
+    () => buildOsmStaticMapUrl(mapMarkers, '1280x480'),
+    [mapMarkers],
+  );
+
+  const leafletMapHtml = useMemo(
+    () => buildLeafletMapHtml(mapMarkers),
+    [mapMarkers],
+  );
+
+  const previewMapUrl = staticMapUrl || osmStaticMapUrl;
+
   const saveMapsSettings = useCallback(async () => {
     await saveConfigs({
       [GOOGLE_MAPS_WEB_API_KEY_CONFIG_KEY]: String(
@@ -317,14 +349,14 @@ const MapsSection = () => {
         ? franchiseAddressCategoryIds.filter(id => id !== categoryId)
         : [...franchiseAddressCategoryIds, categoryId];
       setFranchiseAddressCategoryIds(nextIds);
-      const saved = saveDefaultCompanyConfigs?.({
+      const saved = saveMainCompanyConfigs?.({
         [SHOP_FRANCHISE_ADDRESS_CATEGORY_IDS_CONFIG_KEY]: nextIds,
       });
       if (!saved) {
         setFranchiseAddressCategoryIds(franchiseAddressCategoryIds);
       }
     },
-    [franchiseAddressCategoryIds, saveDefaultCompanyConfigs],
+    [franchiseAddressCategoryIds, saveMainCompanyConfigs],
   );
 
   const toggleSalesPage = useCallback(() => {
@@ -369,229 +401,26 @@ const MapsSection = () => {
       iconBackgroundColor={themePalette.cardIconBackground}
       iconColor={themePalette.cardIconColor}
       title="Mapas">
-      <View style={localStyles.fieldBlock} testID="maps-primary-entry-options">
-        <Text style={localStyles.fieldLabel}>Chave do Google Maps Web</Text>
-        <Text style={localStyles.helperText}>
-          Usada no display web e no mapa de franquias do shop.
-        </Text>
-        <TextInput
-          value={webGoogleMapsApiKey}
-          onChangeText={setWebGoogleMapsApiKey}
-          onBlur={saveMapsSettings}
-          autoCapitalize="none"
-          autoCorrect={false}
-          placeholder="Cole a chave do Google Maps para web"
-          placeholderTextColor={themePalette.inputPlaceholderText}
-          style={localStyles.input}
-        />
-      </View>
-
-      <View style={localStyles.fieldBlock}>
-        <Text style={localStyles.fieldLabel}>Chave do Google Maps Android</Text>
-        <Text style={localStyles.helperText}>
-          Reserve para fluxos nativos. O display de entregas no Android usa a
-          chave web (WebView).
-        </Text>
-        <TextInput
-          value={androidGoogleMapsApiKey}
-          onChangeText={setAndroidGoogleMapsApiKey}
-          onBlur={saveMapsSettings}
-          autoCapitalize="none"
-          autoCorrect={false}
-          placeholder="Cole a chave do Google Maps para Android"
-          placeholderTextColor={themePalette.inputPlaceholderText}
-          style={localStyles.input}
-        />
-      </View>
-
-      <View style={localStyles.settingRow}>
-        <View style={localStyles.settingCopy}>
-          <Text style={localStyles.statusLabel}>Vitrine do shop</Text>
-          <Text style={localStyles.settingDescription}>
-            Ativa a vitrine principal (categorias/produtos) como entrada do
-            app_type=shop.
-          </Text>
-        </View>
-        <TouchableOpacity
-          style={[
-            localStyles.statusChip,
-            salesPageEnabled
-              ? localStyles.statusChipEnabled
-              : localStyles.statusChipDisabled,
-          ]}
-          activeOpacity={0.85}
-          onPress={toggleSalesPage}>
-          <Icon
-            name={salesPageEnabled ? 'check-circle' : 'block'}
-            size={16}
-            color={
-              salesPageEnabled
-                ? themePalette.badgeSelectedText
-                : themePalette.badgeDisabledText
-            }
-          />
-          <Text
-            style={[
-              localStyles.statusChipText,
-              {
-                color: salesPageEnabled
-                  ? themePalette.badgeSelectedText
-                  : themePalette.badgeDisabledText,
-              },
-            ]}>
-            {salesPageEnabled ? 'Ativado' : 'Desativado'}
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={localStyles.settingRow}>
-        <View style={localStyles.settingCopy}>
-          <Text style={localStyles.statusLabel}>Localizador de franquias</Text>
-          <Text style={localStyles.settingDescription}>
-            Ativa o mapa das franquias como entrada do app_type=shop.
-          </Text>
-        </View>
-        <TouchableOpacity
-          testID="maps-franchise-locator-toggle"
-          style={[
-            localStyles.statusChip,
-            franchiseLocatorEnabled
-              ? localStyles.statusChipEnabled
-              : localStyles.statusChipDisabled,
-          ]}
-          activeOpacity={0.85}
-          onPress={toggleFranchiseLocator}>
-          <Icon
-            name={franchiseLocatorEnabled ? 'check-circle' : 'block'}
-            size={16}
-            color={
-              franchiseLocatorEnabled
-                ? themePalette.badgeSelectedText
-                : themePalette.badgeDisabledText
-            }
-          />
-          <Text
-            style={[
-              localStyles.statusChipText,
-              {
-                color: franchiseLocatorEnabled
-                  ? themePalette.badgeSelectedText
-                  : themePalette.badgeDisabledText,
-              },
-            ]}>
-            {franchiseLocatorEnabled ? 'Ativado' : 'Desativado'}
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={localStyles.fieldBlock}>
-        <Text style={localStyles.fieldLabel}>Tela principal do shop</Text>
-        <Text style={localStyles.helperText}>
-          {primaryEntryOptions.length === 0
-            ? 'Ative a vitrine e/ou o localizador acima para escolher a entrada principal.'
-            : primaryEntryOptions.length === 1
-              ? 'Apenas uma entrada está ativa — ela é usada automaticamente.'
-              : 'Escolha qual entrada o app_type=shop abre primeiro: mapa das franquias ou vitrine.'}
-        </Text>
-        {primaryEntryOptions.length > 0 && (
-          <View
-            style={{
-              flexDirection: 'row',
-              flexWrap: 'wrap',
-              gap: 8,
-              marginTop: 8,
-            }}>
-            {primaryEntryOptions.map(option => {
-              const selected = primaryEntry === option.value;
-              const locked = primaryEntryOptions.length === 1;
-              return (
-                <TouchableOpacity
-                  key={option.value}
-                  style={[
-                    localStyles.statusChip,
-                    selected
-                      ? localStyles.statusChipEnabled
-                      : localStyles.statusChipDisabled,
-                  ]}
-                  activeOpacity={locked ? 1 : 0.85}
-                  onPress={() => selectPrimaryEntry(option.value)}
-                  disabled={locked}>
-                  <Icon
-                    name={
-                      option.value === SHOP_HOME_OPTION_FRANCHISE_LOCATOR
-                        ? 'map'
-                        : 'storefront'
-                    }
-                    size={16}
-                    color={
-                      selected
-                        ? themePalette.badgeSelectedText
-                        : themePalette.badgeDisabledText
-                    }
-                  />
-                  <Text
-                    style={[
-                      localStyles.statusChipText,
-                      {
-                        color: selected
-                          ? themePalette.badgeSelectedText
-                          : themePalette.badgeDisabledText,
-                      },
-                    ]}>
-                    {option.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        )}
-      </View>
-
-      <View style={localStyles.fieldBlock}>
-        <Text style={localStyles.fieldLabel}>
-          Categorias de endereços no mapa de franquias
-        </Text>
-        {isLoadingCategories ? (
-          <ActivityIndicator size={22} color={themePalette.primary} />
-        ) : franchiseAddressCategories.length === 0 ? (
-          <Text style={localStyles.helperText}>
-            Nenhuma categoria de endereço encontrada.
-          </Text>
-        ) : (
-          <View>
-            {franchiseAddressCategories.map(category => {
-              const categoryId = String(category?.id || category?.['@id'] || '')
-                .replace(/\D+/g, '')
-                .trim();
-              const selected = franchiseAddressCategoryIds.includes(categoryId);
-
-              return (
-                <TouchableOpacity
-                  activeOpacity={0.85}
-                  key={category?.['@id'] || category?.id}
-                  onPress={() => toggleFranchiseAddressCategory(category)}
-                  style={[
-                    localStyles.franchiseAddressOption,
-                    selected && localStyles.franchiseAddressOptionActive,
-                  ]}>
-                  <View style={localStyles.franchiseAddressOptionCopy}>
-                    <Text style={localStyles.franchiseAddressName}>
-                      {category?.name || `Categoria #${categoryId}`}
-                    </Text>
-                  </View>
-                  <Icon
-                    name={selected ? 'check-box' : 'check-box-outline-blank'}
-                    size={22}
-                    color={
-                      selected ? themePalette.primary : themePalette.textMuted
-                    }
-                  />
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        )}
-      </View>
+      <MapsMapasControls
+        androidGoogleMapsApiKey={androidGoogleMapsApiKey}
+        franchiseAddressCategories={franchiseAddressCategories}
+        franchiseAddressCategoryIds={franchiseAddressCategoryIds}
+        franchiseLocatorEnabled={franchiseLocatorEnabled}
+        isLoadingCategories={isLoadingCategories}
+        localStyles={localStyles}
+        primaryEntry={primaryEntry}
+        primaryEntryOptions={primaryEntryOptions}
+        salesPageEnabled={salesPageEnabled}
+        saveMapsSettings={saveMapsSettings}
+        selectPrimaryEntry={selectPrimaryEntry}
+        setAndroidGoogleMapsApiKey={setAndroidGoogleMapsApiKey}
+        setWebGoogleMapsApiKey={setWebGoogleMapsApiKey}
+        themePalette={themePalette}
+        toggleFranchiseAddressCategory={toggleFranchiseAddressCategory}
+        toggleFranchiseLocator={toggleFranchiseLocator}
+        toggleSalesPage={toggleSalesPage}
+        webGoogleMapsApiKey={webGoogleMapsApiKey}
+      />
 
       {franchiseLocatorEnabled ? (
         <>
@@ -602,21 +431,16 @@ const MapsSection = () => {
             saveConfigs={saveConfigs}
             themePalette={themePalette}
             globalStyles={globalStyles}
-            onVisibilityChange={(nextCompanyIds, nextAddressIds) => {
-              setVisibleFranchiseCompanyIds(
-                Array.isArray(nextCompanyIds) ? nextCompanyIds : [],
-              );
-              setVisibleFranchiseAddressIds(
-                Array.isArray(nextAddressIds) ? nextAddressIds : [],
-              );
-            }}
           />
 
-          <FranchiseMapPreview
-            isLoading={isLoadingFranchiseDirectory}
-            mapMarkers={mapMarkers}
-            webGoogleMapsApiKey={webGoogleMapsApiKey}
+          <MapsFranchisePreview
+            isLoadingFranchiseDirectory={isLoadingFranchiseDirectory}
+            leafletMapHtml={leafletMapHtml}
             localStyles={localStyles}
+            mapBoxWidth={mapBoxWidth}
+            mapMarkers={mapMarkers}
+            previewMapUrl={previewMapUrl}
+            setMapBoxWidth={setMapBoxWidth}
             themePalette={themePalette}
             visibleFranchiseCompanyIds={visibleFranchiseCompanyIds}
           />

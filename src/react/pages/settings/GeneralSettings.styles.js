@@ -393,6 +393,8 @@ export const createGeneralSettingsStyles = palette =>
     primaryButton: {
       marginTop: 16,
       justifyContent: 'center',
+      backgroundColor: palette.buttonBackground,
+      borderColor: palette.buttonBorder,
     },
     secondaryButton: {
       marginTop: 10,

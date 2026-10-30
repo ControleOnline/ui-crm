@@ -34,7 +34,21 @@ jobs:
       - uses: actions/checkout@v4
         if: github.base_ref != 'dev'
         with:
-          ref: ${{ github.head_ref }}
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+
+      - name: Validate checked-out pull request head
+        if: github.base_ref != 'dev'
+        env:
+          EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -eu
+          actual=$(git rev-parse HEAD)
+          test "$actual" = "$EXPECTED_HEAD_SHA" || {
+            echo "::error::Checked out $actual, expected pull request head $EXPECTED_HEAD_SHA."
+            exit 1
+          }
 
       - name: Validate frozen RC manifest
         if: github.base_ref != 'dev'

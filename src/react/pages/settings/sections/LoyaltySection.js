@@ -37,6 +37,7 @@ import {
   ProductSelectionModal,
   resolveProductLabel,
   resolveProductMeta,
+  resolveProductMetaParts,
   useProductBrowser,
 } from './LoyaltyProductPicker';
 
@@ -46,7 +47,7 @@ const LoyaltySection = () => {
   const {globalStyles} = css();
   const palette = useGeneralSettingsPalette();
   const styles = useGeneralSettingsStyles();
-  const {currentCompany, effectiveCompanyConfigs, saveConfig} =
+  const {currentCompany, effectiveCompanyConfigs, saveConfig, selectedCompanyId} =
     useGeneralSettingsConfig();
   const productActions = useStore('products').actions;
 
@@ -62,11 +63,11 @@ const LoyaltySection = () => {
   const [giftVisible, setGiftVisible] = useState(false);
 
   const participantsBrowser = useProductBrowser({
-    companyId: currentCompany?.id,
+    companyId: selectedCompanyId || currentCompany?.id,
     visible: participantsVisible,
   });
   const giftBrowser = useProductBrowser({
-    companyId: currentCompany?.id,
+    companyId: selectedCompanyId || currentCompany?.id,
     visible: giftVisible,
   });
 
@@ -339,13 +340,26 @@ const LoyaltySection = () => {
                       color={palette.iconDanger}
                     />
                     <View style={styles.printerCopy}>
-                      <Text style={styles.printerName}>
+                      <Text style={styles.printerName} numberOfLines={2}>
                         {resolveProductLabel(product)}
                       </Text>
-                      <Text style={styles.printerDevice}>
-                        {resolveProductMeta(product) || 'Toque para remover'}
+                      <Text style={styles.printerDevice} numberOfLines={1}>
+                        {resolveProductMetaParts(product).metaLine ||
+                          resolveProductMetaParts(product).sku ||
+                          'Toque para remover'}
                       </Text>
                     </View>
+                    {!!resolveProductMetaParts(product).priceLabel && (
+                      <Text
+                        style={{
+                          fontSize: 13,
+                          fontWeight: '700',
+                          color: palette.iconSuccess || palette.success,
+                          marginLeft: 8,
+                        }}>
+                        {resolveProductMetaParts(product).priceLabel}
+                      </Text>
+                    )}
                   </TouchableOpacity>
                 );
               })}
@@ -396,14 +410,26 @@ const LoyaltySection = () => {
                   color={palette.iconActive}
                 />
                 <View style={styles.printerCopy}>
-                  <Text style={styles.printerName}>
+                  <Text style={styles.printerName} numberOfLines={2}>
                     {resolveProductLabel(selectedGiftProduct)}
                   </Text>
-                  <Text style={styles.printerDevice}>
-                    {resolveProductMeta(selectedGiftProduct) ||
+                  <Text style={styles.printerDevice} numberOfLines={1}>
+                    {resolveProductMetaParts(selectedGiftProduct).metaLine ||
+                      resolveProductMetaParts(selectedGiftProduct).sku ||
                       `ID ${giftProductId}`}
                   </Text>
                 </View>
+                {!!resolveProductMetaParts(selectedGiftProduct).priceLabel && (
+                  <Text
+                    style={{
+                      fontSize: 13,
+                      fontWeight: '700',
+                      color: palette.iconSuccess || palette.success,
+                      marginLeft: 8,
+                    }}>
+                    {resolveProductMetaParts(selectedGiftProduct).priceLabel}
+                  </Text>
+                )}
               </View>
             </View>
           ) : (
