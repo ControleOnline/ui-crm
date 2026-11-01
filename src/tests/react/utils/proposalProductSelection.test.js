@@ -2,11 +2,13 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 
 const {
+  collectProductCategoryIds,
   filterProductsByModelCategory,
   getProposalModelCategoryId,
   getProposalModelCategoryName,
   keepCompatibleSelectedProducts,
   normalizeCategoryId,
+  productMatchesModelCategory,
 } = require('../../../react/utils/proposalProductSelection');
 
 test('normalizeCategoryId resolves nested category references', () => {
@@ -32,7 +34,19 @@ test('getProposalModelCategoryName returns human label when present', () => {
   assert.equal(getProposalModelCategoryName({ category: {} }), '');
 });
 
-test('filterProductsByModelCategory keeps only matching products when a category is selected', () => {
+test('collectProductCategoryIds reads productCategory join collection', () => {
+  const product = {
+    '@id': '/products/1',
+    productCategory: [
+      { category: { '@id': '/categories/4' } },
+      { category: '/categories/9' },
+    ],
+  };
+
+  assert.deepEqual([...collectProductCategoryIds(product)].sort(), ['4', '9']);
+});
+
+test('filterProductsByModelCategory keeps matching products via product.category', () => {
   const products = [
     { '@id': '/products/1', category: { '@id': '/categories/4' } },
     { '@id': '/products/2', category: { '@id': '/categories/7' } },
@@ -45,6 +59,40 @@ test('filterProductsByModelCategory keeps only matching products when a category
       selectedModelCategoryId: '4',
     }),
     [products[0], products[2]],
+  );
+});
+
+test('filterProductsByModelCategory keeps matching products via productCategory join', () => {
+  const products = [
+    {
+      '@id': '/products/10',
+      productCategory: [{ category: { '@id': '/categories/4', name: 'Serviços' } }],
+    },
+    {
+      '@id': '/products/11',
+      productCategory: [{ category: { '@id': '/categories/8' } }],
+    },
+  ];
+
+  assert.deepEqual(
+    filterProductsByModelCategory({
+      products,
+      selectedModelCategoryId: '4',
+    }),
+    [products[0]],
+  );
+});
+
+test('filterProductsByModelCategory keeps sparse products when categories are not embedded', () => {
+  // product:read often omits productCategory; API filter is the source of truth.
+  const products = [{ '@id': '/products/1' }, { '@id': '/products/2' }];
+
+  assert.deepEqual(
+    filterProductsByModelCategory({
+      products,
+      selectedModelCategoryId: '4',
+    }),
+    products,
   );
 });
 
@@ -73,4 +121,12 @@ test('keepCompatibleSelectedProducts drops selections outside the model category
     }),
     [selectedProducts[0]],
   );
+});
+
+test('productMatchesModelCategory accepts join-based membership', () => {
+  const product = {
+    productCategory: [{ category: '/categories/15' }],
+  };
+  assert.equal(productMatchesModelCategory(product, '15'), true);
+  assert.equal(productMatchesModelCategory(product, '99'), false);
 });

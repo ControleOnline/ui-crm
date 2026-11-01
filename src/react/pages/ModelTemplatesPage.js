@@ -13,8 +13,8 @@ import {
   getCategoryContextForDocument,
 } from '@controleonline/ui-common/src/react/utils/categoryContexts';
 
-import { resolveThemePalette, withOpacity } from '@controleonline/../../src/styles/branding';
-import { colors } from '@controleonline/../../src/styles/colors';
+import { resolveThemePalette, withOpacity } from '@controleonline/ui-layout/src/styles/branding';
+import { colors } from '@controleonline/ui-layout/src/styles/colors';
 import styles from './ModelTemplatesPage.styles';
 import { inlineStyle_1012_59, inlineStyle_1068_14 } from './ModelTemplatesPage.styles';
 
