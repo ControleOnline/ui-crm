@@ -29,6 +29,7 @@ import CrmSection from './sections/CrmSection';
 import LoyaltySection from './sections/LoyaltySection';
 import MapsSection from './sections/MapsSection';
 import ShopSettingsSection from './sections/shop/ShopSettingsSection';
+import AiProvidersSection from './sections/AiProvidersSection';
 import IntegrationsSection from './sections/IntegrationsSection';
 import AiProvidersSection from './sections/AiProvidersSection';
 import LogSection from './sections/LogSection';
