@@ -1,6 +1,6 @@
 {
   "name": "@controleonline/ui-crm",
-  "version": "1.0.42",
+  "version": "1.0.45",
   "author": "ControleOnline",
   "description": "ControleOnline CRM Quasar UI Component",
   "license": "MIT",
@@ -26,7 +26,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/controleonline/conline-quasar-ui"
+    "url": "https://github.com/ControleOnline/ui-crm.git"
   },
   "bugs": "",
   "homepage": "https://www.controleonline.com/devs/plugins",

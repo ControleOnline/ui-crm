@@ -6,6 +6,7 @@ import CrmIndex from '@controleonline/ui-crm/src/react/pages/crm/index';
 import ProposalsPage from '../pages/proposals';
 import CrmConversation from '../pages/crm/conversation';
 import GeneralSettings from '../pages/settings/GeneralSettings';
+import McpPage from '../pages/mcp/McpPage';
 import ProposalDetails from '../pages/proposals/ProposalDetails';
 
 const crmRoutes = [
@@ -118,6 +119,19 @@ const crmRoutes = [
       headerBackVisible: true,
       companyFilterMode: 'icon',
       title: 'Propostas',
+    },
+  },
+  {
+    name: 'McpPage',
+    component: McpPage,
+    path: 'mcp',
+    options: {
+      showCompanyFilter: true,
+      showBottomToolBar: true,
+      headerShown: true,
+      headerBackVisible: true,
+      companyFilterMode: 'icon',
+      title: 'Chat IA / MCP',
     },
   },
   {
