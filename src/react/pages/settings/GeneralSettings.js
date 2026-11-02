@@ -29,7 +29,6 @@ import CrmSection from './sections/CrmSection';
 import LoyaltySection from './sections/LoyaltySection';
 import MapsSection from './sections/MapsSection';
 import ShopSettingsSection from './sections/shop/ShopSettingsSection';
-import AiProvidersSection from './sections/AiProvidersSection';
 import IntegrationsSection from './sections/IntegrationsSection';
 import LogSection from './sections/LogSection';
 import MaintenanceSection from './sections/MaintenanceSection';
@@ -51,13 +50,6 @@ const SETTINGS_TABS = [
     icon: 'link',
     stores: ['configs', 'people'],
     Component: IntegrationsSection,
-  },
-  {
-    key: 'ai-providers',
-    label: 'IA / MCP',
-    icon: 'smart-toy',
-    stores: ['configs', 'people'],
-    Component: AiProvidersSection,
   },
   {
     key: 'logs',
