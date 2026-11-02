@@ -88,7 +88,7 @@ const ShopSection = () => {
   const localStyles = useGeneralSettingsStyles();
   const {
     currentCompany,
-    defaultCompanyLabel,
+    mainCompanyLabel,
     effectiveCompanyConfigs,
     isMainCompanySelected,
     saveConfig,
@@ -232,7 +232,7 @@ const ShopSection = () => {
         <View style={localStyles.emptyBox}>
           <Text style={localStyles.emptyTitle}>Disponivel na empresa principal</Text>
           <Text style={localStyles.emptyText}>
-            Selecione a empresa principal ({defaultCompanyLabel}) para configurar o shop.
+            Selecione a empresa principal ({mainCompanyLabel}) para configurar o shop.
           </Text>
         </View>
       </GeneralSettingsSection>

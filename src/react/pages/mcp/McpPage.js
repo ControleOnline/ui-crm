@@ -30,7 +30,7 @@ export default function McpPage() {
   const peopleStore = useStore('people');
   const company =
     peopleStore?.getters?.currentCompany ||
-    peopleStore?.getters?.defaultCompany ||
+    peopleStore?.getters?.mainCompany ||
     null;
   const companyId = company?.id || company?.['@id']?.split('/').pop() || null;
 

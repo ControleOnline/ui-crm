@@ -144,7 +144,7 @@ const GeneralSettings = () => {
   const {
     companies,
     currentCompany,
-    defaultCompany,
+    mainCompany,
     hasDefaultCompanyAccess,
     isMainCompanySelected,
     peopleActions,
@@ -184,10 +184,10 @@ const GeneralSettings = () => {
         }
       }
 
-      if (!defaultCompany?.id) {
-        const defaultCompanyRequest = peopleActions.defaultCompany?.();
-        if (defaultCompanyRequest?.then) {
-          requests.push(defaultCompanyRequest.catch(() => {}));
+      if (!mainCompany?.id) {
+        const mainCompanyRequest = peopleActions.mainCompany?.();
+        if (mainCompanyRequest?.then) {
+          requests.push(mainCompanyRequest.catch(() => {}));
         }
       }
 
@@ -204,7 +204,7 @@ const GeneralSettings = () => {
       return () => {
         cancelled = true;
       };
-    }, [companies, defaultCompany?.id, peopleActions]),
+    }, [companies, mainCompany?.id, peopleActions]),
   );
 
   /*
