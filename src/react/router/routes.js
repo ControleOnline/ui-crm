@@ -124,7 +124,7 @@ const crmRoutes = [
   {
     name: 'McpPage',
     component: McpPage,
-    path: 'mcp',
+    path: 'ai',
     options: {
       showCompanyFilter: true,
       showBottomToolBar: true,

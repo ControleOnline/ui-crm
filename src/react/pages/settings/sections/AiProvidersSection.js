@@ -149,7 +149,7 @@ const AiProvidersSection = () => {
   return (
     <GeneralSettingsSection
       title="Inteligencia Artificial / MCP"
-      description="Configure Grok, Codex/OpenAI, Gemini e Claude por empresa. A chave nao volta em claro no GET. O prompt inicial e enviado em toda conversa do /mcp.">
+      description="Configure Grok, Codex/OpenAI, Gemini e Claude por empresa. A chave nao volta em claro no GET. O prompt inicial e enviado em toda conversa do /ai.">
       {!hasDefaultCompanyAccess ? (
         <Text style={localStyles.helperText}>
           Sem acesso a empresa padrao para editar configs.
