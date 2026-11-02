@@ -26,8 +26,8 @@ const MaintenanceSection = () => {
   const themePalette = useGeneralSettingsPalette();
   const {showError, showSuccess} = useToastMessage();
   const {
-    defaultCompany,
-    defaultCompanyLabel,
+    mainCompany,
+    mainCompanyLabel,
     hasDefaultCompanyAccess,
     isMainCompanySelected,
     isSaving,
@@ -35,7 +35,7 @@ const MaintenanceSection = () => {
     saveConfigs,
   } = useGeneralSettingsConfig();
   const [routines, setRoutines] = useState(
-    normalizeMaintenanceRoutines(defaultCompany?.configs?.[
+    normalizeMaintenanceRoutines(mainCompany?.configs?.[
       MAINTENANCE_ROUTINES_CONFIG_KEY
     ]),
   );
@@ -43,22 +43,22 @@ const MaintenanceSection = () => {
   useEffect(() => {
     setRoutines(
       normalizeMaintenanceRoutines(
-        defaultCompany?.configs?.[MAINTENANCE_ROUTINES_CONFIG_KEY],
+        mainCompany?.configs?.[MAINTENANCE_ROUTINES_CONFIG_KEY],
       ),
     );
-  }, [defaultCompany?.configs]);
+  }, [mainCompany?.configs]);
 
   const editable =
     hasDefaultCompanyAccess &&
-    !!defaultCompany?.id &&
+    !!mainCompany?.id &&
     isMainCompanySelected &&
     !isSaving;
 
   const saveRoutines = useCallback(
     async (nextRoutines = routines) => {
-    if (!hasDefaultCompanyAccess || !defaultCompany?.id || !isMainCompanySelected) {
+    if (!hasDefaultCompanyAccess || !mainCompany?.id || !isMainCompanySelected) {
       showError(
-        `Abra a empresa principal (${defaultCompanyLabel}) para editar as rotinas.`,
+        `Abra a empresa principal (${mainCompanyLabel}) para editar as rotinas.`,
       );
       return;
     }
@@ -87,15 +87,15 @@ const MaintenanceSection = () => {
       }
 
       try {
-        await peopleActions.defaultCompany();
+        await peopleActions.mainCompany();
       } catch {}
 
       showSuccess('Rotinas de manutencao salvas com sucesso.');
       return true;
     },
     [
-      defaultCompany?.id,
-      defaultCompanyLabel,
+      mainCompany?.id,
+      mainCompanyLabel,
       hasDefaultCompanyAccess,
       isMainCompanySelected,
       peopleActions,
@@ -133,7 +133,7 @@ const MaintenanceSection = () => {
       iconColor={themePalette.cardIconColor}
       title="Rotinas de manutencao">
       <Text style={localStyles.helperText}>
-        {`Essas rotinas ficam gravadas na empresa principal (${defaultCompanyLabel}) e o cron geral tenta executa-las a cada minuto.`}
+        {`Essas rotinas ficam gravadas na empresa principal (${mainCompanyLabel}) e o cron geral tenta executa-las a cada minuto.`}
       </Text>
 
       {!isMainCompanySelected && hasDefaultCompanyAccess && (

@@ -44,10 +44,10 @@ const AiProvidersSection = () => {
   const localStyles = useGeneralSettingsStyles();
   const themePalette = useGeneralSettingsPalette();
   const {showError, showSuccess} = useToastMessage();
-  const {defaultCompany, hasDefaultCompanyAccess, isMainCompanySelected} =
+  const {mainCompany, hasDefaultCompanyAccess, isMainCompanySelected} =
     useGeneralSettingsConfig();
 
-  const companyId = defaultCompany?.id || null;
+  const companyId = mainCompany?.id || null;
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [providers, setProviders] = useState(() => {

@@ -24,8 +24,8 @@ const LoginSection = () => {
   const {showError, showSuccess} = useToastMessage();
   const {
     configActions,
-    defaultCompany,
-    defaultCompanyLabel,
+    mainCompany,
+    mainCompanyLabel,
     hasDefaultCompanyAccess,
     isMainCompanySelected,
     peopleActions,
@@ -34,11 +34,11 @@ const LoginSection = () => {
   const [googleClientId, setGoogleClientId] = useState('');
 
   useEffect(() => {
-    setGoogleClientId(resolveCompanyGoogleOauthClientId(defaultCompany));
-  }, [defaultCompany?.configs]);
+    setGoogleClientId(resolveCompanyGoogleOauthClientId(mainCompany));
+  }, [mainCompany?.configs]);
 
   const saveGoogleOauthConfig = useCallback(() => {
-    if (!hasDefaultCompanyAccess || !defaultCompany?.id) {
+    if (!hasDefaultCompanyAccess || !mainCompany?.id) {
       showError(
         'Nao foi possivel identificar a empresa principal para salvar o login Google.',
       );
@@ -60,7 +60,7 @@ const LoginSection = () => {
           .addConfigs({
             configKey: OAUTH_GOOGLE_CLIENT_ID_CONFIG_KEY,
             configValue: toConfigRequestValue(normalizedGoogleClientId),
-            people: '/people/' + defaultCompany.id,
+            people: '/people/' + mainCompany.id,
             module: 4,
             visibility: 'public',
           })
@@ -68,7 +68,7 @@ const LoginSection = () => {
             setGoogleClientId(normalizedGoogleClientId);
 
             try {
-              await peopleActions.defaultCompany();
+              await peopleActions.mainCompany();
             } catch {}
 
             showSuccess('Google OAuth salvo com sucesso.');
@@ -85,7 +85,7 @@ const LoginSection = () => {
     });
   }, [
     configActions,
-    defaultCompany?.id,
+    mainCompany?.id,
     hasDefaultCompanyAccess,
     googleClientId,
     isMainCompanySelected,
@@ -102,7 +102,7 @@ const LoginSection = () => {
       iconColor={themePalette.cardIconColor}
       title="Login e autenticacao">
       <Text style={localStyles.helperText}>
-        {`Esse client ID e salvo na empresa principal (${defaultCompanyLabel}) e controla quando o botao "Entrar com Google" aparece no login web.`}
+        {`Esse client ID e salvo na empresa principal (${mainCompanyLabel}) e controla quando o botao "Entrar com Google" aparece no login web.`}
       </Text>
 
       {!isMainCompanySelected && (
@@ -115,13 +115,13 @@ const LoginSection = () => {
       <TextInput
         style={[
           localStyles.input,
-          (!defaultCompany?.id || !isMainCompanySelected) &&
+          (!mainCompany?.id || !isMainCompanySelected) &&
             localStyles.inputDisabled,
         ]}
         value={googleClientId}
         onChangeText={setGoogleClientId}
         onBlur={saveGoogleOauthConfig}
-        editable={!!defaultCompany?.id && isMainCompanySelected}
+        editable={!!mainCompany?.id && isMainCompanySelected}
         autoCapitalize="none"
         autoCorrect={false}
         placeholder="1234567890-abc123def456.apps.googleusercontent.com"
