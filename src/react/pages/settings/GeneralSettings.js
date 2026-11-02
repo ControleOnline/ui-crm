@@ -1,7 +1,7 @@
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {ScrollView, Text, TouchableOpacity, View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
-import {useFocusEffect} from '@react-navigation/native';
+import {useFocusEffect, useRoute} from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
 import css from '@controleonline/ui-orders/src/react/css/orders';
@@ -139,6 +139,7 @@ const SETTINGS_TABS = [
 ];
 
 const GeneralSettings = () => {
+  const route = useRoute();
   const {styles} = css();
   const localStyles = useGeneralSettingsStyles();
   const {
@@ -234,6 +235,20 @@ const GeneralSettings = () => {
   useEffect(() => {
     writeGeneralSettingsActiveTab(activeTab);
   }, [activeTab]);
+
+  useFocusEffect(
+    useCallback(() => {
+      const tabFromRoute = String(route?.params?.tab || '').trim();
+      if (!tabFromRoute) {
+        return undefined;
+      }
+      writeGeneralSettingsActiveTab(tabFromRoute);
+      setActiveTab(prev =>
+        prev === tabFromRoute ? prev : tabFromRoute,
+      );
+      return undefined;
+    }, [route?.params?.tab]),
+  );
 
   const activeTabConfig = useMemo(
     () =>
