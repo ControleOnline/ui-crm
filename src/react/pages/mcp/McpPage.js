@@ -131,6 +131,28 @@ export default function McpPage() {
     setDraft('');
   };
 
+  const pollUntilDone = async (taskId, interactionId) => {
+    const maxAttempts = 40;
+    for (let i = 0; i < maxAttempts; i += 1) {
+      await new Promise(r => setTimeout(r, 1500));
+      try {
+        await loadMessages(taskId);
+        if (interactionId) {
+          const detail = await api.fetch(`/task_interations/${interactionId}`);
+          const st = detail?.status || detail?.['status'];
+          if (st === 'done' || st === 'error') {
+            return st;
+          }
+        } else {
+          return 'done';
+        }
+      } catch {
+        // keep polling
+      }
+    }
+    return 'timeout';
+  };
+
   const sendMessage = async () => {
     const text = draft.trim();
     if (!text || sending) return;
@@ -147,16 +169,24 @@ export default function McpPage() {
         ...(companyId ? {company_id: Number(companyId)} : {}),
       };
       const res = await api.post('/mcp/chat', body);
-      const newTaskId = res?.task?.id;
+      const newTaskId = res?.task_id || res?.task?.id;
+      const interactionId = res?.interaction_id;
       setDraft('');
-      if (newTaskId && newTaskId !== activeTaskId) {
+      if (newTaskId && Number(newTaskId) !== Number(activeTaskId)) {
         setActiveTaskId(Number(newTaskId));
         await loadTasks();
-      } else {
-        await loadMessages(activeTaskId || newTaskId);
       }
-      if (res?.reply) {
-        // optimistic refresh
+      await loadMessages(newTaskId || activeTaskId);
+      // Phase 2 runs in queue; poll for status/reply (WS will also push when available)
+      if (res?.async || res?.status === 'pending') {
+        const finalStatus = await pollUntilDone(newTaskId || activeTaskId, interactionId);
+        await loadMessages(newTaskId || activeTaskId);
+        if (finalStatus === 'error') {
+          showError('A IA retornou erro ao processar a mensagem');
+        } else if (finalStatus === 'timeout') {
+          showError('Ainda processando… atualize o chat em instantes');
+        }
+      } else if (res?.message) {
         await loadMessages(newTaskId || activeTaskId);
       }
     } catch (e) {
@@ -180,6 +210,9 @@ export default function McpPage() {
     return (
       <View style={[styles.bubble, isUser ? styles.bubbleUser : styles.bubbleAi]}>
         <Text style={styles.bubbleText}>{body}</Text>
+        {item?.status && item.status !== 'done' ? (
+          <Text style={styles.bubbleMeta}>{String(item.status)}</Text>
+        ) : null}
       </View>
     );
   };

@@ -84,6 +84,7 @@ export default StyleSheet.create({
     alignSelf: 'flex-start',
     backgroundColor: '#212a33',
   },
+  bubbleMeta: {fontSize: 11, opacity: 0.7, marginTop: 4},
   bubbleText: {color: '#e7e9ea', fontSize: 14, lineHeight: 20},
   composer: {
     flexDirection: 'row',
