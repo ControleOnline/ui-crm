@@ -29,12 +29,11 @@ import CrmSection from './sections/CrmSection';
 import LoyaltySection from './sections/LoyaltySection';
 import MapsSection from './sections/MapsSection';
 import ShopSettingsSection from './sections/shop/ShopSettingsSection';
-import IntegrationsSection from './sections/IntegrationsSection';
 import LogSection from './sections/LogSection';
 import MaintenanceSection from './sections/MaintenanceSection';
 
 const MAIN_COMPANY_ONLY_TABS = new Set(['shop']);
-const TECHNICAL_TABS = new Set(['integrations', 'logs', 'maintenance']);
+const TECHNICAL_TABS = new Set(['logs', 'maintenance']);
 
 const SETTINGS_TABS = [
   {
@@ -43,13 +42,6 @@ const SETTINGS_TABS = [
     icon: 'dvr',
     stores: ['configs', 'people'],
     Component: DeviceRuntimeFooterSection,
-  },
-  {
-    key: 'integrations',
-    label: 'Integrações',
-    icon: 'link',
-    stores: ['configs', 'people'],
-    Component: IntegrationsSection,
   },
   {
     key: 'logs',
