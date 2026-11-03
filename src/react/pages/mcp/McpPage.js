@@ -28,6 +28,8 @@ const PROVIDER_LABELS = {
 export default function McpPage() {
   const {showError, showSuccess} = useToastMessage();
   const peopleStore = useStore('people');
+  const websocketStore = useStore('websocket');
+  const wsMessages = websocketStore?.getters?.messages || [];
   const company =
     peopleStore?.getters?.currentCompany ||
     peopleStore?.getters?.mainCompany ||
@@ -44,6 +46,8 @@ export default function McpPage() {
   const [loadingChat, setLoadingChat] = useState(false);
   const [sending, setSending] = useState(false);
   const listRef = useRef(null);
+  const pendingByTaskRef = useRef({}); // taskId -> userInteractionId
+  const handledWsRef = useRef(new Set());
 
   const companyQuery = useMemo(
     () => (companyId ? {company_id: Number(companyId)} : {}),
@@ -131,27 +135,45 @@ export default function McpPage() {
     setDraft('');
   };
 
-  const pollUntilDone = async (taskId, interactionId) => {
-    const maxAttempts = 40;
-    for (let i = 0; i < maxAttempts; i += 1) {
-      await new Promise(r => setTimeout(r, 1500));
-      try {
-        await loadMessages(taskId);
-        if (interactionId) {
-          const detail = await api.fetch(`/task_interations/${interactionId}`);
-          const st = detail?.status || detail?.['status'];
-          if (st === 'done' || st === 'error') {
-            return st;
-          }
-        } else {
-          return 'done';
-        }
-      } catch {
-        // keep polling
-      }
+  // Realtime: apply mcp_chat_reply from websocket store (no HTTP poll)
+  useEffect(() => {
+    if (!Array.isArray(wsMessages) || wsMessages.length === 0) {
+      return;
     }
-    return 'timeout';
-  };
+    const latest = wsMessages[wsMessages.length - 1];
+    const candidates = Array.isArray(latest) ? latest : [latest];
+    candidates.forEach(evt => {
+      if (!evt || typeof evt !== 'object') {
+        return;
+      }
+      const eventName = String(evt.event || evt.action || '');
+      if (eventName !== 'mcp_chat_reply') {
+        return;
+      }
+      const taskId = Number(evt.task_id || evt.taskId || 0);
+      const interactionId = Number(evt.interaction_id || evt.interactionId || 0);
+      const key = `${taskId}:${interactionId}:${evt.status || ''}:${String(evt.body || '').slice(0, 40)}`;
+      if (handledWsRef.current.has(key)) {
+        return;
+      }
+      handledWsRef.current.add(key);
+
+      if (taskId && Number(activeTaskId) === taskId) {
+        // Refresh only the open chat once when reply arrives
+        loadMessages(taskId);
+      } else if (taskId && !activeTaskId) {
+        setActiveTaskId(taskId);
+      }
+      if (taskId) {
+        delete pendingByTaskRef.current[taskId];
+        loadTasks();
+      }
+      if (String(evt.status || '') === 'error') {
+        showError(evt.body || 'A IA retornou erro ao processar a mensagem');
+      }
+      setSending(false);
+    });
+  }, [wsMessages, activeTaskId, loadMessages, loadTasks, showError]);
 
   const sendMessage = async () => {
     const text = draft.trim();
@@ -168,30 +190,38 @@ export default function McpPage() {
         ...(activeTaskId ? {task_id: activeTaskId} : {}),
         ...(companyId ? {company_id: Number(companyId)} : {}),
       };
+      // Optimistic local bubble while queue processes
+      setMessages(prev => [
+        ...prev,
+        {
+          id: `local-${Date.now()}`,
+          body: text,
+          status: 'pending',
+          registeredBy: {id: companyId ? Number(companyId) + 1 : 0},
+        },
+      ]);
+      setDraft('');
       const res = await api.post('/mcp/chat', body);
       const newTaskId = res?.task_id || res?.task?.id;
       const interactionId = res?.interaction_id;
-      setDraft('');
-      if (newTaskId && Number(newTaskId) !== Number(activeTaskId)) {
-        setActiveTaskId(Number(newTaskId));
-        await loadTasks();
-      }
-      await loadMessages(newTaskId || activeTaskId);
-      // Phase 2 runs in queue; poll for status/reply (WS will also push when available)
-      if (res?.async || res?.status === 'pending') {
-        const finalStatus = await pollUntilDone(newTaskId || activeTaskId, interactionId);
-        await loadMessages(newTaskId || activeTaskId);
-        if (finalStatus === 'error') {
-          showError('A IA retornou erro ao processar a mensagem');
-        } else if (finalStatus === 'timeout') {
-          showError('Ainda processando… atualize o chat em instantes');
+      if (newTaskId) {
+        pendingByTaskRef.current[Number(newTaskId)] = interactionId;
+        if (Number(newTaskId) !== Number(activeTaskId)) {
+          setActiveTaskId(Number(newTaskId));
+          loadTasks();
         }
-      } else if (res?.message) {
-        await loadMessages(newTaskId || activeTaskId);
+        // Single reload after persist (user message on server) — no poll loop
+        await loadMessages(Number(newTaskId));
+      }
+      // sending stays true until websocket reply (or error toast)
+      if (!(res?.async || res?.status === 'pending')) {
+        setSending(false);
+        if (res?.message) {
+          await loadMessages(newTaskId || activeTaskId);
+        }
       }
     } catch (e) {
       showError(e?.message || e?.error || 'Falha ao enviar mensagem');
-    } finally {
       setSending(false);
     }
   };
