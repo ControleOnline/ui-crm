@@ -82,7 +82,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#e2e8f0',
   },
 
-  tabItem: { flex: 1, paddingVertical: 16, alignItems: 'center' },
+  tabItem: { flex: 1, minHeight: 40, justifyContent: 'center', alignItems: 'center' },
 
   tabActive: { borderBottomWidth: 3, borderBottomColor: colors.primary },
 
