@@ -62,8 +62,8 @@ export default function McpPage() {
     </View>
   ) : null;
 
-  const options = chat.hasAi ? [['ai', 'IA']] : [['support', 'Suporte'], ['relationship', 'Comercial']];
-  const selected = chat.hasAi ? 'ai' : chat.ticketType;
+  // With the company's own AI the chat goes straight to it; the type choice exists only without AI.
+  const options = [['support', 'Suporte'], ['relationship', 'Comercial']];
 
   return (
     <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={80}>
@@ -117,15 +117,14 @@ export default function McpPage() {
             }
           />
         )}
-        {isNew ? (
+        {isNew && !chat.hasAi ? (
           <View style={styles.ticketTypeRow}>
             {options.map(([value, label]) => (
               <TouchableOpacity
                 key={value}
-                disabled={chat.hasAi}
                 onPress={() => chat.setTicketType(value)}
-                style={[styles.providerChip, selected === value && styles.providerChipActive]}>
-                <Text style={[styles.providerChipText, selected === value && styles.providerChipTextActive]}>{label}</Text>
+                style={[styles.providerChip, chat.ticketType === value && styles.providerChipActive]}>
+                <Text style={[styles.providerChipText, chat.ticketType === value && styles.providerChipTextActive]}>{label}</Text>
               </TouchableOpacity>
             ))}
           </View>
