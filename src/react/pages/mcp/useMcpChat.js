@@ -74,15 +74,14 @@ export default function useMcpChat() {
     if (!companyId) return;
     const base = {provider: `/people/${companyId}`, 'order[alterDate]': 'desc', itemsPerPage: 50};
     try {
-      // My internal chats + customer conversations the AI is handling + tickets I opened with the platform.
-      const [internal, customers, tickets] = await Promise.all([
+      // The user's conversations: chats with the company AI + tickets with the platform team.
+      const [internal, tickets] = await Promise.all([
         api.fetch('/tasks', {params: {...base, type: 'ia', ...(currentPeopleId ? {registeredBy: `/people/${currentPeopleId}`} : {})}}),
-        api.fetch('/tasks', {params: {...base, 'exists[aiAgent]': true}}),
         currentPeopleId
           ? api.fetch('/tasks', {params: {client: `/people/${currentPeopleId}`, announce: 'via:ai', 'order[alterDate]': 'desc', itemsPerPage: 50}})
           : Promise.resolve([]),
       ]);
-      setTasks(mergeConversations([toItems(internal), toItems(customers), toItems(tickets)], currentPeopleId));
+      setTasks(mergeConversations([toItems(internal), toItems(tickets)], currentPeopleId));
     } catch (e) {
       showError(e?.message || 'Falha ao listar conversas');
     } finally {
@@ -259,6 +258,7 @@ export default function useMcpChat() {
     setActiveTaskId,
     customerChat,
     myTicket,
+    hasAi: providers.length > 0,
     ticketType,
     setTicketType,
     messages,
