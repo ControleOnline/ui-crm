@@ -98,6 +98,7 @@ export default StyleSheet.create({
   bubbleCustomer: {backgroundColor: '#1f3a2b'},
   bubbleAuthor: {color: '#8b98a5', fontSize: 11, fontWeight: '700', marginBottom: 2},
   bubbleMeta: {color: '#8b98a5', fontSize: 11, marginTop: 4},
+  ticketTypeRow: {flexDirection: 'row', gap: 6, paddingHorizontal: 10, paddingTop: 8},
   composerHint: {color: '#8b98a5', fontSize: 12, padding: 12, borderTopWidth: 1, borderTopColor: '#2a3441'},
   bubbleText: {color: '#e7e9ea', fontSize: 14, lineHeight: 20},
   composer: {
