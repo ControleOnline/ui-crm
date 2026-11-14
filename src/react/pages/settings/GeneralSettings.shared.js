@@ -232,7 +232,7 @@ export const useGeneralSettingsConfig = () => {
     () => normalizeEntityId(mainCompany?.id || mainCompany?.['@id']),
     [mainCompany?.['@id'], mainCompany?.id],
   );
-  const hasMainCompanyAccess = useMemo(() => {
+  const hasDefaultCompanyAccess = useMemo(() => {
     if (mainCompanyId === '') {
       return false;
     }
@@ -479,7 +479,7 @@ export const useGeneralSettingsConfig = () => {
     mainCompany,
     mainCompanyLabel,
     effectiveCompanyConfigs,
-    hasMainCompanyAccess,
+    hasDefaultCompanyAccess,
     isMainCompanySelected,
     isSaving,
     peopleActions,

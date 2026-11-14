@@ -28,7 +28,7 @@ const MaintenanceSection = () => {
   const {
     mainCompany,
     mainCompanyLabel,
-    hasMainCompanyAccess,
+    hasDefaultCompanyAccess,
     isMainCompanySelected,
     isSaving,
     peopleActions,
@@ -49,14 +49,14 @@ const MaintenanceSection = () => {
   }, [mainCompany?.configs]);
 
   const editable =
-    hasMainCompanyAccess &&
+    hasDefaultCompanyAccess &&
     !!mainCompany?.id &&
     isMainCompanySelected &&
     !isSaving;
 
   const saveRoutines = useCallback(
     async (nextRoutines = routines) => {
-    if (!hasMainCompanyAccess || !mainCompany?.id || !isMainCompanySelected) {
+    if (!hasDefaultCompanyAccess || !mainCompany?.id || !isMainCompanySelected) {
       showError(
         `Abra a empresa principal (${mainCompanyLabel}) para editar as rotinas.`,
       );
@@ -96,7 +96,7 @@ const MaintenanceSection = () => {
     [
       mainCompany?.id,
       mainCompanyLabel,
-      hasMainCompanyAccess,
+      hasDefaultCompanyAccess,
       isMainCompanySelected,
       peopleActions,
       routines,

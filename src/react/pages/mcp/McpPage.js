@@ -1,7 +1,8 @@
 /*
- * @agents MCP AI chat (Task type=ia). Keep under 500 lines; API via /mcp/chat*.
+ * @agents /ai: employee chats with the company AI (internal data via MCP) and follows the customer
+ * conversations the AI is handling now. Employees answer customers in CRM / Support. Logic: useMcpChat.
  */
-import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
+import React, {useMemo, useRef, useState} from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -13,288 +14,150 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import {useStore} from '@store';
-import {api} from '@controleonline/ui-common/src/api';
-import useToastMessage from '../../hooks/useToastMessage';
+import useMcpChat from './useMcpChat';
 import styles from './McpPage.styles';
 
-const PROVIDER_LABELS = {
-  grok: 'Grok',
-  openai: 'Codex / OpenAI',
-  gemini: 'Gemini',
-  claude: 'Claude',
+const {idOf, isCustomerConversation, conversationChannel, stageLabel, messageRole} = require('./mcpChatUtils');
+
+const PROVIDER_LABELS = {grok: 'Grok', openai: 'Codex / OpenAI', gemini: 'Gemini', claude: 'Claude'};
+const CHANNEL_LABELS = {whatsapp: 'WhatsApp', email: 'E-mail', web: 'Site', ai: 'IA'};
+const ROLE_LABELS = {ai: 'IA', note: 'Nota interna', customer: 'Cliente', staff: 'Equipe', me: null};
+
+const TaskRow = ({item, selected, onPress}) => {
+  const customer = isCustomerConversation(item);
+  return (
+    <TouchableOpacity onPress={onPress} style={[styles.taskRow, selected && styles.taskRowActive]}>
+      <Text numberOfLines={1} style={styles.taskRowText}>
+        {item.name || `Conversa #${idOf(item)}`}
+      </Text>
+      {customer ? (
+        <Text style={styles.taskRowMeta}>
+          {CHANNEL_LABELS[conversationChannel(item)]} · {stageLabel(item)}
+        </Text>
+      ) : null}
+    </TouchableOpacity>
+  );
 };
 
 export default function McpPage() {
-  const {showError, showSuccess} = useToastMessage();
-  const peopleStore = useStore('people');
-  const company =
-    peopleStore?.getters?.currentCompany ||
-    peopleStore?.getters?.defaultCompany ||
-    null;
-  const companyId = company?.id || company?.['@id']?.split('/').pop() || null;
-
-  const [providers, setProviders] = useState([]);
-  const [provider, setProvider] = useState(null);
-  const [tasks, setTasks] = useState([]);
-  const [activeTaskId, setActiveTaskId] = useState(null);
-  const [messages, setMessages] = useState([]);
+  const chat = useMcpChat();
   const [draft, setDraft] = useState('');
-  const [loadingList, setLoadingList] = useState(true);
-  const [loadingChat, setLoadingChat] = useState(false);
-  const [sending, setSending] = useState(false);
   const listRef = useRef(null);
 
-  const companyQuery = useMemo(
-    () => (companyId ? {company_id: Number(companyId)} : {}),
-    [companyId],
+  const [internal, customers] = useMemo(
+    () => [chat.tasks.filter(t => !isCustomerConversation(t)), chat.tasks.filter(isCustomerConversation)],
+    [chat.tasks],
   );
 
-  const loadProviders = useCallback(async () => {
-    try {
-      const res = await api.fetch('/mcp/chat/providers', {params: companyQuery});
-      const list = res?.providers || res?.member || res || [];
-      const arr = Array.isArray(list) ? list : [];
-      setProviders(arr);
-      const enabled = arr.find(p => p.enabled || p.has_key);
-      setProvider(prev => prev || enabled?.provider || enabled?.id || enabled?.name || null);
-    } catch (e) {
-      showError(e?.message || 'Falha ao carregar providers de IA');
-    }
-  }, [companyQuery, showError]);
-
-  const loadTasks = useCallback(async () => {
-    setLoadingList(true);
-    try {
-      const params = {
-        type: 'ia',
-        order: {alterDate: 'desc'},
-        itemsPerPage: 50,
-      };
-      if (companyId) {
-        params.provider = `/people/${companyId}`;
-      }
-      const res = await api.fetch('/tasks', {params});
-      const items = res?.member || res?.['hydra:member'] || res || [];
-      setTasks(Array.isArray(items) ? items : []);
-    } catch (e) {
-      showError(e?.message || 'Falha ao listar chats');
-    } finally {
-      setLoadingList(false);
-    }
-  }, [companyId, showError]);
-
-  const loadMessages = useCallback(
-    async taskId => {
-      if (!taskId) {
-        setMessages([]);
-        return;
-      }
-      setLoadingChat(true);
-      try {
-        const res = await api.fetch('/task_interations', {
-          params: {
-            'task.id': taskId,
-            type: 'comment',
-            order: {id: 'asc'},
-            itemsPerPage: 100,
-          },
-        });
-        const items = res?.member || res?.['hydra:member'] || res || [];
-        setMessages(Array.isArray(items) ? items : []);
-      } catch (e) {
-        showError(e?.message || 'Falha ao carregar mensagens');
-      } finally {
-        setLoadingChat(false);
-      }
-    },
-    [showError],
-  );
-
-  useEffect(() => {
-    loadProviders();
-    loadTasks();
-  }, [loadProviders, loadTasks]);
-
-  useEffect(() => {
-    loadMessages(activeTaskId);
-  }, [activeTaskId, loadMessages]);
-
-  const selectTask = task => {
-    const id = task?.id || task?.['@id']?.split('/').pop();
-    setActiveTaskId(id ? Number(id) : null);
-  };
-
-  const startNewChat = () => {
-    setActiveTaskId(null);
-    setMessages([]);
+  const submit = async () => {
+    const text = draft;
     setDraft('');
+    const ok = await chat.sendMessage(text);
+    if (!ok) setDraft(text);
   };
-
-  const sendMessage = async () => {
-    const text = draft.trim();
-    if (!text || sending) return;
-    if (!provider) {
-      showError('Selecione um provider de IA configurado na empresa');
-      return;
-    }
-    setSending(true);
-    try {
-      const body = {
-        message: text,
-        provider,
-        ...(activeTaskId ? {task_id: activeTaskId} : {}),
-        ...(companyId ? {company_id: Number(companyId)} : {}),
-      };
-      const res = await api.post('/mcp/chat', body);
-      const newTaskId = res?.task?.id;
-      setDraft('');
-      if (newTaskId && newTaskId !== activeTaskId) {
-        setActiveTaskId(Number(newTaskId));
-        await loadTasks();
-      } else {
-        await loadMessages(activeTaskId || newTaskId);
-      }
-      if (res?.reply) {
-        // optimistic refresh
-        await loadMessages(newTaskId || activeTaskId);
-      }
-    } catch (e) {
-      showError(e?.message || e?.error || 'Falha ao enviar mensagem');
-    } finally {
-      setSending(false);
-    }
-  };
-
-  const activeTask = tasks.find(
-    t => String(t.id) === String(activeTaskId) || t['@id']?.endsWith(`/${activeTaskId}`),
-  );
 
   const renderMessage = ({item}) => {
-    const body = item?.body || '';
-    const byId =
-      item?.registeredBy?.id ||
-      item?.registeredBy?.['@id']?.split('/').pop() ||
-      item?.registered_by_id;
-    const isUser = companyId && String(byId) !== String(companyId);
+    const role = messageRole(item, {companyId: chat.companyId, task: chat.activeTask, currentPeopleId: chat.currentPeopleId});
+    const right = role === 'me' || role === 'staff';
     return (
-      <View style={[styles.bubble, isUser ? styles.bubbleUser : styles.bubbleAi]}>
-        <Text style={styles.bubbleText}>{body}</Text>
+      <View style={[styles.bubble, right ? styles.bubbleUser : styles.bubbleAi, role === 'note' && styles.bubbleNote, role === 'customer' && styles.bubbleCustomer]}>
+        {ROLE_LABELS[role] ? <Text style={styles.bubbleAuthor}>{ROLE_LABELS[role]}</Text> : null}
+        <Text style={styles.bubbleText}>{item?.body || ''}</Text>
+        {item?.status && !['done', 'pending'].includes(item.status) ? <Text style={styles.bubbleMeta}>{String(item.status)}</Text> : null}
       </View>
     );
   };
 
+  const typing = chat.aiStatus ? (
+    <View style={[styles.bubble, styles.bubbleAi]}>
+      <Text style={styles.bubbleMeta}>{chat.aiStatus === 'processing' ? 'IA consultando os dados…' : 'Enviado, aguardando a IA…'}</Text>
+    </View>
+  ) : null;
+
+  const renderSection = (title, items, empty) => (
+    <View>
+      <Text style={styles.sectionTitle}>{title}</Text>
+      {items.length === 0 ? <Text style={styles.emptyText}>{empty}</Text> : null}
+      {items.map(item => (
+        <TaskRow key={String(idOf(item))} item={item} selected={idOf(item) === Number(chat.activeTaskId)} onPress={() => chat.setActiveTaskId(idOf(item))} />
+      ))}
+    </View>
+  );
+
+  const task = chat.activeTask;
   return (
-    <KeyboardAvoidingView
-      style={styles.root}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={80}>
+    <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={80}>
       <View style={styles.sidebar}>
         <View style={styles.sidebarHeader}>
-          <Text style={styles.sidebarTitle}>Chats IA</Text>
-          <TouchableOpacity onPress={startNewChat} style={styles.newBtn}>
-            <Text style={styles.newBtnText}>Novo</Text>
+          <Text style={styles.sidebarTitle}>IA</Text>
+          <TouchableOpacity onPress={chat.startNewChat} style={styles.newBtn}>
+            <Text style={styles.newBtnText}>Novo chat</Text>
           </TouchableOpacity>
         </View>
-        <ScrollView
-          horizontal
-          style={styles.providerRow}
-          contentContainerStyle={styles.providerRowContent}>
-          {(providers.length ? providers : Object.keys(PROVIDER_LABELS).map(k => ({provider: k, enabled: false}))).map(
-            p => {
-              const key = p.provider || p.id || p.name;
-              const selected = key === provider;
-              const disabled = p.enabled === false && !p.has_key;
-              return (
-                <TouchableOpacity
-                  key={String(key)}
-                  disabled={disabled}
-                  onPress={() => setProvider(key)}
-                  style={[
-                    styles.providerChip,
-                    selected && styles.providerChipActive,
-                    disabled && styles.providerChipDisabled,
-                  ]}>
-                  <Text
-                    style={[
-                      styles.providerChipText,
-                      selected && styles.providerChipTextActive,
-                    ]}>
-                    {PROVIDER_LABELS[key] || p.label || key}
-                  </Text>
-                </TouchableOpacity>
-              );
-            },
-          )}
+        <ScrollView horizontal style={styles.providerRow} contentContainerStyle={styles.providerRowContent}>
+          {chat.providers.length === 0 ? <Text style={styles.emptyText}>Nenhuma IA configurada.</Text> : null}
+          {chat.providers.map(p => (
+            <TouchableOpacity key={p.provider} onPress={() => chat.setProvider(p.provider)} style={[styles.providerChip, p.provider === chat.provider && styles.providerChipActive]}>
+              <Text style={[styles.providerChipText, p.provider === chat.provider && styles.providerChipTextActive]}>
+                {PROVIDER_LABELS[p.provider] || p.label || p.provider}
+              </Text>
+            </TouchableOpacity>
+          ))}
         </ScrollView>
-        {loadingList ? (
-          <ActivityIndicator style={{marginTop: 16}} />
+        {chat.loadingList ? (
+          <ActivityIndicator style={styles.spinner} />
         ) : (
-          <FlatList
-            data={tasks}
-            keyExtractor={item => String(item.id || item['@id'])}
-            renderItem={({item}) => {
-              const id = item.id || item['@id']?.split('/').pop();
-              const selected = String(id) === String(activeTaskId);
-              return (
-                <TouchableOpacity
-                  onPress={() => selectTask(item)}
-                  style={[styles.taskRow, selected && styles.taskRowActive]}>
-                  <Text numberOfLines={1} style={styles.taskNameText}>
-                    {item.name || `Chat #${id}`}
-                  </Text>
-                </TouchableOpacity>
-              );
-            }}
-            ListEmptyComponent={
-              <Text style={styles.emptyText}>Nenhum chat ainda. Envie uma mensagem.</Text>
-            }
-          />
+          <ScrollView>
+            {renderSection('Meus chats', internal, 'Pergunte algo sobre a empresa.')}
+            {renderSection('IA atendendo clientes', customers, 'Nenhuma conversa com a IA agora.')}
+          </ScrollView>
         )}
       </View>
 
       <View style={styles.chatPane}>
         <View style={styles.chatHeader}>
-          <Text style={styles.chatTitle}>
-            {activeTask?.name || (activeTaskId ? `Chat #${activeTaskId}` : 'Novo chat')}
-          </Text>
-          <Text style={styles.chatSubtitle}>
-            {PROVIDER_LABELS[provider] || provider || 'Selecione a IA'}
-          </Text>
+          <View style={styles.chatHeaderText}>
+            <Text style={styles.chatTitle}>{task?.name || (chat.activeTaskId ? `Conversa #${chat.activeTaskId}` : 'Novo chat')}</Text>
+            <Text style={styles.chatSubtitle}>
+              {chat.customerChat
+                ? `${CHANNEL_LABELS[conversationChannel(task)]} · ${stageLabel(task)} · IA atendendo`
+                : PROVIDER_LABELS[chat.provider] || chat.provider || 'Selecione a IA'}
+            </Text>
+          </View>
+          {chat.customerChat ? (
+            <View style={styles.actionsRow}>
+              {(task?.type === 'ia' ? ['relationship', 'support'] : [task?.type]).map(type => (
+                <TouchableOpacity key={type} style={styles.actionBtn} onPress={() => chat.takeOver(type)}>
+                  <Text style={styles.actionBtnText}>{`Assumir${task?.type === 'ia' ? ` (${stageLabel({type})})` : ''}`}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          ) : null}
         </View>
-        {loadingChat ? (
-          <ActivityIndicator style={{marginTop: 24}} />
+        {chat.loadingChat ? (
+          <ActivityIndicator style={styles.spinner} />
         ) : (
           <FlatList
             ref={listRef}
-            data={messages}
+            data={chat.messages}
             keyExtractor={item => String(item.id || item['@id'])}
             renderItem={renderMessage}
+            ListFooterComponent={typing}
             contentContainerStyle={styles.messagesContent}
             onContentSizeChange={() => listRef.current?.scrollToEnd?.({animated: true})}
-            ListEmptyComponent={
-              <Text style={styles.emptyText}>
-                Pergunte algo. A conversa vira uma Task type=ia.
-              </Text>
-            }
+            ListEmptyComponent={<Text style={styles.emptyText}>Pergunte sobre vendas, pedidos, clientes… A IA consulta os dados da empresa.</Text>}
           />
         )}
-        <View style={styles.composer}>
-          <TextInput
-            style={styles.input}
-            value={draft}
-            onChangeText={setDraft}
-            placeholder="Mensagem para a IA…"
-            multiline
-            editable={!sending}
-          />
-          <TouchableOpacity
-            style={[styles.sendBtn, (!draft.trim() || sending) && styles.sendBtnDisabled]}
-            disabled={!draft.trim() || sending}
-            onPress={sendMessage}>
-            <Text style={styles.sendBtnText}>{sending ? '…' : 'Enviar'}</Text>
-          </TouchableOpacity>
-        </View>
+        {chat.customerChat ? (
+          <Text style={styles.composerHint}>A IA está atendendo este cliente. Para responder você mesmo, use “Assumir” ou abra o ticket no CRM / Suporte.</Text>
+        ) : (
+          <View style={styles.composer}>
+            <TextInput style={styles.input} value={draft} onChangeText={setDraft} placeholder="Pergunte à IA…" placeholderTextColor="#8b98a5" multiline editable={!chat.sending} />
+            <TouchableOpacity style={[styles.sendBtn, (!draft.trim() || chat.sending) && styles.sendBtnDisabled]} disabled={!draft.trim() || chat.sending} onPress={submit}>
+              <Text style={styles.sendBtnText}>{chat.sending ? '…' : 'Enviar'}</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
     </KeyboardAvoidingView>
   );
