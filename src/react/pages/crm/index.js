@@ -85,6 +85,7 @@ export default function CrmIndex() {
           getStatusFilterKey={data.getStatusFilterKey}
           getStatusFilterLabel={data.getStatusFilterLabel}
           onAddOpportunity={forms.openAddOpportunity}
+          onOpenFunnel={() => navigation.navigate('CrmFunnel')}
           searchText={data.searchText}
           selectedStatusFilterKey={data.selectedStatusFilterKey}
           setSearchText={data.setSearchText}
