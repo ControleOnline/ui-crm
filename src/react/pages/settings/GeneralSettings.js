@@ -1,7 +1,7 @@
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {ScrollView, Text, TouchableOpacity, View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
-import {useFocusEffect} from '@react-navigation/native';
+import {useFocusEffect, useRoute} from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
 import css from '@controleonline/ui-orders/src/react/css/orders';
@@ -29,13 +29,11 @@ import CrmSection from './sections/CrmSection';
 import LoyaltySection from './sections/LoyaltySection';
 import MapsSection from './sections/MapsSection';
 import ShopSettingsSection from './sections/shop/ShopSettingsSection';
-import IntegrationsSection from './sections/IntegrationsSection';
-import AiProvidersSection from './sections/AiProvidersSection';
 import LogSection from './sections/LogSection';
 import MaintenanceSection from './sections/MaintenanceSection';
 
 const MAIN_COMPANY_ONLY_TABS = new Set(['shop']);
-const TECHNICAL_TABS = new Set(['integrations', 'logs', 'maintenance']);
+const TECHNICAL_TABS = new Set(['logs', 'maintenance']);
 
 const SETTINGS_TABS = [
   {
@@ -44,20 +42,6 @@ const SETTINGS_TABS = [
     icon: 'dvr',
     stores: ['configs', 'people'],
     Component: DeviceRuntimeFooterSection,
-  },
-  {
-    key: 'integrations',
-    label: 'Integrações',
-    icon: 'link',
-    stores: ['configs', 'people'],
-    Component: IntegrationsSection,
-  },
-  {
-    key: 'ai-providers',
-    label: 'IA / MCP',
-    icon: 'smart-toy',
-    stores: ['configs', 'people'],
-    Component: AiProvidersSection,
   },
   {
     key: 'logs',
@@ -139,13 +123,14 @@ const SETTINGS_TABS = [
 ];
 
 const GeneralSettings = () => {
+  const route = useRoute();
   const {styles} = css();
   const localStyles = useGeneralSettingsStyles();
   const {
     companies,
     currentCompany,
     mainCompany,
-    hasMainCompanyAccess,
+    hasDefaultCompanyAccess,
     isMainCompanySelected,
     peopleActions,
   } =
@@ -165,9 +150,9 @@ const GeneralSettings = () => {
       SETTINGS_TABS.filter(
         tab =>
           (!MAIN_COMPANY_ONLY_TABS.has(tab.key) || isMainCompanySelected) &&
-          (!TECHNICAL_TABS.has(tab.key) || hasMainCompanyAccess),
+          (!TECHNICAL_TABS.has(tab.key) || hasDefaultCompanyAccess),
       ),
-    [hasMainCompanyAccess, isMainCompanySelected],
+    [hasDefaultCompanyAccess, isMainCompanySelected],
   );
 
   useFocusEffect(
@@ -234,6 +219,20 @@ const GeneralSettings = () => {
   useEffect(() => {
     writeGeneralSettingsActiveTab(activeTab);
   }, [activeTab]);
+
+  useFocusEffect(
+    useCallback(() => {
+      const tabFromRoute = String(route?.params?.tab || '').trim();
+      if (!tabFromRoute) {
+        return undefined;
+      }
+      writeGeneralSettingsActiveTab(tabFromRoute);
+      setActiveTab(prev =>
+        prev === tabFromRoute ? prev : tabFromRoute,
+      );
+      return undefined;
+    }, [route?.params?.tab]),
+  );
 
   const activeTabConfig = useMemo(
     () =>

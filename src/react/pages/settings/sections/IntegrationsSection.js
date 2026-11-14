@@ -70,7 +70,7 @@ const IntegrationsSection = () => {
     configActions,
     mainCompany,
     mainCompanyLabel,
-    hasMainCompanyAccess,
+    hasDefaultCompanyAccess,
     isMainCompanySelected,
     isSaving,
     peopleActions,
@@ -87,7 +87,7 @@ const IntegrationsSection = () => {
    * This is the only place in the section that reads the company-scoped private payload remotely.
    */
   useEffect(() => {
-    if (!hasMainCompanyAccess || !mainCompany?.id) {
+    if (!hasDefaultCompanyAccess || !mainCompany?.id) {
       setPrivateConfigs({});
       setIsLoadingPrivateConfigs(false);
       return undefined;
@@ -142,7 +142,7 @@ const IntegrationsSection = () => {
     return () => {
       cancelled = true;
     };
-  }, [mainCompany?.id, hasMainCompanyAccess, showError]);
+  }, [mainCompany?.id, hasDefaultCompanyAccess, showError]);
 
   useEffect(() => {
     setCieloConfig(resolveCieloConfig(privateConfigs));
@@ -152,7 +152,7 @@ const IntegrationsSection = () => {
 
   const savePrivateConfig = useCallback(
     (configKey, configValue) => {
-      if (!hasMainCompanyAccess || !mainCompany?.id) {
+      if (!hasDefaultCompanyAccess || !mainCompany?.id) {
         showError(
           'Nao foi possivel identificar a empresa principal para salvar a integracao.',
         );
@@ -203,7 +203,7 @@ const IntegrationsSection = () => {
       configActions,
       mainCompany?.id,
       mainCompanyLabel,
-      hasMainCompanyAccess,
+      hasDefaultCompanyAccess,
       isMainCompanySelected,
       peopleActions,
       showError,
@@ -225,7 +225,7 @@ const IntegrationsSection = () => {
   );
 
   const editable =
-    hasMainCompanyAccess &&
+    hasDefaultCompanyAccess &&
     !!mainCompany?.id &&
     isMainCompanySelected &&
     !isSaving &&

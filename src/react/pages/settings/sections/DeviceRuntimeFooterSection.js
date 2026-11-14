@@ -23,12 +23,12 @@ const DeviceRuntimeFooterSection = () => {
     configActions,
     mainCompany,
     mainCompanyLabel,
-    hasMainCompanyAccess,
+    hasDefaultCompanyAccess,
     isMainCompanySelected,
     peopleActions,
   } = useGeneralSettingsConfig();
   const [deviceRuntimeFooterText, setDeviceRuntimeFooterText] = useState('');
-  const canEditFooterText = !!mainCompany?.id && hasMainCompanyAccess;
+  const canEditFooterText = !!mainCompany?.id && hasDefaultCompanyAccess;
 
   useEffect(() => {
     setDeviceRuntimeFooterText(

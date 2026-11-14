@@ -26,7 +26,7 @@ const LoginSection = () => {
     configActions,
     mainCompany,
     mainCompanyLabel,
-    hasMainCompanyAccess,
+    hasDefaultCompanyAccess,
     isMainCompanySelected,
     peopleActions,
   } = useGeneralSettingsConfig();
@@ -38,7 +38,7 @@ const LoginSection = () => {
   }, [mainCompany?.configs]);
 
   const saveGoogleOauthConfig = useCallback(() => {
-    if (!hasMainCompanyAccess || !mainCompany?.id) {
+    if (!hasDefaultCompanyAccess || !mainCompany?.id) {
       showError(
         'Nao foi possivel identificar a empresa principal para salvar o login Google.',
       );
@@ -86,7 +86,7 @@ const LoginSection = () => {
   }, [
     configActions,
     mainCompany?.id,
-    hasMainCompanyAccess,
+    hasDefaultCompanyAccess,
     googleClientId,
     isMainCompanySelected,
     peopleActions,

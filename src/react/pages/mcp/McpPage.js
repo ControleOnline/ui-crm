@@ -28,9 +28,11 @@ const PROVIDER_LABELS = {
 export default function McpPage() {
   const {showError, showSuccess} = useToastMessage();
   const peopleStore = useStore('people');
+  const websocketStore = useStore('websocket');
+  const wsMessages = websocketStore?.getters?.messages || [];
   const company =
     peopleStore?.getters?.currentCompany ||
-    peopleStore?.getters?.defaultCompany ||
+    peopleStore?.getters?.mainCompany ||
     null;
   const companyId = company?.id || company?.['@id']?.split('/').pop() || null;
 
@@ -44,6 +46,8 @@ export default function McpPage() {
   const [loadingChat, setLoadingChat] = useState(false);
   const [sending, setSending] = useState(false);
   const listRef = useRef(null);
+  const pendingByTaskRef = useRef({}); // taskId -> userInteractionId
+  const handledWsRef = useRef(new Set());
 
   const companyQuery = useMemo(
     () => (companyId ? {company_id: Number(companyId)} : {}),
@@ -131,6 +135,46 @@ export default function McpPage() {
     setDraft('');
   };
 
+  // Realtime: apply mcp_chat_reply from websocket store (no HTTP poll)
+  useEffect(() => {
+    if (!Array.isArray(wsMessages) || wsMessages.length === 0) {
+      return;
+    }
+    const latest = wsMessages[wsMessages.length - 1];
+    const candidates = Array.isArray(latest) ? latest : [latest];
+    candidates.forEach(evt => {
+      if (!evt || typeof evt !== 'object') {
+        return;
+      }
+      const eventName = String(evt.event || evt.action || '');
+      if (eventName !== 'mcp_chat_reply') {
+        return;
+      }
+      const taskId = Number(evt.task_id || evt.taskId || 0);
+      const interactionId = Number(evt.interaction_id || evt.interactionId || 0);
+      const key = `${taskId}:${interactionId}:${evt.status || ''}:${String(evt.body || '').slice(0, 40)}`;
+      if (handledWsRef.current.has(key)) {
+        return;
+      }
+      handledWsRef.current.add(key);
+
+      if (taskId && Number(activeTaskId) === taskId) {
+        // Refresh only the open chat once when reply arrives
+        loadMessages(taskId);
+      } else if (taskId && !activeTaskId) {
+        setActiveTaskId(taskId);
+      }
+      if (taskId) {
+        delete pendingByTaskRef.current[taskId];
+        loadTasks();
+      }
+      if (String(evt.status || '') === 'error') {
+        showError(evt.body || 'A IA retornou erro ao processar a mensagem');
+      }
+      setSending(false);
+    });
+  }, [wsMessages, activeTaskId, loadMessages, loadTasks, showError]);
+
   const sendMessage = async () => {
     const text = draft.trim();
     if (!text || sending) return;
@@ -146,22 +190,38 @@ export default function McpPage() {
         ...(activeTaskId ? {task_id: activeTaskId} : {}),
         ...(companyId ? {company_id: Number(companyId)} : {}),
       };
-      const res = await api.post('/mcp/chat', body);
-      const newTaskId = res?.task?.id;
+      // Optimistic local bubble while queue processes
+      setMessages(prev => [
+        ...prev,
+        {
+          id: `local-${Date.now()}`,
+          body: text,
+          status: 'pending',
+          registeredBy: {id: companyId ? Number(companyId) + 1 : 0},
+        },
+      ]);
       setDraft('');
-      if (newTaskId && newTaskId !== activeTaskId) {
-        setActiveTaskId(Number(newTaskId));
-        await loadTasks();
-      } else {
-        await loadMessages(activeTaskId || newTaskId);
+      const res = await api.post('/mcp/chat', body);
+      const newTaskId = res?.task_id || res?.task?.id;
+      const interactionId = res?.interaction_id;
+      if (newTaskId) {
+        pendingByTaskRef.current[Number(newTaskId)] = interactionId;
+        if (Number(newTaskId) !== Number(activeTaskId)) {
+          setActiveTaskId(Number(newTaskId));
+          loadTasks();
+        }
+        // Single reload after persist (user message on server) — no poll loop
+        await loadMessages(Number(newTaskId));
       }
-      if (res?.reply) {
-        // optimistic refresh
-        await loadMessages(newTaskId || activeTaskId);
+      // sending stays true until websocket reply (or error toast)
+      if (!(res?.async || res?.status === 'pending')) {
+        setSending(false);
+        if (res?.message) {
+          await loadMessages(newTaskId || activeTaskId);
+        }
       }
     } catch (e) {
       showError(e?.message || e?.error || 'Falha ao enviar mensagem');
-    } finally {
       setSending(false);
     }
   };
@@ -180,6 +240,9 @@ export default function McpPage() {
     return (
       <View style={[styles.bubble, isUser ? styles.bubbleUser : styles.bubbleAi]}>
         <Text style={styles.bubbleText}>{body}</Text>
+        {item?.status && item.status !== 'done' ? (
+          <Text style={styles.bubbleMeta}>{String(item.status)}</Text>
+        ) : null}
       </View>
     );
   };

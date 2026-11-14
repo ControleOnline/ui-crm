@@ -44,10 +44,10 @@ const AiProvidersSection = () => {
   const localStyles = useGeneralSettingsStyles();
   const themePalette = useGeneralSettingsPalette();
   const {showError, showSuccess} = useToastMessage();
-  const {defaultCompany, hasDefaultCompanyAccess, isMainCompanySelected} =
+  const {mainCompany, hasDefaultCompanyAccess, isMainCompanySelected} =
     useGeneralSettingsConfig();
 
-  const companyId = defaultCompany?.id || null;
+  const companyId = mainCompany?.id || null;
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [providers, setProviders] = useState(() => {
@@ -149,7 +149,7 @@ const AiProvidersSection = () => {
   return (
     <GeneralSettingsSection
       title="Inteligencia Artificial / MCP"
-      description="Configure Grok, Codex/OpenAI, Gemini e Claude por empresa. A chave nao volta em claro no GET. O prompt inicial e enviado em toda conversa do /mcp.">
+      description="Configure Grok, Codex/OpenAI, Gemini e Claude por empresa. A chave nao volta em claro no GET. O prompt inicial e enviado em toda conversa do /ai.">
       {!hasDefaultCompanyAccess ? (
         <Text style={localStyles.helperText}>
           Sem acesso a empresa padrao para editar configs.
