@@ -44,10 +44,16 @@ export default function McpPage() {
   const [draft, setDraft] = useState('');
   const listRef = useRef(null);
 
-  const [internal, customers] = useMemo(
-    () => [chat.tasks.filter(t => !isCustomerConversation(t)), chat.tasks.filter(isCustomerConversation)],
-    [chat.tasks],
-  );
+  const [internal, tickets, customers] = useMemo(() => {
+    const mine = t => idOf(t.client) === Number(chat.currentPeopleId);
+    return [
+      chat.tasks.filter(t => !isCustomerConversation(t)),
+      chat.tasks.filter(t => isCustomerConversation(t) && mine(t)),
+      chat.tasks.filter(t => isCustomerConversation(t) && !mine(t)),
+    ];
+  }, [chat.tasks, chat.currentPeopleId]);
+  const noAi = chat.providers.length === 0;
+  const ticketComposer = chat.myTicket || (!chat.activeTaskId && noAi);
 
   const submit = async () => {
     const text = draft;
@@ -95,7 +101,7 @@ export default function McpPage() {
           </TouchableOpacity>
         </View>
         <ScrollView horizontal style={styles.providerRow} contentContainerStyle={styles.providerRowContent}>
-          {chat.providers.length === 0 ? <Text style={styles.emptyText}>Nenhuma IA configurada.</Text> : null}
+          {noAi ? <Text style={styles.emptyText}>Sem IA própria: suas mensagens abrem um chamado.</Text> : null}
           {chat.providers.map(p => (
             <TouchableOpacity key={p.provider} onPress={() => chat.setProvider(p.provider)} style={[styles.providerChip, p.provider === chat.provider && styles.providerChipActive]}>
               <Text style={[styles.providerChipText, p.provider === chat.provider && styles.providerChipTextActive]}>
@@ -108,7 +114,8 @@ export default function McpPage() {
           <ActivityIndicator style={styles.spinner} />
         ) : (
           <ScrollView>
-            {renderSection('Meus chats', internal, 'Pergunte algo sobre a empresa.')}
+            {renderSection('Meus chats', internal, noAi ? 'Sua empresa ainda não tem IA configurada.' : 'Pergunte algo sobre a empresa.')}
+            {tickets.length ? renderSection('Meus chamados', tickets, '') : null}
             {renderSection('IA atendendo clientes', customers, 'Nenhuma conversa com a IA agora.')}
           </ScrollView>
         )}
@@ -119,9 +126,13 @@ export default function McpPage() {
           <View style={styles.chatHeaderText}>
             <Text style={styles.chatTitle}>{task?.name || (chat.activeTaskId ? `Conversa #${chat.activeTaskId}` : 'Novo chat')}</Text>
             <Text style={styles.chatSubtitle}>
-              {chat.customerChat
-                ? `${CHANNEL_LABELS[conversationChannel(task)]} · ${stageLabel(task)} · IA atendendo`
-                : PROVIDER_LABELS[chat.provider] || chat.provider || 'Selecione a IA'}
+              {chat.myTicket
+                ? `Chamado ${stageLabel(task)} · ${task?.taskStatus?.status || 'aberto'}${task?.aiAgent ? ' · IA atendendo' : ''}`
+                : chat.customerChat
+                  ? `${CHANNEL_LABELS[conversationChannel(task)]} · ${stageLabel(task)} · IA atendendo`
+                  : ticketComposer
+                    ? 'Novo chamado'
+                    : PROVIDER_LABELS[chat.provider] || chat.provider || 'Selecione a IA'}
             </Text>
           </View>
           {chat.customerChat ? (
@@ -151,11 +162,22 @@ export default function McpPage() {
         {chat.customerChat ? (
           <Text style={styles.composerHint}>A IA está atendendo este cliente. Para responder você mesmo, use “Assumir” ou abra o ticket no CRM / Suporte.</Text>
         ) : (
+          <View>
+            {ticketComposer && !chat.myTicket ? (
+              <View style={styles.ticketTypeRow}>
+                {[['support', 'Suporte'], ['relationship', 'Comercial']].map(([value, label]) => (
+                  <TouchableOpacity key={value} onPress={() => chat.setTicketType(value)} style={[styles.providerChip, chat.ticketType === value && styles.providerChipActive]}>
+                    <Text style={[styles.providerChipText, chat.ticketType === value && styles.providerChipTextActive]}>{label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            ) : null}
           <View style={styles.composer}>
-            <TextInput style={styles.input} value={draft} onChangeText={setDraft} placeholder="Pergunte à IA…" placeholderTextColor="#8b98a5" multiline editable={!chat.sending} />
+            <TextInput style={styles.input} value={draft} onChangeText={setDraft} placeholder={chat.myTicket ? 'Escreva no chamado…' : ticketComposer ? 'Descreva o que precisa; abriremos um chamado com a nossa equipe…' : 'Pergunte à IA…'} placeholderTextColor="#8b98a5" multiline editable={!chat.sending} />
             <TouchableOpacity style={[styles.sendBtn, (!draft.trim() || chat.sending) && styles.sendBtnDisabled]} disabled={!draft.trim() || chat.sending} onPress={submit}>
-              <Text style={styles.sendBtnText}>{chat.sending ? '…' : 'Enviar'}</Text>
+              <Text style={styles.sendBtnText}>{chat.sending ? '…' : ticketComposer && !chat.myTicket ? 'Abrir chamado' : 'Enviar'}</Text>
             </TouchableOpacity>
+          </View>
           </View>
         )}
       </View>

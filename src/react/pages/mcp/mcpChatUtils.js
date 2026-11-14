@@ -100,6 +100,8 @@ const messageRole = (item, {companyId, task, currentPeopleId}) => {
     return customerChat && item?.visibility === 'private' ? 'note' : 'ai';
   }
   if (customerChat) {
+    // In my own ticket (I am the client) my messages are mine.
+    if (by && currentPeopleId && by === Number(currentPeopleId)) return 'me';
     return by && by === idOf(task?.client) ? 'customer' : 'staff';
   }
   if (!by && String(item?.id || '').startsWith('local-')) return 'me';

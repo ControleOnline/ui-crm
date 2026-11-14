@@ -16,6 +16,7 @@ const {
 
 const REPLY_FALLBACK_MS = 90000;
 const LIST_DEBOUNCE_MS = 400;
+const TICKET_REFRESH_MS = 20000;
 const toItems = res => {
   const items = res?.member || res?.['hydra:member'] || res || [];
   return Array.isArray(items) ? items : [];
@@ -52,7 +53,11 @@ export default function useMcpChat() {
     () => tasks.find(t => idOf(t) === Number(activeTaskId)) || null,
     [tasks, activeTaskId],
   );
-  const customerChat = isCustomerConversation(activeTask);
+  // A ticket I opened with the platform (my company has no AI): I talk in it from here.
+  const myTicket = Boolean(activeTask) && isCustomerConversation(activeTask) && idOf(activeTask.client) === Number(currentPeopleId);
+  // Someone else's customer conversation handled by our AI: read-only here.
+  const customerChat = isCustomerConversation(activeTask) && !myTicket;
+  const [ticketType, setTicketType] = useState('support');
 
   const loadProviders = useCallback(async () => {
     try {
@@ -69,12 +74,15 @@ export default function useMcpChat() {
     if (!companyId) return;
     const base = {provider: `/people/${companyId}`, 'order[alterDate]': 'desc', itemsPerPage: 50};
     try {
-      // My internal chats + every customer conversation the AI is handling right now.
-      const [internal, customers] = await Promise.all([
+      // My internal chats + customer conversations the AI is handling + tickets I opened with the platform.
+      const [internal, customers, tickets] = await Promise.all([
         api.fetch('/tasks', {params: {...base, type: 'ia', ...(currentPeopleId ? {registeredBy: `/people/${currentPeopleId}`} : {})}}),
         api.fetch('/tasks', {params: {...base, 'exists[aiAgent]': true}}),
+        currentPeopleId
+          ? api.fetch('/tasks', {params: {client: `/people/${currentPeopleId}`, announce: 'via:ai', 'order[alterDate]': 'desc', itemsPerPage: 50}})
+          : Promise.resolve([]),
       ]);
-      setTasks(mergeConversations([toItems(internal), toItems(customers)], currentPeopleId));
+      setTasks(mergeConversations([toItems(internal), toItems(customers), toItems(tickets)], currentPeopleId));
     } catch (e) {
       showError(e?.message || 'Falha ao listar conversas');
     } finally {
@@ -117,6 +125,13 @@ export default function useMcpChat() {
   useEffect(() => {
     loadMessages(activeTaskId);
   }, [activeTaskId, loadMessages]);
+
+  // Platform staff replies to my ticket are not pushed to my devices: refresh while it is open.
+  useEffect(() => {
+    if (!myTicket || !activeTaskId) return undefined;
+    const timer = setInterval(() => loadMessages(activeTaskId, {silent: true}), TICKET_REFRESH_MS);
+    return () => clearInterval(timer);
+  }, [myTicket, activeTaskId, loadMessages]);
 
   useEffect(
     () => () => {
@@ -179,7 +194,9 @@ export default function useMcpChat() {
         showError('Responda o cliente pelo CRM ou Suporte.');
         return false;
       }
-      if (!provider) {
+      // No AI for my company (or I'm in my ticket): the message goes to a ticket with the platform.
+      const ticketMode = myTicket || (!activeTaskId && !provider);
+      if (!ticketMode && !provider) {
         showError('Nenhuma IA configurada para a empresa. Configure em Configurador → IA.');
         return false;
       }
@@ -188,12 +205,17 @@ export default function useMcpChat() {
       try {
         const res = await api.post('/mcp/chat', {
           message: body,
-          provider,
+          ...(ticketMode ? {type: ticketType} : {provider}),
           ...(activeTaskId ? {task_id: activeTaskId} : {}),
           ...(companyId ? {company_id: companyId} : {}),
         });
         const taskId = Number(res?.task_id || 0);
-        if (taskId) {
+        if (taskId && res?.mode === 'ticket' && !res?.async) {
+          // Humans of the platform answer later; no AI reply to wait for.
+          if (taskId !== Number(activeTaskId)) setActiveTaskId(taskId);
+          else loadMessages(taskId, {silent: true});
+          scheduleTasksReload();
+        } else if (taskId) {
           setPending(prev => ({...prev, [taskId]: prev[taskId] || 'pending'}));
           armFallback(taskId);
           if (taskId !== Number(activeTaskId)) setActiveTaskId(taskId);
@@ -209,7 +231,7 @@ export default function useMcpChat() {
         setSending(false);
       }
     },
-    [activeTaskId, armFallback, companyId, customerChat, loadMessages, provider, scheduleTasksReload, sending, showError],
+    [activeTaskId, armFallback, companyId, customerChat, loadMessages, myTicket, provider, scheduleTasksReload, sending, showError, ticketType],
   );
 
   const takeOver = useCallback(
@@ -236,6 +258,9 @@ export default function useMcpChat() {
     activeTaskId,
     setActiveTaskId,
     customerChat,
+    myTicket,
+    ticketType,
+    setTicketType,
     messages,
     loadingList,
     loadingChat,
