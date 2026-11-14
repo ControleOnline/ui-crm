@@ -2,27 +2,21 @@ import React, { useCallback, useState, useEffect, useLayoutEffect } from 'react'
 import { Text, View, TouchableOpacity, FlatList, ActivityIndicator, TextInput, RefreshControl, Platform, ScrollView } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useStore } from '@store';
-import { colors } from '@controleonline/../../src/styles/colors';
+import { colors } from '@controleonline/ui-layout/src/styles/colors';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import IconAdd from 'react-native-vector-icons/MaterialIcons';
 import MaterialIcon from 'react-native-vector-icons/MaterialIcons';
 import CreateProposalsModal from './CreateProposalsModal';
-import ProposalCard from './ProposalCard';
-import {
-  normalizeDigits,
-  normalizeStatusKey,
-  getStatusColor,
-  getStatusLabel,
-  extractPeopleId,
-  resolvePeopleName,
-  getContractPartyCandidates,
-  isIgnoredContractPartyId,
-  getResolvedPeopleName,
-  getContractClientName as resolveContractClientName,
-  isContractClientPendingResolution as resolveContractClientPending,
-} from './proposalListHelpers';
 import Formatter from '@controleonline/ui-common/src/utils/formatter';
 import { getPeopleDisplayName } from '@controleonline/ui-common/src/react/utils/peopleDisplay';
+import {
+  normalizeProposalStatusKey,
+  getProposalStatusColor,
+  getProposalStatusLabel,
+  getProposalStatusFilterKey,
+  buildProposalStatusFilterOptions,
+  proposalMatchesStatusFilter,
+} from '../../utils/proposalStatus';
 import styles from './index.styles';
 import { inlineStyle_669_129 } from './index.styles';
 
@@ -198,27 +192,14 @@ const ProposalsPage = () => {
     setRefreshing(false);
   }, [fetchContracts, searchQuery]);
 
-
-
+  const normalizeStatusKey = normalizeProposalStatusKey;
+  const getStatusColor = getProposalStatusColor;
+  const getStatusLabel = status => getProposalStatusLabel(status, global.t?.t);
   const getStatusFilterKey = useCallback(
-    item => {
-      if (!item) {
-        return '';
-      }
-
-      if (item['@id']) {
-        return item['@id'];
-      }
-
-      if (item.id != null) {
-        return `/statuses/${item.id}`;
-      }
-
-      const normalized = normalizeStatusKey(item.realStatus || item.status);
-      return normalized ? `realStatus:${normalized}` : '';
-    },
-    [normalizeStatusKey],
+    item => getProposalStatusFilterKey(item),
+    [],
   );
+
 
   const statusFilterOptions = React.useMemo(
     () => {

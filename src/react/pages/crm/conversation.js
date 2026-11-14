@@ -7,7 +7,7 @@ import {useNavigation, useRoute} from '@react-navigation/native';
 import {useStore} from '@store';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import useToastMessage from '../../hooks/useToastMessage';
-import {colors} from '@controleonline/../../src/styles/colors';
+import {colors} from '@controleonline/ui-layout/src/styles/colors';
 import styles from './conversation.styles';
 import MarketingEventsSection from './components/MarketingEventsSection';
 

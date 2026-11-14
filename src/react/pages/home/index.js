@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { TouchableOpacity, View, ScrollView, ActivityIndicator } from 'react-native';
 import { Text } from 'react-native-animatable';
-import { colors } from '@controleonline/../../src/styles/colors';
+import { colors } from '@controleonline/ui-layout/src/styles/colors';
 
-import { resolveThemePalette } from '@controleonline/../../src/styles/branding';
+import { resolveThemePalette } from '@controleonline/ui-layout/src/styles/branding';
 
 import {app_type} from '@appType';
 import Icon from 'react-native-vector-icons/Feather';

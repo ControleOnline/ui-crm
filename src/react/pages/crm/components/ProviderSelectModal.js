@@ -10,7 +10,7 @@ import { Text } from 'react-native-animatable';
 import Icon from 'react-native-vector-icons/FontAwesome';
 
 import AnimatedModal from '@controleonline/ui-common/src/react/components/AnimatedModal';
-import { colors } from '@controleonline/../../src/styles/colors';
+import { colors } from '@controleonline/ui-layout/src/styles/colors';
 import { formatDisplayUppercase } from '@controleonline/ui-common/src/react/utils/entityDisplay';
 import { normalizePeopleReferenceValue } from '../../../utils/opportunityPeople';
 import styles from '../index.styles';
