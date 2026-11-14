@@ -12,6 +12,7 @@ const CrmHeader = ({
   getStatusFilterKey,
   getStatusFilterLabel,
   onAddOpportunity,
+  onOpenFunnel,
   searchText,
   selectedStatusFilterKey,
   setSearchText,
@@ -39,6 +40,11 @@ const CrmHeader = ({
           </TouchableOpacity>
         )}
       </View>
+      {onOpenFunnel ? (
+        <TouchableOpacity style={styles.addButton} onPress={onOpenFunnel} accessibilityLabel="Funil">
+          <Icon name="columns" size={18} color="#FFFFFF" />
+        </TouchableOpacity>
+      ) : null}
       <TouchableOpacity style={styles.addButton} onPress={onAddOpportunity}>
         <IconAdd name="add" size={24} color="#FFFFFF" />
       </TouchableOpacity>
