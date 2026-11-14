@@ -112,7 +112,7 @@ export default function McpPage() {
             onContentSizeChange={() => listRef.current?.scrollToEnd?.({animated: true})}
             ListEmptyComponent={
               <Text style={styles.emptyText}>
-                {chat.hasAi ? 'Pergunte à IA. Se ela não resolver, abre um chamado com a nossa equipe.' : 'Escolha Suporte ou Comercial e descreva o que precisa.'}
+                {chat.hasAi ? 'Como podemos ajudar? Descreva o que precisa.' : 'Escolha Suporte ou Comercial e descreva o que precisa.'}
               </Text>
             }
           />
