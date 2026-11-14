@@ -60,7 +60,8 @@ test('messageRole distinguishes ai, notes, customer and staff', () => {
   assert.equal(messageRole({registeredBy: '/people/99', visibility: 'public'}, ctx), 'ai');
   assert.equal(messageRole({registeredBy: '/people/99', visibility: 'private'}, ctx), 'note');
   assert.equal(messageRole({registeredBy: '/people/50'}, ctx), 'customer');
-  assert.equal(messageRole({registeredBy: '/people/10'}, ctx), 'staff');
+  assert.equal(messageRole({registeredBy: '/people/10'}, ctx), 'me', 'my own reply');
+  assert.equal(messageRole({registeredBy: '/people/11'}, ctx), 'staff', 'a colleague');
 
   const myTicket = {id: 9, type: 'support', announce: '["via:ai"]', client: '/people/10'};
   assert.equal(messageRole({registeredBy: '/people/10'}, {companyId: 99, task: myTicket, currentPeopleId: 10}), 'me');
