@@ -54,7 +54,7 @@ const crmRoutes = [
   {
     name: 'RoyaltiesPayablePage',
     component: RoyaltiesPayablePage,
-    path: 'royalties-a-pagar',
+    path: 'royalties-payable',
     options: {
       showCompanyFilter: true,
       showBottomToolBar: true,
@@ -67,7 +67,7 @@ const crmRoutes = [
   {
     name: 'RoyaltiesReceivablePage',
     component: RoyaltiesReceivablePage,
-    path: 'royalties-a-receber',
+    path: 'royalties-receivable',
     options: {
       showCompanyFilter: true,
       showBottomToolBar: true,
@@ -150,7 +150,7 @@ const crmRoutes = [
     // Kanban of CRM opportunities (+ AI triage column).
     name: 'CrmFunnel',
     component: CrmFunnelPage,
-    path: 'crm/funil',
+    path: 'crm/funnel',
     options: {
       showCompanyFilter: true,
       showBottomToolBar: true,
@@ -164,7 +164,7 @@ const crmRoutes = [
     // Support tickets funnel (clone of the CRM funnel for type=support).
     name: 'SupportFunnel',
     component: SupportFunnelPage,
-    path: 'suporte',
+    path: 'support',
     options: {
       showCompanyFilter: true,
       showBottomToolBar: true,
