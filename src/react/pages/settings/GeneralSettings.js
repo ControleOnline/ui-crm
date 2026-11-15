@@ -31,6 +31,7 @@ import MapsSection from './sections/MapsSection';
 import ShopSettingsSection from './sections/shop/ShopSettingsSection';
 import LogSection from './sections/LogSection';
 import MaintenanceSection from './sections/MaintenanceSection';
+import AiDefaultSection from './sections/AiDefaultSection';
 
 const MAIN_COMPANY_ONLY_TABS = new Set(['shop']);
 const TECHNICAL_TABS = new Set(['logs', 'maintenance']);
@@ -98,6 +99,13 @@ const SETTINGS_TABS = [
     icon: 'groups',
     stores: ['configs'],
     Component: CrmSection,
+  },
+  {
+    key: 'ai',
+    label: 'IA',
+    icon: 'chat',
+    stores: ['configs'],
+    Component: AiDefaultSection,
   },
   {
     key: 'loyalty',

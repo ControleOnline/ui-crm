@@ -64,7 +64,8 @@ export default function useMcpChat() {
       const res = await api.fetch('/mcp/chat/providers', {params: companyId ? {company_id: companyId} : {}});
       const list = Array.isArray(res?.providers) ? res.providers : [];
       setProviders(list);
-      setProvider(prev => prev || list[0]?.provider || null);
+      // The company's chosen AI (General settings → IA); otherwise the first connected one.
+      setProvider(prev => prev || res?.default || list.find(p => p.default)?.provider || list[0]?.provider || null);
     } catch (e) {
       showError(e?.message || 'Falha ao carregar providers de IA');
     }
