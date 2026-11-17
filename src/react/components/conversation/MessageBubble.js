@@ -17,7 +17,8 @@ export default function MessageBubble({item, side, kind, author, showAuthor, pal
   const bg = note ? palette.noteBubble : mine ? palette.mineBubble : palette.otherBubble;
   const fg = mine && !note ? palette.mineText : palette.otherText;
   const body = String(item?.body || '');
-  const isFileLabel = item?.file && /^📎 /.test(body);
+  // "Anexo" / "Anexo: name" only describes the file shown above it.
+  const isFileLabel = item?.file && /^Anexo(:|$)/.test(body);
 
   return (
     <View style={{flexDirection: 'row', justifyContent: mine ? 'flex-end' : 'flex-start', marginVertical: 2, paddingHorizontal: 8}}>

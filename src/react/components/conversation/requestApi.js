@@ -64,7 +64,8 @@ export const sendRequestMessage = ({taskId, type, text, fileId, companyId}) =>
 export const postInteraction = (taskId, {text, fileId, visibility}) =>
   api.post('/task_interations', {
     task: `/tasks/${taskId}`,
-    body: text || (fileId ? '📎 Anexo' : ''),
+    // Plain text label: the API column is not utf8mb4 (no emoji).
+    body: text || (fileId ? 'Anexo' : ''),
     type: 'comment',
     visibility,
     ...(fileId ? {file: `/files/${fileId}`} : {}),
