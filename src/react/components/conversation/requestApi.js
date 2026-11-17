@@ -1,5 +1,5 @@
 /*
- * @agents API of requests (relationship/support) shared by the customer screen (/ai), Support and CRM.
+ * @agents API of requests (relationship/support) shared by the customer screen (/support), the analyst screen (/ai) and CRM.
  */
 import {api} from '@controleonline/ui-common/src/api';
 
