@@ -126,7 +126,7 @@ const crmRoutes = [
   {
     name: 'McpPage',
     component: McpPage,
-    path: 'ai',
+    path: 'support',
     options: {
       showCompanyFilter: true,
       showBottomToolBar: true,
@@ -164,7 +164,7 @@ const crmRoutes = [
     // Support tickets funnel (clone of the CRM funnel for type=support).
     name: 'SupportFunnel',
     component: SupportFunnelPage,
-    path: 'support',
+    path: 'ai',
     options: {
       showCompanyFilter: true,
       showBottomToolBar: true,

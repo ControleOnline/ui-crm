@@ -1,5 +1,5 @@
 /*
- * @agents Analyst workspace of one request (Support /support and CRM), app-community#1599/#1600:
+ * @agents Analyst workspace of one request (/ai analyst screen and CRM), app-community#1599/#1600:
  * WhatsApp-like conversation + actions: status, category, responsible (only the context's responders:
  * CRM = salesmen/assistants, Support = Manager list), context relationship <-> support, due date,
  * reply to the customer or internal note, and call the company's AI (only when one is connected).

@@ -1,5 +1,5 @@
 /*
- * @agents State of the requests screen (/ai, app-community#1592–#1595): the user's relationship/support
+ * @agents State of the requests screen (/support, app-community#1592–#1595): the user's relationship/support
  * requests filtered by status (default "open"), the selected one with its conversation, and the
  * draft type of a new request. Live through websocket events (useRealtimeReload).
  */
