@@ -1,7 +1,7 @@
 /*
  * @agents General settings → Atendimento (app-community#1596/#1600): how requests are distributed and
  * who answers them. Support: rule (random / fewest open) + the people who answer support (the only
- * ones listed as responsible in /support). CRM: rule + sales assistants (salesmen always answer).
+ * ones listed as responsible in the analyst screen /ai). CRM: rule + sales assistants (salesmen always answer).
  * Saved per company through GET|PUT /tickets/settings.
  */
 import React, {useCallback, useEffect, useState} from 'react';

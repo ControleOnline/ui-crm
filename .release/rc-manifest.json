@@ -1,14 +1,13 @@
 {
-  "version": "1.0.70",
+  "version": "1.0.72",
   "rc": 1,
-  "branch": "rc/1.0.70-rc.1",
-  "baseMaster": "ce8f861ba69d04b54fae3f510c0b5fce65ea2cdf",
+  "branch": "rc/1.0.72-rc.1",
+  "baseMaster": "bebd5242d1254c2a170572d765b92694db2a789c",
   "tasks": [
-    71,
-    76
+    71
   ],
   "frozen": true,
   "repositories": {
-    "ControleOnline/ui-crm": "36e1f8db2837e851410ae2f6866c92820bcc4b8d"
+    "ControleOnline/ui-crm": "2820595633fbaed5494bdcb9aeae9f6e9cb7777d"
   }
 }

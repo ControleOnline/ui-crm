@@ -1,5 +1,5 @@
 /*
- * @agents Requests screen (/ai) of the customer companies' teams (app-community#1592–#1595, #1597):
+ * @agents Requests screen (/support) of the customer companies' teams (app-community#1592–#1595, #1597):
  * left, the user's requests with a status filter (default "open"); "Novo" asks Suporte or Comercial and
  * the first message opens the request (born without a responsible person). Right, the WhatsApp-like
  * conversation with text, attachments and voice notes. No direct AI chat here; information is read-only.
