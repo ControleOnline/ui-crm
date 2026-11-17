@@ -244,7 +244,7 @@ const IntegrationsSection = () => {
         <Text style={localStyles.helperText}>
           {`Esses dados privados ficam vinculados a empresa principal (${mainCompanyLabel}).`}
         </Text>
-        {!isMainCompanySelected && hasMainCompanyAccess && (
+        {!isMainCompanySelected && hasDefaultCompanyAccess && (
           <Text style={localStyles.helperText}>
             Abra a empresa principal para editar as credenciais. Fora dela esta
             tela fica somente para consulta.
