@@ -101,7 +101,11 @@ export default function TicketFunnelPage({type = 'relationship'}) {
     }
   };
 
-  const open = task => navigation.navigate('TicketConversation', {taskId: idOf(task)});
+  // CRM opens its own conversation (workspace + marketing events); Support opens the ticket page.
+  const open = task =>
+    type === 'relationship'
+      ? navigation.navigate('CrmConversation', {taskId: idOf(task), opportunity: task})
+      : navigation.navigate('TicketConversation', {taskId: idOf(task)});
 
   return (
     <View style={styles.root}>
