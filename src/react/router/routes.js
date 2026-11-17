@@ -133,7 +133,7 @@ const crmRoutes = [
       headerShown: true,
       headerBackVisible: true,
       companyFilterMode: 'icon',
-      title: 'Chat IA / MCP',
+      title: 'Solicitações',
     },
   },
   {
@@ -171,7 +171,7 @@ const crmRoutes = [
       headerShown: true,
       headerBackVisible: true,
       companyFilterMode: 'icon',
-      title: 'Suporte',
+      title: 'Atendimento de suporte',
     },
   },
   {
