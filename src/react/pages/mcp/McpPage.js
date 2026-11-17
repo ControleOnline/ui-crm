@@ -37,6 +37,10 @@ export default function McpPage() {
   );
 
   const statusOptions = [{value: '', label: 'Todos'}, ...r.statuses.map(s => ({value: s.status, label: s.status}))];
+  // The current filter (default "open") is always shown, even before the statuses load.
+  if (r.statusFilter && !statusOptions.some(o => o.value === r.statusFilter)) {
+    statusOptions.push({value: r.statusFilter, label: r.statusFilter});
+  }
 
   const list = (
     <View style={{width: narrow ? '100%' : 320, borderRightWidth: narrow ? 0 : 1, borderRightColor: palette.border, backgroundColor: palette.panel, flex: narrow ? 1 : undefined}}>
