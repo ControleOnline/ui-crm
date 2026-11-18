@@ -3,9 +3,10 @@
  */
 import React, {useState} from 'react';
 import {ActivityIndicator, Modal, Text, TextInput, TouchableOpacity, View} from 'react-native';
-import styles from './tickets.styles';
+import useTicketStyles from './tickets.styles';
 
 export default function AssignAiModal({visible, ticketName, onCancel, onConfirm}) {
+  const {styles, palette} = useTicketStyles();
   const [instructions, setInstructions] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -33,7 +34,7 @@ export default function AssignAiModal({visible, ticketName, onCancel, onConfirm}
             value={instructions}
             onChangeText={setInstructions}
             placeholder="Instruções (opcional): o que perguntar, qual oferta apresentar…"
-            placeholderTextColor="#8b98a5"
+            placeholderTextColor={palette.placeholder}
             multiline
           />
           <View style={styles.modalActions}>
@@ -41,7 +42,7 @@ export default function AssignAiModal({visible, ticketName, onCancel, onConfirm}
               <Text style={styles.ghostBtnText}>Cancelar</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.primaryBtn} onPress={confirm} disabled={busy}>
-              {busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryBtnText}>Atribuir</Text>}
+              {busy ? <ActivityIndicator color={palette.chipActiveText} /> : <Text style={styles.primaryBtnText}>Atribuir</Text>}
             </TouchableOpacity>
           </View>
         </View>

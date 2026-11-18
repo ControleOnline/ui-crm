@@ -1,61 +1,55 @@
+import {useMemo} from 'react';
 import {StyleSheet} from 'react-native';
+import useChatPalette from '../../components/conversation/useChatPalette';
 
-// Same dark palette as /ai.
-export default StyleSheet.create({
-  root: {flex: 1, backgroundColor: '#0f1419'},
-  header: {flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12, borderBottomWidth: 1, borderBottomColor: '#2a3441'},
-  headerText: {flex: 1, minWidth: 0},
-  title: {color: '#e7e9ea', fontSize: 18, fontWeight: '700'},
-  subtitle: {color: '#8b98a5', fontSize: 12, marginTop: 2},
-  search: {minWidth: 180, maxWidth: 280, flex: 1, borderWidth: 1, borderColor: '#38444d', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 6, color: '#e7e9ea'},
-  board: {flex: 1},
-  boardContent: {padding: 12, gap: 12},
-  column: {width: 290, backgroundColor: '#15202b', borderRadius: 12, borderTopWidth: 3, maxHeight: '100%'},
-  columnHeader: {flexDirection: 'row', justifyContent: 'space-between', padding: 10},
-  columnTitle: {color: '#e7e9ea', fontWeight: '700', fontSize: 13, textTransform: 'capitalize'},
-  columnCount: {color: '#8b98a5', fontSize: 12},
-  columnBody: {paddingHorizontal: 8, paddingBottom: 8},
-  card: {backgroundColor: '#1e2732', borderRadius: 10, padding: 10, marginBottom: 8},
-  cardTitle: {color: '#e7e9ea', fontSize: 13, fontWeight: '600'},
-  cardMeta: {color: '#8b98a5', fontSize: 11, marginTop: 4},
-  badges: {flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 6},
-  badge: {borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, backgroundColor: '#2a3441'},
-  badgeAi: {backgroundColor: '#4c1d95'},
-  badgeText: {color: '#e7e9ea', fontSize: 10, fontWeight: '600'},
-  cardActions: {flexDirection: 'row', gap: 6, marginTop: 8},
-  iconBtn: {borderWidth: 1, borderColor: '#38444d', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4},
-  iconBtnText: {color: '#e7e9ea', fontSize: 12},
-  emptyText: {color: '#8b98a5', fontSize: 12, padding: 8},
-  spinner: {marginTop: 24},
-  // ticket screen
-  messages: {padding: 12, paddingBottom: 24},
-  bubble: {maxWidth: '80%', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, marginVertical: 4},
-  bubbleLeft: {alignSelf: 'flex-start', backgroundColor: '#1f3a2b'},
-  bubbleAi: {alignSelf: 'flex-start', backgroundColor: '#212a33'},
-  bubbleRight: {alignSelf: 'flex-end', backgroundColor: '#1d9bf0'},
-  bubbleNote: {alignSelf: 'center', backgroundColor: '#3a2f12', borderWidth: 1, borderColor: '#8a6d1d'},
-  bubbleAuthor: {color: '#c9d1d9', fontSize: 11, fontWeight: '700', marginBottom: 2},
-  bubbleText: {color: '#e7e9ea', fontSize: 14, lineHeight: 20},
-  bubbleMeta: {color: '#c9d1d9', fontSize: 10, marginTop: 4, opacity: 0.8},
-  composer: {padding: 10, borderTopWidth: 1, borderTopColor: '#2a3441', gap: 8},
-  modeRow: {flexDirection: 'row', gap: 6},
-  modeChip: {borderWidth: 1, borderColor: '#38444d', borderRadius: 14, paddingHorizontal: 10, paddingVertical: 4},
-  modeChipActive: {backgroundColor: '#1d9bf0', borderColor: '#1d9bf0'},
-  modeChipNote: {backgroundColor: '#8a6d1d', borderColor: '#8a6d1d'},
-  modeChipText: {color: '#e7e9ea', fontSize: 12},
-  composerRow: {flexDirection: 'row', alignItems: 'flex-end', gap: 8},
-  input: {flex: 1, minHeight: 40, maxHeight: 140, borderWidth: 1, borderColor: '#38444d', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, color: '#e7e9ea', backgroundColor: '#15202b'},
-  primaryBtn: {backgroundColor: '#1d9bf0', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10, alignItems: 'center', justifyContent: 'center'},
-  primaryBtnText: {color: '#fff', fontWeight: '700'},
-  ghostBtn: {borderWidth: 1, borderColor: '#1d9bf0', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8},
-  ghostBtnText: {color: '#1d9bf0', fontWeight: '600', fontSize: 12},
-  aiBar: {flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: '#1b1530', borderBottomWidth: 1, borderBottomColor: '#2a3441'},
-  aiBarText: {flex: 1, color: '#d8ccff', fontSize: 12},
-  // modal
-  modalBackdrop: {flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 16},
-  modalCard: {width: '100%', maxWidth: 480, backgroundColor: '#15202b', borderRadius: 14, padding: 16, gap: 10},
-  modalTitle: {color: '#e7e9ea', fontSize: 16, fontWeight: '700'},
-  modalText: {color: '#8b98a5', fontSize: 13, lineHeight: 18},
-  modalInput: {minHeight: 90, flex: 0},
-  modalActions: {flexDirection: 'row', justifyContent: 'flex-end', gap: 8},
-});
+/*
+ * @agents Ticket funnel/modal styles. Colors come only from the theme (useChatPalette → theme store +
+ * company theme); no color literals here (agents-mcp code-quality: theme tokens only).
+ */
+export const makeTicketStyles = p =>
+  StyleSheet.create({
+    root: {flex: 1, backgroundColor: p.background},
+    header: {flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12, borderBottomWidth: 1, borderBottomColor: p.border},
+    headerText: {flex: 1, minWidth: 0},
+    title: {color: p.text, fontSize: 18, fontWeight: '700'},
+    subtitle: {color: p.muted, fontSize: 12, marginTop: 2},
+    search: {minWidth: 180, maxWidth: 280, flex: 1, borderWidth: 1, borderColor: p.inputBorder, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 6, color: p.inputText, backgroundColor: p.input},
+    board: {flex: 1},
+    boardContent: {padding: 12, gap: 12},
+    column: {width: 290, backgroundColor: p.panel, borderRadius: 12, borderTopWidth: 3, borderTopColor: p.primary, maxHeight: '100%'},
+    columnHeader: {flexDirection: 'row', justifyContent: 'space-between', padding: 10},
+    columnTitle: {color: p.text, fontWeight: '700', fontSize: 13, textTransform: 'capitalize'},
+    columnCount: {color: p.muted, fontSize: 12},
+    columnBody: {paddingHorizontal: 8, paddingBottom: 8},
+    card: {backgroundColor: p.otherBubble, borderWidth: 1, borderColor: p.border, borderRadius: 10, padding: 10, marginBottom: 8},
+    cardTitle: {color: p.text, fontSize: 13, fontWeight: '600'},
+    cardMeta: {color: p.muted, fontSize: 11, marginTop: 4},
+    badges: {flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 6},
+    badge: {borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, backgroundColor: p.chip},
+    badgeAi: {backgroundColor: p.chipActive},
+    badgeText: {color: p.chipText, fontSize: 10, fontWeight: '600'},
+    badgeAiText: {color: p.chipActiveText},
+    cardActions: {flexDirection: 'row', gap: 6, marginTop: 8},
+    iconBtn: {borderWidth: 1, borderColor: p.border, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4},
+    iconBtnText: {color: p.text, fontSize: 12},
+    emptyText: {color: p.muted, fontSize: 12, padding: 8},
+    spinner: {marginTop: 24},
+    input: {flex: 1, minHeight: 40, maxHeight: 140, borderWidth: 1, borderColor: p.inputBorder, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, color: p.inputText, backgroundColor: p.input},
+    primaryBtn: {backgroundColor: p.chipActive, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10, alignItems: 'center', justifyContent: 'center'},
+    primaryBtnText: {color: p.chipActiveText, fontWeight: '700'},
+    ghostBtn: {borderWidth: 1, borderColor: p.chipActive, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8},
+    ghostBtnText: {color: p.chipActive, fontWeight: '600', fontSize: 12},
+    // modal
+    modalBackdrop: {flex: 1, backgroundColor: p.overlay, justifyContent: 'center', alignItems: 'center', padding: 16},
+    modalCard: {width: '100%', maxWidth: 480, backgroundColor: p.modalBackground || p.panel, borderRadius: 14, padding: 16, gap: 10},
+    modalTitle: {color: p.modalHeaderText || p.text, fontSize: 16, fontWeight: '700'},
+    modalText: {color: p.modalText || p.muted, fontSize: 13, lineHeight: 18},
+    modalInput: {minHeight: 90, flex: 0},
+    modalActions: {flexDirection: 'row', justifyContent: 'flex-end', gap: 8},
+  });
+
+export default function useTicketStyles() {
+  const palette = useChatPalette();
+  const styles = useMemo(() => makeTicketStyles(palette), [palette]);
+  return {styles, palette};
+}
