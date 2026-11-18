@@ -1,7 +1,8 @@
 /*
  * @agents General settings → Atendimento (app-community#1596/#1600): how requests are distributed and
  * who answers them. Support: rule (random / fewest open) + the people who answer support (the only
- * ones listed as responsible in the analyst screen /ai). CRM: rule + sales assistants (salesmen always answer).
+ * ones listed as responsible in the analyst screen /ai). Commercial requests follow the CRM's own client
+ * distribution (each client's salesman): no second setting here, by design.
  * Saved per company through GET|PUT /tickets/settings.
  */
 import React, {useCallback, useEffect, useState} from 'react';
@@ -108,15 +109,8 @@ export default function TicketSettingsSection() {
 
       <GeneralSettingsSection
         title="Comercial (CRM)"
-        description="Oportunidades nascem sem responsável e o motor do CRM distribui entre os vendedores. Vendedores sempre respondem; marque aqui os assistentes de vendas que também podem responder.">
-        <Text style={styles.sectionTitle}>Regra de distribuição</Text>
-        {STRATEGIES.map(s => (
-          <Choice key={s.value} palette={palette} active={settings.crm_strategy === s.value} label={s.label} onPress={() => save({crm_strategy: s.value})} />
-        ))}
-        <Text style={[styles.sectionTitle, {marginTop: 12}]}>Assistentes de vendas</Text>
-        {employees.map(p => (
-          <Choice key={p.id} multi palette={palette} active={settings.crm_assistants.includes(p.id)} label={p.alias || p.name} onPress={() => toggle('crm_assistants', p.id)} />
-        ))}
+        description="Solicitações comerciais seguem a distribuição de clientes do CRM: cada cliente é atendido pelo seu vendedor; clientes sem vendedor recebem um pela estratégia configurada na aba CRM.">
+        <Text style={styles.helperText}>Nada a configurar aqui.</Text>
       </GeneralSettingsSection>
       {saving ? <ActivityIndicator style={{marginTop: 8}} /> : null}
     </View>

@@ -136,7 +136,7 @@ const MaintenanceSection = () => {
         {`Essas rotinas ficam gravadas na empresa principal (${mainCompanyLabel}) e o cron geral tenta executa-las a cada minuto.`}
       </Text>
 
-      {!isMainCompanySelected && hasMainCompanyAccess && (
+      {!isMainCompanySelected && hasDefaultCompanyAccess && (
         <Text style={localStyles.helperText}>
           Abra a empresa principal para editar a agenda. Fora dela esta tela
           fica somente para consulta.
