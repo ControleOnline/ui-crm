@@ -131,7 +131,7 @@ export default function McpPage() {
       {!narrow || !showChat ? list : null}
       {!narrow || showChat ? <View style={{flex: 1, minWidth: 0}}>{chat}</View> : null}
       <Modal visible={chooser} transparent animationType="fade" onRequestClose={() => setChooser(false)}>
-        <Pressable style={{flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', padding: 24}} onPress={() => setChooser(false)}>
+        <Pressable style={{flex: 1, backgroundColor: palette.overlay, justifyContent: 'center', padding: 24}} onPress={() => setChooser(false)}>
           <Pressable style={{backgroundColor: palette.panel, borderRadius: 14, padding: 16, borderWidth: 1, borderColor: palette.border, maxWidth: 420, width: '100%', alignSelf: 'center'}}>
             <Text style={{color: palette.text, fontWeight: '700', fontSize: 17, marginBottom: 12}}>Nova solicitação</Text>
             {REQUEST_TYPES.map(t => (

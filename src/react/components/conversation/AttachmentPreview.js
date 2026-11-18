@@ -36,7 +36,7 @@ export default function AttachmentPreview({file, palette, onCancel, onSend}) {
 
   return (
     <Modal transparent animationType="fade" visible onRequestClose={onCancel}>
-      <View style={{flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center', padding: 16}}>
+      <View style={{flex: 1, backgroundColor: palette.overlay, alignItems: 'center', justifyContent: 'center', padding: 16}}>
         <View style={{width: '100%', maxWidth: 520, borderRadius: 14, overflow: 'hidden', backgroundColor: palette.panel}}>
           <View style={{flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: palette.border}}>
             <TouchableOpacity onPress={onCancel} accessibilityLabel="Descartar anexo" style={{padding: 4, marginRight: 8}}>
