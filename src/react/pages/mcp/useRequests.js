@@ -6,7 +6,7 @@
 import {useCallback, useEffect, useState} from 'react';
 import {useStore} from '@store';
 import useRealtimeReload from '../tickets/useRealtimeReload';
-import {fetchMessages, fetchMyRequests, fetchRequestStatuses, fetchTask, sendRequestMessage} from '../../components/conversation/requestApi';
+import {fetchMyRequests, fetchRequestStatuses, fetchTaskWithMessages, retrying, sendRequestMessage} from '../../components/conversation/requestApi';
 
 const {idOf} = require('./mcpChatUtils');
 
@@ -30,13 +30,13 @@ export default function useRequests({onError}) {
   // Loaded once the session is ready (a first call before login returned nothing and never retried).
   useEffect(() => {
     if (!meId) return;
-    fetchRequestStatuses().then(setStatuses).catch(() => setStatuses([]));
+    retrying(fetchRequestStatuses).then(setStatuses).catch(() => setStatuses([]));
   }, [meId, companyId]);
 
   const loadList = useCallback(async () => {
     if (!meId) return;
     try {
-      setRequests(await fetchMyRequests(meId, statusFilter));
+      setRequests(await retrying(() => fetchMyRequests(meId, statusFilter)));
     } catch (e) {
       onError?.(e?.message || 'Não foi possível carregar as solicitações');
     } finally {
@@ -49,7 +49,7 @@ export default function useRequests({onError}) {
       if (!id) return;
       if (!quiet) setLoadingChat(true);
       try {
-        const [t, m] = await Promise.all([fetchTask(id), fetchMessages(id)]);
+        const [t, m] = await fetchTaskWithMessages(id);
         setTask(t);
         setMessages(m);
       } catch (e) {
