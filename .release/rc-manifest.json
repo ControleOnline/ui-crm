@@ -1,14 +1,13 @@
 {
-  "version": "1.0.73",
+  "version": "1.0.75",
   "rc": 1,
-  "branch": "rc/1.0.73-rc.1",
-  "baseMaster": "49763e090fb2b5faabd8e088f82a5281902095a1",
+  "branch": "rc/1.0.75-rc.1",
+  "baseMaster": "fd914b7908a506526f94b71bf5e6d29a209f5bb9",
   "tasks": [
     71
   ],
   "frozen": true,
   "repositories": {
-    "ControleOnline/ui-crm": "bebd5242d1254c2a170572d765b92694db2a789c"
-  },
-  "note": "Restores master to 1.0.70 content + /ai<->/support swap; 1.0.72 RC wrongly carried dev history."
+    "ControleOnline/ui-crm": "42709ef109b99026f250942062969af69798fe62"
+  }
 }

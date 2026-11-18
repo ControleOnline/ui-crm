@@ -27,9 +27,11 @@ export default function useRequests({onError}) {
   const [messages, setMessages] = useState([]);
   const [loadingChat, setLoadingChat] = useState(false);
 
+  // Loaded once the session is ready (a first call before login returned nothing and never retried).
   useEffect(() => {
+    if (!meId) return;
     fetchRequestStatuses().then(setStatuses).catch(() => setStatuses([]));
-  }, []);
+  }, [meId, companyId]);
 
   const loadList = useCallback(async () => {
     if (!meId) return;
