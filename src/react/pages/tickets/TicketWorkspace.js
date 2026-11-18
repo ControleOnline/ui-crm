@@ -15,10 +15,9 @@ import {
   assignAi,
   fetchCategories,
   fetchCompanyAis,
-  fetchMessages,
   fetchResponders,
   fetchStatuses,
-  fetchTask,
+  fetchTaskWithMessages,
   personName,
   postInteraction,
   REQUEST_TYPES,
@@ -63,7 +62,7 @@ export default function TicketWorkspace({taskId, extra = null}) {
       if (!taskId || !meId) return;
       if (!quiet) setLoading(true);
       try {
-        const [t, m] = await Promise.all([fetchTask(taskId), fetchMessages(taskId)]);
+        const [t, m] = await fetchTaskWithMessages(taskId);
         setTask(t);
         setMessages(m);
       } catch (e) {
