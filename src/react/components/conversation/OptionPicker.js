@@ -36,7 +36,7 @@ export default function OptionPicker({label, value, options, onChange, placehold
         {editable ? <Text style={{color: palette.muted, fontSize: 10}}>▾</Text> : null}
       </TouchableOpacity>
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
-        <Pressable style={{flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', padding: 24}} onPress={() => setOpen(false)}>
+        <Pressable style={{flex: 1, backgroundColor: palette.overlay, justifyContent: 'center', padding: 24}} onPress={() => setOpen(false)}>
           <Pressable style={{backgroundColor: palette.panel, borderRadius: 12, maxHeight: '75%', paddingVertical: 8, borderWidth: 1, borderColor: palette.border}}>
             <Text style={{color: palette.text, fontWeight: '700', fontSize: 16, paddingHorizontal: 16, paddingVertical: 8}}>{label}</Text>
             <ScrollView>
