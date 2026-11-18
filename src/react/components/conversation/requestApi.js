@@ -16,6 +16,36 @@ export const toItems = res => {
   return Array.isArray(items) ? items : [];
 };
 
+/**
+ * The app remounts screens while it boots (company, menus, device): a call made in that window can fail
+ * before reaching the network, and the screen then shows "not found" / an empty list until F5.
+ * Retry a few times (growing delay) before giving up.
+ */
+export const retrying = async (fn, {attempts = 4, delayMs = 700} = {}) => {
+  let last;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await fn();
+    } catch (e) {
+      last = e;
+      if (i < attempts - 1) await new Promise(resolve => setTimeout(resolve, delayMs * (i + 1)));
+    }
+  }
+  throw last;
+};
+
+const required = (value, message) => {
+  if (!value) throw new Error(message);
+  return value;
+};
+
+/** Task + its messages; an empty task response counts as a failure (retried). */
+export const fetchTaskWithMessages = taskId =>
+  retrying(async () => {
+    const [task, messages] = await Promise.all([fetchTask(taskId), fetchMessages(taskId)]);
+    return [required(task, 'Solicitação não encontrada'), messages];
+  });
+
 export const personName = p => (p && typeof p === 'object' ? p.alias || p.name || '' : '');
 
 /** Status names of both contexts, open first (filter of the requests list). */
