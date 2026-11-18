@@ -11,7 +11,7 @@ import useToastMessage from '../../hooks/useToastMessage';
 import AssignAiModal from './AssignAiModal';
 import useRealtimeReload from './useRealtimeReload';
 import {assignAi, fetchStatuses, fetchTickets, fetchTriage, moveTicket} from './ticketApi';
-import styles from './tickets.styles';
+import useTicketStyles from './tickets.styles';
 
 const {idOf, conversationChannel} = require('../mcp/mcpChatUtils');
 const {TICKET_TYPES, buildColumns, neighbourStatus, personName, timeAgo} = require('./ticketUtils');
@@ -19,6 +19,7 @@ const {TICKET_TYPES, buildColumns, neighbourStatus, personName, timeAgo} = requi
 const CHANNEL_LABELS = {whatsapp: 'WhatsApp', email: 'E-mail', web: 'Site'};
 
 const TicketCard = ({task, columns, onMove, onAssign, onOpen}) => {
+  const {styles} = useTicketStyles();
   const previous = neighbourStatus(columns, task, -1);
   const next = neighbourStatus(columns, task, 1);
   const channel = conversationChannel(task);
@@ -29,7 +30,7 @@ const TicketCard = ({task, columns, onMove, onAssign, onOpen}) => {
         {[personName(task.client), timeAgo(task.alterDate)].filter(Boolean).join(' · ')}
       </Text>
       <View style={styles.badges}>
-        {task.aiAgent ? <View style={[styles.badge, styles.badgeAi]}><Text style={styles.badgeText}>IA atendendo</Text></View> : null}
+        {task.aiAgent ? <View style={[styles.badge, styles.badgeAi]}><Text style={[styles.badgeText, styles.badgeAiText]}>IA atendendo</Text></View> : null}
         {CHANNEL_LABELS[channel] ? <View style={styles.badge}><Text style={styles.badgeText}>{CHANNEL_LABELS[channel]}</Text></View> : null}
       </View>
       <View style={styles.cardActions}>
@@ -43,6 +44,7 @@ const TicketCard = ({task, columns, onMove, onAssign, onOpen}) => {
 
 export default function TicketFunnelPage({type = 'relationship'}) {
   const navigation = useNavigation();
+  const {styles, palette} = useTicketStyles();
   const {showError, showSuccess} = useToastMessage();
   const peopleStore = useStore('people');
   const companyId = idOf(peopleStore?.getters?.currentCompany || peopleStore?.getters?.mainCompany);
@@ -114,14 +116,14 @@ export default function TicketFunnelPage({type = 'relationship'}) {
           <Text style={styles.title}>{meta.title}</Text>
           <Text style={styles.subtitle}>{`${tickets.length} tickets · ${triage.length} em triagem pela IA`}</Text>
         </View>
-        <TextInput style={styles.search} value={search} onChangeText={setSearch} placeholder="Buscar cliente ou título" placeholderTextColor="#8b98a5" />
+        <TextInput style={styles.search} value={search} onChangeText={setSearch} placeholder="Buscar cliente ou título" placeholderTextColor={palette.placeholder} />
       </View>
       {loading ? (
         <ActivityIndicator style={styles.spinner} />
       ) : (
         <ScrollView horizontal style={styles.board} contentContainerStyle={styles.boardContent}>
           {columns.map(column => (
-            <View key={column.key} style={[styles.column, {borderTopColor: column.color}]}>
+            <View key={column.key} style={[styles.column, column.color ? {borderTopColor: column.color} : null]}>
               <View style={styles.columnHeader}>
                 <Text style={styles.columnTitle}>{column.title}</Text>
                 <Text style={styles.columnCount}>{column.tasks.length}</Text>

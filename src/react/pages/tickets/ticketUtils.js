@@ -28,13 +28,14 @@ const buildColumns = (statuses, tasks, triage = []) => {
     return ra - rb || ia - ib;
   });
   const columns = [
-    {key: TRIAGE_COLUMN, title: 'Triagem IA', color: '#7c3aed', status: null, tasks: (triage || []).filter(isCustomerConversation)},
+    {key: TRIAGE_COLUMN, title: 'Triagem IA', color: null, status: null, tasks: (triage || []).filter(isCustomerConversation)},
   ];
   sorted.forEach(status => {
     columns.push({
       key: String(idOf(status)),
       title: status.status || status.name || `#${idOf(status)}`,
-      color: status.color || '#1d9bf0',
+      // Status color comes from the database; without one the column uses the theme primary.
+      color: status.color || null,
       status,
       tasks: [],
     });

@@ -34,6 +34,8 @@ export default function useChatPalette() {
       inputBorder: t.inputBorder || t.cardBorder,
       inputText: t.inputText || t.textPrimary,
       placeholder: t.inputPlaceholderText || t.textMuted,
+      // Modal backdrop: theme token; derived from the text color only when the theme has none.
+      overlay: t.modalOverlay || t.overlayBackground || withOpacity(t.textPrimary || t.cardText, 0.55),
       danger: t.error || t.iconDanger,
       success: t.success || t.iconSuccess,
     };
