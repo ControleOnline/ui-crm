@@ -1,6 +1,7 @@
 /*
  * @agents Message input, WhatsApp-like: Enter sends (Shift+Enter breaks the line), 📎 attaches a file,
- * 🎤 records a voice note (sent when recording stops). `onSend({text, file})` resolves true on success.
+ * 🎤 records a voice note (sent when recording stops). Sending never blocks typing: the input is cleared
+ * at once and `onSend({text, file})` queues the message (ConversationView shows it as pending).
  */
 import React, {useState} from 'react';
 import {ActivityIndicator, Platform, Text, TextInput, TouchableOpacity, View} from 'react-native';
@@ -10,23 +11,17 @@ import {selectFile} from './fileApi';
 export default function Composer({palette, placeholder, disabled, disabledText, onSend, top, onError}) {
   const [text, setText] = useState('');
   const [file, setFile] = useState(null);
-  const [sending, setSending] = useState(false);
+  const sending = false;
   const audio = useAudioRecording();
 
-  const send = async (payload = {text, file}) => {
-    if (sending || (!String(payload.text || '').trim() && !payload.file)) return;
-    setSending(true);
-    try {
-      const ok = await onSend({text: String(payload.text || '').trim(), file: payload.file || null});
-      if (ok !== false && payload !== null) {
-        setText('');
-        setFile(null);
-      }
-    } catch (e) {
-      onError?.(e?.message || 'Não foi possível enviar');
-    } finally {
-      setSending(false);
-    }
+  const send = (payload = {text, file}) => {
+    const message = {text: String(payload.text || '').trim(), file: payload.file || null};
+    if (!message.text && !message.file) return;
+    setText('');
+    setFile(null);
+    Promise.resolve()
+      .then(() => onSend(message))
+      .catch(e => onError?.(e?.message || 'Não foi possível enviar'));
   };
 
   const attach = async () => {
@@ -45,7 +40,7 @@ export default function Composer({palette, placeholder, disabled, disabledText, 
         return;
       }
       const voice = await audio.stop();
-      if (voice) await send({text: '', file: voice});
+      if (voice) send({text: '', file: voice});
     } catch (e) {
       onError?.(e?.message || 'Não foi possível gravar');
     }
