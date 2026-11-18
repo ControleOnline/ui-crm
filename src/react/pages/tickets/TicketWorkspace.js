@@ -128,8 +128,9 @@ export default function TicketWorkspace({taskId, extra = null}) {
     [providerId, task, meId],
   );
 
-  const send = async ({text, fileId}) => {
-    await postInteraction(taskId, {text, fileId, visibility: mode});
+  const send = async ({text, fileId, kind}) => {
+    const visibility = kind ? (kind === 'note' ? 'private' : 'public') : mode;
+    await postInteraction(taskId, {text, fileId, visibility});
     await load({quiet: true});
     return true;
   };
@@ -215,6 +216,7 @@ export default function TicketWorkspace({taskId, extra = null}) {
         loading={loading}
         describe={describe}
         onSend={send}
+        pendingKind={mode === 'public' ? 'msg' : 'note'}
         uploadCompanyId={providerId}
         placeholder={mode === 'public' ? 'Mensagem para o cliente' : 'Nota visível só para a equipe'}
         canSend={options.canReply}
