@@ -1,10 +1,12 @@
 /*
- * @agents Message input, WhatsApp-like: Enter sends (Shift+Enter breaks the line), 📎 attaches a file,
+ * @agents Message input, WhatsApp-like: Enter sends (Shift+Enter breaks the line), 📎 picks a file and opens
+ * a preview with caption (AttachmentPreview),
  * 🎤 records a voice note (sent when recording stops). Sending never blocks typing: the input is cleared
  * at once and `onSend({text, file})` queues the message (ConversationView shows it as pending).
  */
 import React, {useState} from 'react';
 import {ActivityIndicator, Platform, Text, TextInput, TouchableOpacity, View} from 'react-native';
+import AttachmentPreview from './AttachmentPreview';
 import useAudioRecording from './useAudioRecording';
 import {selectFile} from './fileApi';
 
@@ -14,11 +16,11 @@ export default function Composer({palette, placeholder, disabled, disabledText, 
   const sending = false;
   const audio = useAudioRecording();
 
-  const send = (payload = {text, file}) => {
+  const send = (payload = {text, file: null}) => {
     const message = {text: String(payload.text || '').trim(), file: payload.file || null};
     if (!message.text && !message.file) return;
-    setText('');
-    setFile(null);
+    if (message.file) setFile(null);
+    else setText('');
     Promise.resolve()
       .then(() => onSend(message))
       .catch(e => onError?.(e?.message || 'Não foi possível enviar'));
@@ -63,18 +65,11 @@ export default function Composer({palette, placeholder, disabled, disabledText, 
   }
 
   const iconBtn = {width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center'};
-  const hasContent = Boolean(text.trim() || file);
+  const hasContent = Boolean(text.trim());
   return (
     <View style={{borderTopWidth: 1, borderTopColor: palette.border, backgroundColor: palette.panel, paddingHorizontal: 8, paddingVertical: 6}}>
       {top}
-      {file ? (
-        <View style={{flexDirection: 'row', alignItems: 'center', gap: 8, padding: 6, marginBottom: 4, borderRadius: 8, backgroundColor: palette.chip}}>
-          <Text style={{color: palette.chipText, flex: 1}} numberOfLines={1}>{`📎 ${file.name || 'arquivo'}`}</Text>
-          <TouchableOpacity onPress={() => setFile(null)}>
-            <Text style={{color: palette.danger, fontWeight: '700'}}>✕</Text>
-          </TouchableOpacity>
-        </View>
-      ) : null}
+      <AttachmentPreview file={file} palette={palette} onCancel={() => setFile(null)} onSend={send} />
       <View style={{flexDirection: 'row', alignItems: 'flex-end', gap: 6}}>
         <TouchableOpacity style={iconBtn} onPress={attach} disabled={sending || audio.recording} accessibilityLabel="Anexar arquivo">
           <Text style={{fontSize: 20, color: palette.muted}}>📎</Text>
