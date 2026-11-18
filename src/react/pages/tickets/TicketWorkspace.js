@@ -59,7 +59,8 @@ export default function TicketWorkspace({taskId, extra = null}) {
 
   const load = useCallback(
     async ({quiet = false} = {}) => {
-      if (!taskId) return;
+      // On a reload (F5 / deep link) the session is restored asynchronously: wait for the user.
+      if (!taskId || !meId) return;
       if (!quiet) setLoading(true);
       try {
         const [t, m] = await Promise.all([fetchTask(taskId), fetchMessages(taskId)]);
@@ -71,7 +72,7 @@ export default function TicketWorkspace({taskId, extra = null}) {
         setLoading(false);
       }
     },
-    [taskId, onError],
+    [taskId, meId, onError],
   );
 
   useEffect(() => {
