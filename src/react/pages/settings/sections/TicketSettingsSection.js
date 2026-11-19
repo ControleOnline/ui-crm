@@ -12,6 +12,7 @@ import useToastMessage from '@controleonline/ui-crm/src/react/hooks/useToastMess
 import {fetchTicketSettings, saveTicketSettings} from '../../../components/conversation/requestApi';
 import {useGeneralSettingsPalette, useGeneralSettingsStyles} from '../GeneralSettings.styles';
 import GeneralSettingsSection from '../GeneralSettingsSection';
+import AttendanceSettings from './AttendanceSettings';
 import {useGeneralSettingsConfig} from '../GeneralSettings.shared';
 
 const STRATEGIES = [
@@ -41,7 +42,7 @@ const Choice = ({active, label, onPress, palette, multi}) => (
         borderWidth: 2,
         marginRight: 10,
         borderColor: palette.primary,
-        backgroundColor: active ? palette.primary : 'transparent',
+        backgroundColor: active ? palette.primary : palette.cardBackground,
       }}
     />
     <Text style={{color: palette.textPrimary, flex: 1}}>{label}</Text>
@@ -90,12 +91,16 @@ export default function TicketSettingsSection() {
 
   if (!settings) return <ActivityIndicator style={{marginTop: 16}} />;
   const employees = settings.employees || [];
+  const attendance = type => (
+    <AttendanceSettings type={type} value={settings.attendance?.[type]} onSave={patch => save({attendance: patch})} palette={palette} styles={styles} Choice={Choice} />
+  );
 
   return (
     <View>
       <GeneralSettingsSection
         title="Suporte"
-        description="Chamados de suporte nascem sem responsável e são distribuídos entre as pessoas marcadas abaixo. Só elas respondem e aparecem como responsáveis em Atendimento de suporte.">
+        description="Com IA primeiro, o chamado fica com a IA (sem responsável) até ela resolver ou encaminhar. Pessoas: distribuição entre as marcadas abaixo, que respondem e aparecem como responsáveis em Atendimento de suporte.">
+        {attendance('support')}
         <Text style={styles.sectionTitle}>Regra de distribuição</Text>
         {STRATEGIES.map(s => (
           <Choice key={s.value} palette={palette} active={settings.support_strategy === s.value} label={s.label} onPress={() => save({support_strategy: s.value})} />
@@ -109,8 +114,8 @@ export default function TicketSettingsSection() {
 
       <GeneralSettingsSection
         title="Comercial (CRM)"
-        description="Solicitações comerciais seguem a distribuição de clientes do CRM: cada cliente é atendido pelo seu vendedor; clientes sem vendedor recebem um pela estratégia configurada na aba CRM.">
-        <Text style={styles.helperText}>Nada a configurar aqui.</Text>
+        description="Quando vai para uma pessoa, segue a distribuição de clientes do CRM: cada cliente é atendido pelo seu vendedor; clientes sem vendedor recebem um pela estratégia da aba CRM.">
+        {attendance('relationship')}
       </GeneralSettingsSection>
       {saving ? <ActivityIndicator style={{marginTop: 8}} /> : null}
     </View>
