@@ -257,7 +257,6 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
         client: selectedClient,
         payer: selectedClient,
         app: 'CRM',
-        orderType: 'sale',
       });
 
       if (selectedProducts.length > 0) {
