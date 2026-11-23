@@ -24,6 +24,7 @@ import {
   useGeneralSettingsStyles,
 } from '../GeneralSettings.styles';
 import GeneralSettingsSection from '../GeneralSettingsSection';
+import GoogleMarketingSection from './GoogleMarketingSection';
 import LoginSection from './LoginSection';
 import {
   toConfigCacheValue,
@@ -385,6 +386,8 @@ const IntegrationsSection = () => {
           styles={localStyles}
         />
       </GeneralSettingsSection>
+
+      <GoogleMarketingSection />
     </>
   );
 };
