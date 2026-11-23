@@ -52,6 +52,15 @@ const SCOPE_SETS = [
     fieldKey: 'ACCOUNT_NAME',
     fieldPlaceholder: 'accounts/pub-0000000000000000',
   },
+  {
+    key: 'webmasters',
+    title: global.t?.t('settings', 'googleMarketing', 'gsc.title', 'Google Search Console'),
+    description: global.t?.t('settings', 'googleMarketing', 'gsc.desc', 'Cliques, impressões, CTR e posição média orgânica.'),
+    icon: 'search',
+    configKey: 'SEARCH_CONSOLE_SITE',
+    fieldKey: 'SITE_URL',
+    fieldPlaceholder: 'sc-domain:exemplo.com ou https://exemplo.com/',
+  },
 ];
 
 const resolveTextConfig = (configs, key) => {
