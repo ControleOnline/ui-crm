@@ -1,279 +1,175 @@
-import React, { useEffect, useState, useLayoutEffect, useRef } from 'react';
-import { Text, View, TouchableOpacity, ScrollView, Dimensions, ActivityIndicator, Platform } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { useCallback, useEffect, useLayoutEffect, useState } from 'react';
+import { ActivityIndicator, Text, useWindowDimensions, View } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useStores } from '@store';
-import Icon from 'react-native-vector-icons/MaterialIcons';
 import RenderHTML from 'react-native-render-html';
 import { colors } from '@controleonline/../../src/styles/colors';
 import { useMessage } from '@controleonline/ui-common/src/react/components/MessageService';
 import LinkedOrderProductsTab from '@controleonline/ui-common/src/react/components/LinkedOrderProductsTab';
+import DocumentDetailsShell from '@controleonline/ui-common/src/react/components/documentDetails/DocumentDetailsShell';
+import DocumentSheet from '@controleonline/ui-common/src/react/components/documentDetails/DocumentSheet';
+import useLinkedOrderSummary from '@controleonline/ui-common/src/react/hooks/useLinkedOrderSummary';
 import { resolveDocumentFileContent } from '@controleonline/ui-common/src/react/utils/documentFileContent';
-import styles from './ProposalDetails.styles';
+import { getPeopleDisplayName } from '@controleonline/ui-common/src/react/utils/peopleDisplay';
 import { getProposalInitialTabIndex } from './proposalNavigation';
+const { formatDocumentPeriod, formatDocumentStatusLabel } = require('../../utils/documentHeader');
 
-import {
-  inlineStyle_17_10,
-  inlineStyle_159_14,
-  inlineStyle_219_14,
-  inlineStyle_229_14,
-} from './ProposalDetails.styles';
-
-import { inlineStyle_27_8, inlineStyle_47_16 } from './ProposalDetails.styles';
-const { width } = Dimensions.get('window');
-
-const PropostaTab = ({ contract, fileContent, fileLoading, fileError, canEdit, handleSendPropostal }) => {
-  return (
-    <View style={inlineStyle_17_10}>
-      <ScrollView
-        style={styles.tabScroll}
-        contentContainerStyle={inlineStyle_27_8({
-          canEdit: canEdit,
-        })}>
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Proposta</Text>
-
-          {fileLoading ? (
-            <View style={styles.centerContainer}>
-              <ActivityIndicator size="large" color={colors.primary} />
-              <Text style={styles.loadingText}>Carregando proposta...</Text>
-            </View>
-          ) : fileError ? (
-            <Text style={styles.errorText}>{fileError}</Text>
-          ) : fileContent ? (
-            <View style={styles.htmlWrapper}>
-              <RenderHTML
-                contentWidth={width - 32}
-                source={{ html: fileContent }}
-                ignoredDomTags={['meta', 'title']}
-                baseStyle={inlineStyle_47_16}
-              />
-            </View>
-          ) : (
-            <View style={styles.centerContainer}>
-              <ActivityIndicator size="large" color={colors.primary} />
-              <Text style={styles.loadingText}>Gerando proposta...</Text>
-            </View>
-          )}
-        </View>
-      </ScrollView>
-      {canEdit && (
-        <View style={styles.fixedSignButtonContainer}>
-          <TouchableOpacity style={styles.signButton} onPress={handleSendPropostal}>
-            <Icon name="edit" size={20} color="#fff" />
-            <Text style={styles.signButtonText}>Enviar Proposta</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-    </View>
-  );
+const documentTheme = {
+  primary: colors.primary,
 };
+
+// Readable width of the document inside the "paper" (see DocumentDetailsShell).
+const resolveDocumentWidth = width => (width >= 768 ? Math.min(width - 48, 920) - 80 : width - 32);
 
 const ProposalDetails = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const { contractId, initialTab } = route.params;
-
+  const { width } = useWindowDimensions();
   const { showSuccess, showError } = useMessage();
 
-  const contractStore = useStores((s) => s.contract);
-
+  const contractStore = useStores(s => s.contract);
   const { item: contract, isLoading } = contractStore.getters;
   const contractActions = contractStore.actions;
 
-  const [fileContent, setFileContent] = useState('');
+  const [fileDocument, setFileDocument] = useState(null);
   const [fileLoading, setFileLoading] = useState(false);
   const [fileError, setFileError] = useState(null);
-  const [activeTab, setActiveTab] = useState(0);
+  const [productsOpen, setProductsOpen] = useState(getProposalInitialTabIndex(initialTab) === 1);
 
-  const scrollRef = useRef(null);
-
-  useEffect(() => {
-    const targetTabIndex = getProposalInitialTabIndex(initialTab);
-    if (targetTabIndex === 1) {
-      setActiveTab(targetTabIndex);
-      requestAnimationFrame(() => {
-        scrollRef.current?.scrollTo({ x: targetTabIndex * width, animated: false });
-      });
-    }
-  }, [initialTab]);
-
+  const contractRef = contract?.['@id'];
+  const orderSummary = useLinkedOrderSummary(contractRef);
   const canEdit = contract?.status?.realStatus === 'open';
-  const proposalTitle =
-    global.t?.t('contract', 'title', 'proposal') || 'Proposta';
 
   useLayoutEffect(() => {
-    navigation.setOptions({
-      headerShown: true,
-      headerBackVisible: true,
-      title: proposalTitle,
-    });
-  }, [navigation, proposalTitle]);
+    // The fixed document header replaces the navigation header.
+    navigation.setOptions({ headerShown: false });
+  }, [navigation]);
 
-  useEffect(() => {
-    const loadData = async () => {
-      let data = await contractActions.get(contractId);
-
-      if (!data?.contractFile) {
-        try {
-          await contractActions.generate({ id: contractId });
-          data = await contractActions.get(contractId);
-        } catch (e) {
-          console.log('Erro ao gerar proposta', e);
-        }
-      }
-
-      if (data?.contractFile) {
-        setFileLoading(true);
-        try {
-          const res = await contractActions.getFileContent(data.contractFile['@id']);
-          setFileContent(resolveDocumentFileContent(res?.content).content);
-        } catch {
-          setFileError('Falha ao carregar a proposta');
-        } finally {
-          setFileLoading(false);
-        }
-      }
-    };
-
-    loadData();
-
-  }, [contractId]);
-
-  const handleSendPropostal = async () => {
+  const loadDocument = useCallback(async (regenerate = false) => {
+    setFileLoading(true);
     try {
-      console.log('Implementar lógica de envio');
-      showSuccess('Proposta enviada com sucesso');
-
-      const updated = await contractActions.get(contractId);
-      if (updated?.contractFile) {
-        const res = await contractActions.getFileContent(updated.contractFile['@id']);
-        setFileContent(resolveDocumentFileContent(res?.content).content);
+      if (regenerate) {
+        await contractActions.generate({ id: contractId });
+      }
+      let data = await contractActions.get(contractId);
+      if (!data?.contractFile) {
+        await contractActions.generate({ id: contractId });
+        data = await contractActions.get(contractId);
+      }
+      if (data?.contractFile) {
+        const res = await contractActions.getFileContent(data.contractFile['@id']);
+        setFileDocument(resolveDocumentFileContent(res?.content));
+        setFileError(null);
       }
     } catch {
-      showError('Erro ao enviar proposta');
+      setFileError('Não foi possível carregar a proposta.');
+    } finally {
+      setFileLoading(false);
     }
+  }, [contractId]);
+
+  useEffect(() => {
+    loadDocument();
+  }, [loadDocument]);
+
+  const handleBack = () => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
+    navigation.navigate('ProposalsIndex');
+  };
+
+  const handleSendProposal = async () => {
+    showSuccess('Proposta enviada com sucesso');
   };
 
   // The proposal is rendered from the order products; regenerate it after they change.
   const handleProductsChanged = async () => {
-    try {
-      await contractActions.generate({ id: contractId });
-      const updated = await contractActions.get(contractId);
-      if (updated?.contractFile) {
-        const res = await contractActions.getFileContent(updated.contractFile['@id']);
-        setFileContent(resolveDocumentFileContent(res?.content).content);
-        setFileError(null);
-      }
-    } catch {
-      showError('Produtos salvos, mas a proposta nao foi atualizada. Recarregue a tela.');
-    }
+    await Promise.all([orderSummary.reload(), loadDocument(true)]);
   };
 
-  const handleTabPress = (index) => {
-    setActiveTab(index);
-    scrollRef.current?.scrollTo({ x: index * width, animated: true });
-  };
-
-  if (isLoading || !contract) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.topSkeleton} />
-        <View style={styles.infoSkeleton} />
-        <View style={styles.tabsSkeleton} />
-      </SafeAreaView>
-    );
-  }
+  const statusColor = contract?.status?.color || '#64748b';
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.topHeader}>
-        <View style={styles.topAvatar}>
-          <Icon name="description" size={32} color="#fff" />
-        </View>
-        <View style={inlineStyle_159_14}>
-          <Text style={styles.topTitle} numberOfLines={1}>
-            {contract.contractModel?.model || 'Proposta sem modelo'}
+    <>
+      <DocumentDetailsShell
+        theme={documentTheme}
+        title={contract?.contractModel?.model || 'Proposta'}
+        clientName={getPeopleDisplayName(contract?.client)}
+        meta={
+          contract
+            ? [`#${contract.id}`, formatDocumentPeriod(contract.startDate, contract.endDate)]
+                .filter(Boolean)
+                .join('  ·  ')
+            : ''
+        }
+        totalLabel={orderSummary.totalLabel}
+        statusLabel={contract ? formatDocumentStatusLabel(contract.status) : null}
+        statusColor={statusColor}
+        onBack={handleBack}
+        loading={isLoading || !contract || (fileLoading && !fileDocument)}
+        secondaryActions={[
+          {
+            key: 'products',
+            icon: 'inventory-2',
+            label: 'Produtos',
+            count: orderSummary.count,
+            onPress: () => setProductsOpen(true),
+          },
+        ]}
+        primaryAction={
+          canEdit
+            ? { label: 'Enviar proposta', icon: 'send', onPress: handleSendProposal }
+            : null
+        }>
+        {fileError ? (
+          <Text style={{ color: '#b91c1c' }}>{fileError}</Text>
+        ) : fileDocument?.kind === 'text' ? (
+          <Text selectable style={{ color: '#1e293b', fontSize: 15, lineHeight: 24 }}>
+            {fileDocument.content}
           </Text>
-          <Text style={styles.topSubtitle}>ID: {contract.id}</Text>
-        </View>
-      </View>
-      <View style={styles.fixedInfo}>
-        <View
-          style={[
-            styles.statusBox,
-            {
-              backgroundColor: `${contract.status?.color}20`,
-              borderColor: contract.status?.color,
-            },
-          ]}>
-          <Text style={[styles.statusText, { color: contract.status?.color }]}>
-            {contract.status?.status?.toUpperCase() || '—'}
-          </Text>
-        </View>
+        ) : fileDocument?.content ? (
+          <View>
+            {fileLoading ? (
+              <ActivityIndicator style={{ position: 'absolute', right: 0, top: 0 }} color={colors.primary} />
+            ) : null}
+            <RenderHTML
+              contentWidth={resolveDocumentWidth(width)}
+              source={{ html: fileDocument.content }}
+              ignoredDomTags={['meta', 'title']}
+              baseStyle={{ color: '#1e293b', fontSize: 15, lineHeight: 24 }}
+            />
+          </View>
+        ) : (
+          <Text style={{ color: '#64748b' }}>Gerando proposta...</Text>
+        )}
+      </DocumentDetailsShell>
 
-        <View style={styles.datesRow}>
-          <View style={styles.dateBlock}>
-            <Text style={styles.dateLabel}>Início</Text>
-            <Text style={styles.dateValue}>
-              {contract.startDate ? new Date(contract.startDate).toLocaleDateString('pt-BR') : '—'}
-            </Text>
-          </View>
-          <View style={styles.dateBlock}>
-            <Text style={styles.dateLabel}>Término</Text>
-            <Text style={styles.dateValue}>
-              {contract.endDate ? new Date(contract.endDate).toLocaleDateString('pt-BR') : '—'}
-            </Text>
-          </View>
-        </View>
-      </View>
-      <View style={styles.tabs}>
-        <TouchableOpacity
-          style={[styles.tabItem, activeTab === 0 && styles.tabActive]}
-          onPress={() => handleTabPress(0)}>
-          <Text style={[styles.tabLabel, activeTab === 0 && styles.tabLabelActive]}>Proposta</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tabItem, activeTab === 1 && styles.tabActive]}
-          onPress={() => handleTabPress(1)}>
-          <Text style={[styles.tabLabel, activeTab === 1 && styles.tabLabelActive]}>Produtos</Text>
-        </TouchableOpacity>
-      </View>
-      <ScrollView
-        ref={scrollRef}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        onScroll={(e) => {
-          const idx = Math.round(e.nativeEvent.contentOffset.x / width);
-          if (idx !== activeTab) setActiveTab(idx);
-        }}>
-        <View style={inlineStyle_219_14({
-          width: width,
-        })}>
-          <PropostaTab
-            contract={contract}
-            fileContent={fileContent}
-            fileLoading={fileLoading}
-            fileError={fileError}
-            canEdit={canEdit}
-            handleSendPropostal={handleSendPropostal}
-          />
-        </View>
-        <View style={inlineStyle_229_14({
-          width: width,
-        })}>
+      <DocumentSheet
+        visible={productsOpen}
+        onClose={() => setProductsOpen(false)}
+        theme={documentTheme}
+        title="Produtos da proposta"
+        subtitle={
+          orderSummary.count
+            ? `${orderSummary.count} ${orderSummary.count === 1 ? 'item' : 'itens'} · ${orderSummary.totalLabel}`
+            : 'Nenhum produto ainda'
+        }>
+        {contract ? (
           <LinkedOrderProductsTab
             contract={contract}
             canEdit={canEdit}
             emptyTitle="Nenhum produto vinculado a esta proposta."
-            emptySubtitle="Adicione os produtos negociados para poder ajustar a proposta ao longo da conversa com o cliente."
-            searchPlaceholder="Buscar produto para adicionar a proposta..."
+            emptySubtitle="Adicione os produtos negociados; a proposta é atualizada automaticamente."
+            searchPlaceholder="Buscar produto para adicionar..."
             onProductsChanged={handleProductsChanged}
+            embedded
           />
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+        ) : null}
+      </DocumentSheet>
+    </>
   );
 };
 
