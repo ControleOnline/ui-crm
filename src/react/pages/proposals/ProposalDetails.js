@@ -11,6 +11,7 @@ import LinkedOrderProductsTab from '@controleonline/ui-common/src/react/componen
 import { resolveDocumentFileContent } from '@controleonline/ui-common/src/react/utils/documentFileContent';
 import styles from './ProposalDetails.styles';
 import { getProposalInitialTabIndex } from './proposalNavigation';
+const { formatDocumentPeriod, formatDocumentStatusLabel } = require('../../utils/documentHeader');
 
 import {
   inlineStyle_17_10,
@@ -189,42 +190,32 @@ const ProposalDetails = () => {
     <SafeAreaView style={styles.container}>
       <View style={styles.topHeader}>
         <View style={styles.topAvatar}>
-          <Icon name="description" size={32} color="#fff" />
+          <Icon name="description" size={18} color="#fff" />
         </View>
         <View style={inlineStyle_159_14}>
           <Text style={styles.topTitle} numberOfLines={1}>
             {contract.contractModel?.model || 'Proposta sem modelo'}
           </Text>
-          <Text style={styles.topSubtitle}>ID: {contract.id}</Text>
+          <Text style={styles.topSubtitle} numberOfLines={1}>
+            {`#${contract.id}`}
+            {formatDocumentPeriod(contract.startDate, contract.endDate)
+              ? ` · ${formatDocumentPeriod(contract.startDate, contract.endDate)}`
+              : ''}
+          </Text>
         </View>
-      </View>
-      <View style={styles.fixedInfo}>
         <View
           style={[
             styles.statusBox,
             {
-              backgroundColor: `${contract.status?.color}20`,
-              borderColor: contract.status?.color,
+              backgroundColor: `${contract.status?.color || '#64748b'}20`,
+              borderColor: contract.status?.color || '#64748b',
             },
           ]}>
-          <Text style={[styles.statusText, { color: contract.status?.color }]}>
-            {contract.status?.status?.toUpperCase() || '—'}
+          <Text
+            style={[styles.statusText, { color: contract.status?.color || '#64748b' }]}
+            numberOfLines={1}>
+            {formatDocumentStatusLabel(contract.status)}
           </Text>
-        </View>
-
-        <View style={styles.datesRow}>
-          <View style={styles.dateBlock}>
-            <Text style={styles.dateLabel}>Início</Text>
-            <Text style={styles.dateValue}>
-              {contract.startDate ? new Date(contract.startDate).toLocaleDateString('pt-BR') : '—'}
-            </Text>
-          </View>
-          <View style={styles.dateBlock}>
-            <Text style={styles.dateLabel}>Término</Text>
-            <Text style={styles.dateValue}>
-              {contract.endDate ? new Date(contract.endDate).toLocaleDateString('pt-BR') : '—'}
-            </Text>
-          </View>
         </View>
       </View>
       <View style={styles.tabs}>

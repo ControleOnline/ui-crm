@@ -7,33 +7,34 @@ const styles = StyleSheet.create({
   topHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    paddingTop: Platform.OS === 'ios' ? 50 : 16,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    paddingTop: Platform.OS === 'ios' ? 44 : 8,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#e2e8f0',
   },
 
   topAvatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 16,
+    marginRight: 10,
   },
 
   topTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
+    fontSize: 15,
+    fontWeight: '700',
     color: '#0f172a',
   },
 
   topSubtitle: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#64748b',
-    marginTop: 4,
+    marginTop: 1,
   },
 
   fixedInfo: {
@@ -44,18 +45,16 @@ const styles = StyleSheet.create({
   },
 
   statusBox: {
-    alignSelf: 'center',
-    paddingHorizontal: 24,
-    paddingVertical: 10,
-    borderRadius: 30,
-    borderWidth: 1.5,
-    marginBottom: 16,
+    marginLeft: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 999,
+    borderWidth: 1,
   },
 
   statusText: {
-    fontSize: 17,
-    fontWeight: '800',
-    textTransform: 'uppercase',
+    fontSize: 12,
+    fontWeight: '700',
   },
 
   datesRow: {
@@ -115,8 +114,9 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     backgroundColor: '#fff',
-    padding: 16,
-    paddingBottom: Platform.OS === 'ios' ? 34 : 16,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    paddingBottom: Platform.OS === 'ios' ? 28 : 8,
     borderTopWidth: 1,
     borderTopColor: '#e2e8f0',
   },
@@ -126,8 +126,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.primary,
-    paddingVertical: 16,
-    borderRadius: 12,
+    paddingVertical: 10,
+    borderRadius: 10,
   },
 
   signButtonText: { color: '#fff', fontSize: 16, fontWeight: '700', marginLeft: 12 },
@@ -183,8 +183,9 @@ export const inlineStyle_27_8 = (
     canEdit: canEdit,
   },
 ) => ({
-  padding: 16,
-  paddingBottom: canEdit ? 120 : 40,
+  padding: 12,
+  // Room for the fixed action bar (~60px) without wasting the document area.
+  paddingBottom: canEdit ? 76 : 24,
 });
 
 export const inlineStyle_47_16 = {
