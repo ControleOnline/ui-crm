@@ -7,6 +7,8 @@ const {
   getProposalModelCategoryName,
   keepCompatibleSelectedProducts,
   normalizeCategoryId,
+  productBelongsToCategory,
+  tagProductsWithModelCategory,
 } = require('../../../react/utils/proposalProductSelection');
 
 test('normalizeCategoryId resolves nested category references', () => {
@@ -73,4 +75,43 @@ test('keepCompatibleSelectedProducts drops selections outside the model category
     }),
     [selectedProducts[0]],
   );
+});
+
+test('productBelongsToCategory follows the product_categories relation used by the backend guard', () => {
+  const product = {
+    '@id': '/products/1374',
+    productCategory: [
+      { category: { '@id': '/categories/2' } },
+      { category: '/categories/176' },
+    ],
+  };
+
+  assert.equal(productBelongsToCategory(product, '176'), true);
+  assert.equal(productBelongsToCategory(product, '/categories/2'), true);
+  assert.equal(productBelongsToCategory(product, '9'), false);
+  assert.equal(productBelongsToCategory({ '@id': '/products/1' }, '176'), false);
+  assert.equal(productBelongsToCategory({ '@id': '/products/1' }, null), true);
+});
+
+test('products fetched with the server category filter stay compatible with that model only', () => {
+  const tagged = tagProductsWithModelCategory({
+    products: [{ '@id': '/products/1374', product: 'Codex' }],
+    selectedModelCategoryId: '176',
+  });
+
+  assert.equal(tagged[0].product, 'Codex');
+  assert.deepEqual(
+    keepCompatibleSelectedProducts({ selectedProducts: tagged, selectedModelCategoryId: '176' }),
+    tagged,
+  );
+  assert.deepEqual(
+    keepCompatibleSelectedProducts({ selectedProducts: tagged, selectedModelCategoryId: '172' }),
+    [],
+  );
+});
+
+test('tagProductsWithModelCategory keeps the list untouched when the model has no category', () => {
+  const products = [{ '@id': '/products/1' }];
+  assert.equal(tagProductsWithModelCategory({ products, selectedModelCategoryId: null }), products);
+  assert.deepEqual(tagProductsWithModelCategory({ products: null, selectedModelCategoryId: '1' }), []);
 });

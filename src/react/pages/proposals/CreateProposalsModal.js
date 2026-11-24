@@ -25,7 +25,7 @@ const {
 } = require('../../utils/proposalCreateHelpers');
 
 const {
-  filterProductsByModelCategory,
+  tagProductsWithModelCategory,
   getProposalModelCategoryId,
   getProposalModelCategoryName,
   keepCompatibleSelectedProducts,
@@ -106,9 +106,11 @@ const CreateProposalsModal = ({ visible, onClose, onSuccess }) => {
         const results = await searchCompanyProducts({
           companyId: currentCompany.id,
           query: productQuery,
+          // Server-side filter matches the backend guard (product_categories).
+          categoryId: selectedModelCategoryId,
         });
 
-        const filteredResults = filterProductsByModelCategory({
+        const filteredResults = tagProductsWithModelCategory({
           products: results,
           selectedModelCategoryId,
         });
