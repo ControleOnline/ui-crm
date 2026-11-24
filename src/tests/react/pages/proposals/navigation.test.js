@@ -55,15 +55,13 @@ test('proposal details normalize the products tab request before selecting the p
   );
 });
 
-test('proposal details switch the active tab to Produtos when the route asks for it', () => {
+test('proposal details open the Produtos sheet when the route asks for it', () => {
+  const source = proposalDetailsSource.replace(/\s+/g, ' ');
   assert.match(
-    proposalDetailsSource.replace(/\s+/g, ' '),
-    /setActiveTab\(targetTabIndex\)/,
+    source,
+    /useState\(getProposalInitialTabIndex\(initialTab\) === 1\)/,
   );
-  assert.match(
-    proposalDetailsSource.replace(/\s+/g, ' '),
-    /scrollRef\.current\?\.scrollTo\(\{\s*x:\s*targetTabIndex \* width,\s*animated:\s*false\s*\}\)/,
-  );
+  assert.match(source, /<DocumentSheet visible=\{productsOpen\}/);
 });
 
 test('proposals index still wires ProposalCard for list items', () => {
