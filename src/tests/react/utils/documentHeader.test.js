@@ -23,3 +23,7 @@ test('period uses the API date without timezone shifts', () => {
   assert.equal(formatDocumentPeriod(null, null), '');
   assert.equal(formatDocumentPeriod('lixo', null), '');
 });
+
+test('end date before start is ignored instead of showing an inverted period', () => {
+  assert.equal(formatDocumentPeriod('2026-12-01', '2026-11-24'), 'Início 01/12/2026');
+});

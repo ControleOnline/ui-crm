@@ -19,14 +19,20 @@ const formatDocumentStatusLabel = status => {
   return STATUS_LABELS[raw.toLowerCase()] || raw.charAt(0).toUpperCase() + raw.slice(1);
 };
 
+const toIsoDay = value => {
+  const match = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return match ? `${match[1]}-${match[2]}-${match[3]}` : null;
+};
+
 const formatDate = value => {
   if (!value) {
     return null;
   }
 
-  const match = String(value).match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (match) {
-    return `${match[3]}/${match[2]}/${match[1]}`;
+  const isoDay = toIsoDay(value);
+  if (isoDay) {
+    const [year, month, day] = isoDay.split('-');
+    return `${day}/${month}/${year}`;
   }
 
   const date = new Date(value);
@@ -35,7 +41,11 @@ const formatDate = value => {
 
 const formatDocumentPeriod = (startDate, endDate) => {
   const start = formatDate(startDate);
-  const end = formatDate(endDate);
+  // An end date before the start is not a real term (legacy data stores the
+  // creation date there); show only the start instead of an inverted period.
+  const startDay = toIsoDay(startDate);
+  const endDay = toIsoDay(endDate);
+  const end = startDay && endDay && endDay < startDay ? null : formatDate(endDate);
 
   if (start && end) {
     return `${start} → ${end}`;
