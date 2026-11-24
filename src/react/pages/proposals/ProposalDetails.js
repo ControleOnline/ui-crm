@@ -8,6 +8,7 @@ import RenderHTML from 'react-native-render-html';
 import { colors } from '@controleonline/../../src/styles/colors';
 import { useMessage } from '@controleonline/ui-common/src/react/components/MessageService';
 import LinkedOrderProductsTab from '@controleonline/ui-common/src/react/components/LinkedOrderProductsTab';
+import { resolveDocumentFileContent } from '@controleonline/ui-common/src/react/utils/documentFileContent';
 import styles from './ProposalDetails.styles';
 import { getProposalInitialTabIndex } from './proposalNavigation';
 
@@ -126,7 +127,7 @@ const ProposalDetails = () => {
         setFileLoading(true);
         try {
           const res = await contractActions.getFileContent(data.contractFile['@id']);
-          setFileContent(res.content || '');
+          setFileContent(resolveDocumentFileContent(res?.content).content);
         } catch {
           setFileError('Falha ao carregar a proposta');
         } finally {
@@ -147,10 +148,25 @@ const ProposalDetails = () => {
       const updated = await contractActions.get(contractId);
       if (updated?.contractFile) {
         const res = await contractActions.getFileContent(updated.contractFile['@id']);
-        setFileContent(res.content || '');
+        setFileContent(resolveDocumentFileContent(res?.content).content);
       }
     } catch {
       showError('Erro ao enviar proposta');
+    }
+  };
+
+  // The proposal is rendered from the order products; regenerate it after they change.
+  const handleProductsChanged = async () => {
+    try {
+      await contractActions.generate({ id: contractId });
+      const updated = await contractActions.get(contractId);
+      if (updated?.contractFile) {
+        const res = await contractActions.getFileContent(updated.contractFile['@id']);
+        setFileContent(resolveDocumentFileContent(res?.content).content);
+        setFileError(null);
+      }
+    } catch {
+      showError('Produtos salvos, mas a proposta nao foi atualizada. Recarregue a tela.');
     }
   };
 
@@ -253,6 +269,7 @@ const ProposalDetails = () => {
             emptyTitle="Nenhum produto vinculado a esta proposta."
             emptySubtitle="Adicione os produtos negociados para poder ajustar a proposta ao longo da conversa com o cliente."
             searchPlaceholder="Buscar produto para adicionar a proposta..."
+            onProductsChanged={handleProductsChanged}
           />
         </View>
       </ScrollView>
